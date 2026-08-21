@@ -35,6 +35,17 @@ export {
   type EditorStudy,
 } from './read.js';
 export {
+  searchPublishedResearch,
+  getPublishedResearchFacets,
+  normalizeExplorerParams,
+  PAGE_SIZE,
+  type ExplorerParams,
+  type ResearchCard,
+  type ResearchSort,
+  type SearchResult,
+  type Facets,
+} from './search.js';
+export {
   runMigrations,
   runSeed,
   readSqlFiles,
