@@ -13,60 +13,48 @@ reviewable — while keeping study outcome, evidence quality, criticism, confide
 and provenance as *separate* dimensions.
 
 **The repository is in the architecture-to-development transition. There is no
-application code yet.** As of this writing the entire repository is:
+application code yet — but the full architecture doc set is now complete
+(Milestone 0 done).** The repository is documentation only:
 
 ```text
 .
-├── CLAUDE.md                                  # this file
-└── WiseEvidence_Architecture_Package_v0.1.zip # the architecture foundation
+├── CLAUDE.md                     # this file
+├── CLAUDE-CODE-MASTER-PROMPT.md  # authoritative lead-architect brief
+├── README.md
+├── MANIFEST.md                   # index of all docs
+└── docs/
+    ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
+    ├── adr/     ADR-001 … ADR-011 (+ index/template)
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
 There is **no** `package.json`, no source tree, no database, no CI, no build
 tooling, and no framework installed. Do not assume any of these exist — inspect
 first (`git status`, `ls`, read files) before acting.
 
-### The architecture package
+> **History:** the architecture originally shipped as
+> `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
+> into tracked files and the zip retired; specs `05`–`23`, ADRs, and the three
+> reports were then written. See `MANIFEST.md`.
 
-`WiseEvidence_Architecture_Package_v0.1.zip` contains the current approved/drafted
-architecture foundation. Its contents:
+### The architecture docs
 
-```text
-README.md
-MANIFEST.md
-CLAUDE-CODE-MASTER-PROMPT.md      # the authoritative development instructions
-docs/
-├── 00-ARCHITECTURE-BASELINE.md   # architectural source of truth
-├── 01-VISION.md
-├── 02-PRODUCT-REQUIREMENTS.md
-├── 03-INFORMATION-ARCHITECTURE.md
-└── 04-SYSTEM-ARCHITECTURE.md
-```
+The tracked `docs/` tree is now the single source of truth. **Read these before
+doing anything substantial** — order `00 → 04` for foundation, then the specific
+specs your task touches. `CLAUDE-CODE-MASTER-PROMPT.md` is the single most
+important document — the lead-architect brief for the whole project. This
+CLAUDE.md summarizes it, but the master prompt governs where they differ.
+`docs/reports/ARCHITECTURE-CROSSCHECK.md` records how cross-doc discrepancies
+were resolved; `docs/23-AI-AGENT-INSTRUCTIONS.md` is the operating contract for
+any coding agent.
 
-**Read these before doing anything substantial.** To inspect them:
+### Architecture is complete; keep it consistent
 
-```bash
-unzip -o WiseEvidence_Architecture_Package_v0.1.zip -d /tmp/wise-arch
-```
-
-`CLAUDE-CODE-MASTER-PROMPT.md` inside the zip is the single most important
-document — it is the lead-architect brief for the whole project. This CLAUDE.md
-summarizes it, but the master prompt governs where they differ.
-
-### Documents that do NOT yet exist
-
-The following are **planned but not finalized**. Do **not** invent them silently
-or treat undocumented architecture as decided. If a task needs one, write the
-document first (see §5).
-
-```text
-05-DATABASE-ARCHITECTURE.md    06-EVIDENCE-TAXONOMY.md      07-OUTCOME-CLASSIFICATION.md
-08-EVIDENCE-QUALITY.md         09-CRITICISM-FRAMEWORK.md    10-AI-ARCHITECTURE.md
-11-DATA-IMPORT-ARCHITECTURE.md 12-ADMIN-ARCHITECTURE.md     13-COMMUNITY-ARCHITECTURE.md
-14-SEARCH-ARCHITECTURE.md      15-UI-UX-SPECIFICATION.md    16-SECURITY.md
-17-DATA-GOVERNANCE.md          18-OPEN-SOURCE-GOVERNANCE.md 19-DEPLOYMENT.md
-20-TESTING.md                  21-COST-CONTROL.md           22-ROADMAP.md
-23-AI-AGENT-INSTRUCTIONS.md
-```
+Specs `05`–`23` and ADRs `001`–`011` now exist. Do **not** silently invent new
+architecture that contradicts them — when a decision changes, update the relevant
+doc, add an ADR if significant, and keep the set internally consistent (see §5).
+The next step is **Milestone 1 — Repository Foundation** (`docs/22-ROADMAP.md`),
+still no premature features.
 
 ---
 
@@ -244,10 +232,9 @@ write an ADR if the decision is significant, (3) update affected implementation
 notes, (4) explain the reason. Never let code and architecture docs silently
 diverge.
 
-The current architecture docs live **inside the zip**. If you begin real
-development, the sound first step is to **unpack `docs/` into the repository** as
-tracked files so they can be versioned and extended — but do this as a deliberate,
-explained change, not silently.
+The architecture docs are now tracked under `docs/` (the v0.1 zip has been
+unpacked and retired). Keep them versioned and extended in place; never let code
+and architecture docs silently diverge.
 
 ### Testing (when code exists)
 
