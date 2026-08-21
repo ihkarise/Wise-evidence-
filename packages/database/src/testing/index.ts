@@ -17,6 +17,12 @@ export interface TestDatabase extends QueryExecutor {
    * `sub` is the authenticated user's UUID (Supabase auth.uid()); null = signed-out.
    */
   asRole<T>(role: PgRole, sub: string | null, fn: (exec: QueryExecutor) => Promise<T>): Promise<T>;
+  /**
+   * Like `asRole`, but writes PERSIST (session-level role + claims, no rollback).
+   * Use for multi-step workflows that switch roles between steps. RLS is still
+   * enforced (the session role is a non-owner). Always resets afterwards.
+   */
+  asRolePersistent<T>(role: PgRole, sub: string | null, fn: (exec: QueryExecutor) => Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -55,6 +61,19 @@ export async function createTestDatabase(
         return await fn(api);
       } finally {
         await pg.exec('rollback');
+      }
+    },
+    async asRolePersistent(role, sub, fn) {
+      await pg.query(`set role ${role}`);
+      await pg.query('select set_config($1, $2, false)', [
+        'request.jwt.claims',
+        sub ? JSON.stringify({ sub, role }) : '',
+      ]);
+      try {
+        return await fn(api);
+      } finally {
+        await pg.query('reset role');
+        await pg.query('select set_config($1, $2, false)', ['request.jwt.claims', '']);
       }
     },
     close: () => pg.close(),

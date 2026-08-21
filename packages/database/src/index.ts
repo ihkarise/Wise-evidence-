@@ -6,6 +6,33 @@ export * from './types.js';
 export { toCanonicalIdentifier, type CanonicalIdentifier } from './identifiers.js';
 export { findStudyByDoi, listPublishedPublications } from './repositories.js';
 export {
+  createDraft,
+  updateDraft,
+  setClassification,
+  addCriticism,
+  submitForReview,
+  reject,
+  approveAndPublish,
+  archive,
+  findExistingByDoi,
+  PermissionError,
+  PublicationError,
+  ValidationError,
+  type ActorContext,
+  type CreateDraftInput,
+  type CreatedDraft,
+  type UpdateDraftPatch,
+  type SetClassificationInput,
+  type AddCriticismInput,
+} from './service.js';
+export {
+  getPublishedStudyDetail,
+  listReviewQueue,
+  type PublicResearchDetail,
+  type PublicClassification,
+  type PublicCriticism,
+} from './read.js';
+export {
   runMigrations,
   runSeed,
   readSqlFiles,
