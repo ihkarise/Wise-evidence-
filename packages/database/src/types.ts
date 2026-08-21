@@ -195,6 +195,8 @@ export interface ResearchStudyRow {
   lifecycle_state: LifecycleState;
   is_demo: boolean;
   duplicate_of_study_id: string | null;
+  /** Human-authored concise summary (migration 0010). Never AI-generated. */
+  summary: string | null;
   created_at: string;
   updated_at: string;
 }
