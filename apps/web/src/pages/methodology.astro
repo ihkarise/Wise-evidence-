@@ -1,0 +1,66 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Methodology — WiseEvidence"
+  description="How WiseEvidence classifies research: separate dimensions, human-reviewed AI, and transparent provenance."
+>
+  <article class="prose-none max-w-2xl">
+    <h1 class="text-3xl font-bold tracking-tight">Methodology</h1>
+    <p class="mt-4 text-slate-600 dark:text-slate-300">
+      WiseEvidence is designed so that its data model stays credible. The full specification lives
+      in the repository’s <code>docs/</code> tree; this page summarizes the principles that govern
+      every research record.
+    </p>
+
+    <h2 class="mt-10 text-xl font-semibold">Separate dimensions</h2>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">
+      A study is never reduced to a single number. Five dimensions are recorded and shown
+      independently:
+    </p>
+    <ul class="mt-3 list-disc space-y-1 pl-6 text-slate-600 dark:text-slate-300">
+      <li><strong>Outcome</strong> — what the study reported.</li>
+      <li><strong>Evidence quality</strong> — how rigorously it was conducted.</li>
+      <li><strong>Confidence</strong> — certainty in the classification.</li>
+      <li><strong>Criticism</strong> — methodological concerns, with their origin.</li>
+      <li><strong>Provenance</strong> — where the record came from.</li>
+    </ul>
+    <p class="mt-3 text-slate-600 dark:text-slate-300">
+      Because these are separate: <strong>Outcome ≠ Evidence Quality</strong>,
+      <strong>Outcome ≠ Confidence</strong>, <strong>Outcome ≠ Criticism</strong>, and
+      <strong>Source ≠ Scientific Truth</strong>. A positive study is not automatically
+      high-quality; a negative study is not automatically low-quality; criticism is not a negative
+      outcome.
+    </p>
+
+    <h2 class="mt-10 text-xl font-semibold">Outcome spectrum</h2>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">
+      Reported outcomes span a spectrum — Strong Positive, Positive, Mixed/Leaning Positive,
+      Neutral/Inconclusive, Mixed/Leaning Negative, Negative, Strong Negative — never a
+      positive-versus-negative binary. Any internal ordering is used for navigation only and is
+      <strong>not</strong> a validated measure of efficacy. WiseEvidence does not present study
+      counts as scientific certainty.
+    </p>
+
+    <h2 class="mt-10 text-xl font-semibold">AI is an assistant, not the authority</h2>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">
+      AI may extract metadata, summarize, and suggest classifications. Those suggestions are stored
+      separately from human-reviewed final values, with full provenance. Important public
+      classifications follow <strong>AI suggestion → human review → final value</strong>; nothing is
+      published automatically while review is required.
+    </p>
+
+    <h2 class="mt-10 text-xl font-semibold">Transparency and provenance</h2>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">
+      Every published record links to its original publication and DOI, and preserves its source,
+      identifiers, and review history. Research PDFs are not hosted by default; WiseEvidence points
+      you to the source and respects its terms.
+    </p>
+
+    <p class="mt-10 text-sm text-slate-500">
+      This platform is under active, staged development. Sections will expand as classification,
+      review, and enrichment features ship.
+    </p>
+  </article>
+</BaseLayout>
