@@ -1,0 +1,22 @@
+{
+  "name": "@wise-evidence/metadata",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bibliographic metadata providers (Crossref + mock) behind a replaceable interface. No provider code leaks into the domain package.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
