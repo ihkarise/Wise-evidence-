@@ -46,6 +46,14 @@ export {
   type Facets,
 } from './search.js';
 export {
+  getEvidenceLandscape,
+  type EvidenceLandscape,
+  type LevelCount,
+  type StudyTypeCount,
+  type ValueCount,
+  type CriticismCount,
+} from './landscape.js';
+export {
   runMigrations,
   runSeed,
   readSqlFiles,

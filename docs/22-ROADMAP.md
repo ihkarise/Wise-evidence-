@@ -59,7 +59,10 @@ and 22 search tests (97 total). No AI/vector/community/pyramid/weighting.
 # 7. Phase 5 — Evidence Visualization  ← current
 
 Evidence pyramid, outcome distribution, quality display, criticism display,
-explore pages (master prompt §83, `15` §5). Honesty rules apply (`15` §6).
+explore pages (master prompt §83, `15` §5). Honesty rules apply (`15` §6). Governed
+by `docs/24-EVIDENCE-VISUALIZATION-METHODOLOGY.md` and ADR-015: study-based
+counting, distributions-not-conclusions, valence-neutral encoding, no efficacy/
+balance/weighting.
 
 # 8. Phase 6 — AI Enrichment
 

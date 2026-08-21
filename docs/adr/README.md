@@ -22,6 +22,7 @@ ADR (master prompt §38).
 | [ADR-012](ADR-012-pglite-database-testing.md) | PGlite for deterministic database and RLS tests | Accepted |
 | [ADR-013](ADR-013-hybrid-rendering.md) | Hybrid rendering (static + SSR via @astrojs/node) | Accepted |
 | [ADR-014](ADR-014-postgres-explorer-search.md) | PostgreSQL full-text search for the public explorer | Accepted |
+| [ADR-015](ADR-015-evidence-visualization-honesty.md) | Evidence visualization honesty rules | Accepted |
 
 ## Template
 
