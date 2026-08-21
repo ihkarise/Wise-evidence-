@@ -83,11 +83,25 @@ The runnable foundation now lives alongside the docs:
 - `docs/adr/ADR-012-pglite-database-testing.md` records the testing boundary
   (PGlite for CI, Supabase for production).
 
+## Manual Research MVP (Milestone 3)
+
+- `apps/web` hybrid rendering (ADR-013, `@astrojs/node`): SSR `/research/[id]`,
+  `/admin/*`, `/api/*`; `/`, `/methodology` stay prerendered.
+- Auth/session (`@supabase/ssr`) + `src/middleware.ts` (fail-closed admin gate,
+  staff-role resolution) + `src/server/db.ts` (RLS-preserving request executor).
+- `packages/metadata` — `MetadataProvider` with `CrossrefMetadataProvider` +
+  `MockMetadataProvider`, sanitization, fixtures, tests.
+- `packages/database` service layer (createDraft…approveAndPublish, fail-closed)
+  + editor/public read models + workflow tests.
+- Admin UI (sign-in, dashboard, add-research, editor) + API routes; public
+  `/research/[id]`. `ADR-013`, docs 05/12/16/19 updated.
+- Real Supabase integration is a documented **pending gate** (`docs/19` §11).
+
 ## Next
 
-Milestone 3 — Manual Research MVP (admin auth, add-research via DOI, metadata
-retrieval, research editor, review queue, publish workflow, public detail page).
-Previously-planned Milestone 2 database work below is now delivered:
+Milestone 4 — Public Research Explorer (search, filters, sorting, research cards,
+conditions/interventions). Previously-planned Milestone 2 database work below is
+now delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See

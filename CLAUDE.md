@@ -12,12 +12,13 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**The architecture doc set is complete (Milestone 0), the repository foundation
-exists (Milestone 1), and the canonical database schema is in place
-(Milestone 2).** There is a runnable Astro app, a pnpm workspace, and versioned
-Supabase migrations with RLS + seed/fixtures, but **no product features yet** —
-no research CRUD, admin UI, search, or AI integration (those are Milestones 3+).
-Current layout:
+**Milestones 0–3 are delivered:** the architecture doc set (M0), the repository
+foundation (M1), the canonical database schema + RLS (M2), and the manual
+research MVP (M3 — Supabase auth, admin editor, DOI metadata via Crossref/mock,
+review→publish workflow, public `/research/[id]`). There is **no public
+search/explorer or AI integration yet** (M4+), and **real-Supabase integration
+is a documented pending gate** (`docs/19` §11) — the workflow and RLS are
+verified deterministically on PGlite. Current layout:
 
 ```text
 .
@@ -26,9 +27,10 @@ Current layout:
 ├── README.md · MANIFEST.md       # project readme · doc index
 ├── CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md · LICENSE (Apache-2.0)
 ├── package.json · pnpm-workspace.yaml · tsconfig.base.json · eslint.config.js
-├── apps/web/                     # Astro app (static-first + React islands)
+├── apps/web/                     # Astro hybrid app (static pages + SSR admin/api/detail)
 ├── packages/domain/              # portable, framework-free logic (DOI normalizer + tests)
-├── packages/database/            # schema mirror, migration runner, PGlite test harness, RLS tests
+├── packages/database/            # schema mirror, migrations, workflow service, PGlite RLS tests
+├── packages/metadata/            # bibliographic providers (Crossref + mock) + fixtures
 ├── supabase/                     # migrations/ (canonical schema) + seed/ (reference + demo fixtures)
 ├── prompts/ · scripts/           # placeholders for later milestones
 ├── .github/workflows/ci.yml      # install → lint → typecheck → test → build
@@ -38,8 +40,9 @@ Current layout:
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Still **no** research CRUD, admin UI, or AI wiring. Do not assume features exist
-— inspect first (`git status`, `ls`, read files) before acting.
+Still **no** public search/explorer or AI wiring, and no live Supabase. Do not
+assume features exist — inspect first (`git status`, `ls`, read files) before
+acting.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked

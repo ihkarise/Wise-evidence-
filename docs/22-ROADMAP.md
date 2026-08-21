@@ -36,13 +36,18 @@ tests (master prompt §80, `05`, `20`). Delivered: `supabase/migrations/0001`–
 migration runner, PGlite + Supabase-auth-shim harness, read-only data access),
 and schema + RLS test suites (ADR-012).
 
-# 5. Phase 3 — Manual Research MVP  ← current
+# 5. Phase 3 — Manual Research MVP  ✅ delivered
 
 Admin authentication, research creation, DOI input, metadata retrieval, research
 editor, classification fields, review queue, publish workflow, public detail
-page, audit trail (master prompt §81, `11` §2, `12`).
+page, audit trail (master prompt §81, `11` §2, `12`). Delivered: Supabase Auth +
+middleware, `packages/metadata` (Crossref + mock), the research workflow service
+(fail-closed publish; ADMIN-only publish/archive), admin editor + API routes,
+SSR `/research/[id]`, and 75 tests. Real-Supabase integration is a documented
+pending gate (`19` §11); the workflow + RLS are verified deterministically on
+PGlite (ADR-012).
 
-# 6. Phase 4 — Public Research Explorer
+# 6. Phase 4 — Public Research Explorer  ← current
 
 Homepage, search, research list, filters, sorting, research detail, DOI copy,
 source links, conditions, interventions, research cards (master prompt §82, `14`,
