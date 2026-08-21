@@ -268,3 +268,29 @@ auto-delete** a possibly-distinct paper on fuzzy match alone.
 
 Exact SQL types, migration files, seed content, RLS policy SQL, and search index
 configuration. Those are produced in Milestones 1–2 and governed by `19`/`20`.
+
+# 15. Milestone 2 Implementation Decisions
+
+The conceptual model above is realized in `supabase/migrations/` (the canonical
+schema) with these concrete decisions:
+
+- **Enums vs taxonomy tables.** Closed, spec-defined vocabularies are PostgreSQL
+  **enums** (outcome, confidence, quality assessment, criticism category/origin,
+  classification dimension, identifier type, lifecycle state, publication state,
+  review action, correction/import/AI status, app role). Admin-manageable,
+  growable taxonomy is stored in **tables** (`study_type`, `evidence_level`,
+  `condition`, `intervention`, `tag`) — because `06` §9 makes study-type and
+  evidence-level versioned and admin-managed, and conditions/interventions grow.
+- **Demo-data flag.** `research_study.is_demo boolean not null default false`
+  marks fixture/demo studies so they can never be mistaken for real research and
+  are excluded from public/statistical views (`17` §10).
+- **AI/human enforcement.** `ai_result` rows are immutable; a check constraint and
+  the `review` linkage keep an AI value from being written as a human
+  `final_value` without a review. Overrides retain both (§9).
+- **Authoritative schema + types.** The SQL migrations are the single source of
+  truth. `packages/database/src/types.ts` is a **hand-authored mirror**, marked as
+  derived, to be regenerated from real Supabase types once the Supabase CLI/type
+  workflow is introduced (ADR-012 records the testing/tooling boundary).
+- **Testing.** Migrations and RLS are executed against **PGlite** with a minimal
+  Supabase-compatible auth shim; Supabase PostgreSQL remains the authoritative
+  production database and final compatibility check (ADR-012, `20` §4a).

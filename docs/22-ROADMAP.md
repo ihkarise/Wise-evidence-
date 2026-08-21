@@ -28,12 +28,15 @@ config, Supabase connection strategy, CI, test runner, lint, type checking,
 island + Tailwind), `packages/domain` (`normalizeDoi` + tests), strict TS,
 ESLint, Prettier, Vitest, GitHub Actions CI, and the governance files.
 
-# 4. Phase 2 — Database Foundation  ← current
+# 4. Phase 2 — Database Foundation  ✅ delivered
 
 Migrations, core entities & relationships, indexes, RLS, seed data, database
-tests (master prompt §80, `05`, `20`).
+tests (master prompt §80, `05`, `20`). Delivered: `supabase/migrations/0001`–
+`0009`, reference seed + demo fixtures, `packages/database` (typed mirror,
+migration runner, PGlite + Supabase-auth-shim harness, read-only data access),
+and schema + RLS test suites (ADR-012).
 
-# 5. Phase 3 — Manual Research MVP
+# 5. Phase 3 — Manual Research MVP  ← current
 
 Admin authentication, research creation, DOI input, metadata retrieval, research
 editor, classification fields, review queue, publish workflow, public detail

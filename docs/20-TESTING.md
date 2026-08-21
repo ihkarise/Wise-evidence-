@@ -44,6 +44,38 @@ AI and external source connectors are mocked deterministically (`10` §14,
 `11` §4). No test hits a paid AI provider or a live external source. Fixtures
 back every mock (§6).
 
+# 4a. Database & RLS Tests (PGlite) — ADR-012
+
+Database and RLS tests run against **PGlite** (embedded PostgreSQL, in-process,
+no Docker/daemon), executing the **real SQL migrations** from
+`supabase/migrations/`. RLS is verified through PostgreSQL's genuine engine —
+`SET ROLE` / `SET LOCAL request.jwt.claims` and real policy evaluation — never a
+TypeScript re-implementation of RLS.
+
+A **minimal Supabase-compatible auth shim** (test-only) supplies exactly what
+Supabase provides in production and nothing more: the roles `anon`,
+`authenticated`, `service_role` (the last `BYPASSRLS`), an `auth` schema with
+`auth.uid()` reading `request.jwt.claims`, and the JWT-claims GUC. It is applied
+before the migrations; migrations therefore deploy to real Supabase unchanged.
+
+**Two environments, one authority:**
+
+- **PGlite** — deterministic, local, CI, fast, free — migration + RLS testing.
+- **Supabase PostgreSQL** — the real production environment and the authoritative
+  database; the **final integration/compatibility check**. A staging verification
+  path against actual Supabase is maintained for later milestones.
+
+If a required PostgreSQL/Supabase feature proves incompatible with PGlite, we
+**stop and report the exact incompatibility** rather than silently weakening a
+test.
+
+RLS tests must at least prove: (1) anon reads published research; (2) anon cannot
+read drafts; (3) anon cannot read AI results; (4) anon cannot read audit data;
+(5) a reviewer performs only permitted review operations; (6) a reviewer cannot
+perform admin-only operations; (7) service_role performs intended privileged
+operations; (8) one user's private data is not readable by another where
+applicable.
+
 # 5. DOI Normalization (test contract)
 
 Normalization must handle at least (master prompt §50):

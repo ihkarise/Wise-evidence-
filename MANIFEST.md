@@ -47,7 +47,7 @@ Architecture specifications (`docs/`):
 Architecture Decision Records (`docs/adr/`):
 
 - `README.md` (index + template)
-- `ADR-001-modular-monolith.md` … `ADR-011-licensing.md`
+- `ADR-001-modular-monolith.md` … `ADR-012-pglite-database-testing.md`
 
 Milestone 0 reports (`docs/reports/`):
 
@@ -68,7 +68,26 @@ The runnable foundation now lives alongside the docs:
 - Governance: `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`.
 
+## Database foundation (Milestone 2)
+
+- `supabase/migrations/0001_enums.sql` … `0009_rls.sql` — the canonical schema:
+  enums, identity + taxonomy, authors/journals/sources, the Study≠Publication
+  core, AI job/result, classification + criticism, review/import/audit, indexes
+  + full-text prep, and Row-Level Security.
+- `supabase/seed/0001_taxonomy.sql` (reference) + `0002_demo_fixtures.sql`
+  (clearly-labeled demo data covering the ten fixture scenarios).
+- `packages/database/` — typed schema mirror (`src/types.ts`), the migration
+  runner, the PGlite + Supabase-auth-shim test harness (`src/testing/`),
+  identifier canonicalization, read-only data-access helpers, and the schema +
+  RLS test suites.
+- `docs/adr/ADR-012-pglite-database-testing.md` records the testing boundary
+  (PGlite for CI, Supabase for production).
+
 ## Next
+
+Milestone 3 — Manual Research MVP (admin auth, add-research via DOI, metadata
+retrieval, research editor, review queue, publish workflow, public detail page).
+Previously-planned Milestone 2 database work below is now delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See

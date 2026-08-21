@@ -5,11 +5,10 @@ This directory will hold the WiseEvidence database configuration: **migrations**
 in `docs/03-... `→ see `docs/04-SYSTEM-ARCHITECTURE.md` §12, `docs/05-DATABASE-ARCHITECTURE.md`,
 `docs/16-SECURITY.md`, and ADR-002 / ADR-003.
 
-## Status: connection strategy only (Milestone 1)
+## Status: schema delivered (Milestone 2)
 
-There is **no database schema, migration, RLS policy, or seed data yet** — that
-is Milestone 2 (Database Foundation, see `docs/22-ROADMAP.md`). Milestone 1
-establishes only the *connection strategy*:
+The canonical schema now lives in `migrations/` and reference/demo data in
+`seed/`. Connection strategy (Milestone 1) remains:
 
 - The frontend reads **only** the public variables `PUBLIC_SUPABASE_URL` and
   `PUBLIC_SUPABASE_ANON_KEY` (see `.env.example`).
@@ -18,20 +17,31 @@ establishes only the *connection strategy*:
   client-side code (`docs/16-SECURITY.md` §5). Server-only access will be added
   in a separate server module in a later milestone.
 
-## Principles carried into Milestone 2
-
-- **PostgreSQL is authoritative**; all schema changes go through
-  version-controlled migrations here — never manual dashboard edits
-  (ADR-002, `docs/17-DATA-GOVERNANCE.md` §2).
-- **Row-Level Security** is the enforcement boundary: the public role reads only
-  `PUBLISHED` records; drafts, review queue, AI results, and audit are restricted
-  (`docs/05` §13, `docs/16` §4).
-
-## Planned layout (Milestone 2)
+## Layout
 
 ```text
 supabase/
-├── migrations/   # version-controlled schema changes
-├── seed/         # clearly-labeled demo/fixture data (never real research)
-└── functions/    # Edge Functions, only when justified
+├── migrations/   # 0001_enums … 0009_rls — the canonical, version-controlled schema
+├── seed/         # 0001_taxonomy (reference) + 0002_demo_fixtures (clearly-labeled demo)
+└── functions/    # Edge Functions — only when justified (not yet present)
 ```
+
+## Principles (enforced by the migrations)
+
+- **PostgreSQL is authoritative**; all schema changes go through the
+  version-controlled migrations here — never manual dashboard edits
+  (ADR-002, `docs/17-DATA-GOVERNANCE.md` §2).
+- **Row-Level Security** is the enforcement boundary: the public/anon role reads
+  only `PUBLISHED` records; drafts, review queue, AI results, imports, and audit
+  are restricted to reviewer/admin (`docs/05` §13, `docs/16` §4, `0009_rls.sql`).
+- **Study ≠ Publication**, **AI suggestion ≠ human final**, **outcome ≠ quality ≠
+  confidence ≠ criticism** are structural, not conventions.
+
+## Running migrations & tests
+
+Production is **Supabase PostgreSQL**. Locally and in CI the same SQL migrations
+run against **PGlite** with a minimal Supabase-compatible auth shim (ADR-012,
+`docs/20` §4a). See `packages/database` for the migration runner and PGlite test
+harness. A staging verification path against real Supabase is maintained for
+later milestones. The Supabase CLI (`supabase db push`) will apply these same
+files to a real project once wired.

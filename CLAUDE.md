@@ -12,10 +12,12 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**The architecture doc set is complete (Milestone 0) and the repository
-foundation now exists (Milestone 1).** There is a runnable Astro app and a pnpm
-workspace, but **no product features yet** — no database schema, research CRUD,
-search, or AI integration (those are Milestones 2+). Current layout:
+**The architecture doc set is complete (Milestone 0), the repository foundation
+exists (Milestone 1), and the canonical database schema is in place
+(Milestone 2).** There is a runnable Astro app, a pnpm workspace, and versioned
+Supabase migrations with RLS + seed/fixtures, but **no product features yet** —
+no research CRUD, admin UI, search, or AI integration (those are Milestones 3+).
+Current layout:
 
 ```text
 .
@@ -26,7 +28,8 @@ search, or AI integration (those are Milestones 2+). Current layout:
 ├── package.json · pnpm-workspace.yaml · tsconfig.base.json · eslint.config.js
 ├── apps/web/                     # Astro app (static-first + React islands)
 ├── packages/domain/              # portable, framework-free logic (DOI normalizer + tests)
-├── supabase/                     # connection strategy only; schema is Milestone 2
+├── packages/database/            # schema mirror, migration runner, PGlite test harness, RLS tests
+├── supabase/                     # migrations/ (canonical schema) + seed/ (reference + demo fixtures)
 ├── prompts/ · scripts/           # placeholders for later milestones
 ├── .github/workflows/ci.yml      # install → lint → typecheck → test → build
 └── docs/
@@ -35,8 +38,8 @@ search, or AI integration (those are Milestones 2+). Current layout:
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Still **no** database, migrations, or AI wiring. Do not assume features exist —
-inspect first (`git status`, `ls`, read files) before acting.
+Still **no** research CRUD, admin UI, or AI wiring. Do not assume features exist
+— inspect first (`git status`, `ls`, read files) before acting.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
