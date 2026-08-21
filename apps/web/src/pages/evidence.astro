@@ -1,0 +1,77 @@
+---
+export const prerender = false;
+import BaseLayout from '../layouts/BaseLayout.astro';
+import DistributionChart from '../components/DistributionChart.astro';
+import { getEvidenceLandscape, type EvidenceLandscape } from '@wise-evidence/database';
+import { withActor, isDbConfigured } from '../server/db.ts';
+
+let land: EvidenceLandscape | null = null;
+let state: 'ok' | 'pending' | 'error' = isDbConfigured() ? 'ok' : 'pending';
+if (state === 'ok') {
+  try {
+    land = await withActor({ role: 'anon', sub: null }, (exec) => getEvidenceLandscape(exec));
+  } catch {
+    state = 'error';
+  }
+}
+
+const levelItems = land
+  ? [
+      ...land.byEvidenceLevel.map((l) => ({ label: `${l.label}`, value: l.studies, href: `/research?evidenceLevel=${l.code}` })),
+      { label: 'Unclassified', value: land.unclassifiedEvidenceLevel },
+    ]
+  : [];
+const typeItems = land
+  ? [
+      ...land.byStudyType.map((t) => ({ label: t.label, value: t.studies, href: `/research?studyType=${t.code}` })),
+      { label: 'Unclassified', value: land.unclassifiedStudyType },
+    ]
+  : [];
+const canonical = new URL('/evidence', Astro.url).toString();
+---
+
+<BaseLayout title="Evidence landscape — WiseEvidence" canonical={canonical}
+  description="How published homeopathy research studies are distributed by evidence level and study type. Position is for navigation, not a claim of truth or effectiveness.">
+  <h1 class="text-3xl font-bold tracking-tight">Evidence landscape</h1>
+
+  {state === 'pending' && (
+    <p class="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+      Research data is not available in this environment yet (Supabase integration pending — docs/19 §11).
+    </p>
+  )}
+  {state === 'error' && (
+    <p class="mt-6 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+      Something went wrong loading the evidence landscape. Please try again.
+    </p>
+  )}
+
+  {land && (
+    <>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        {land.totalStudies} research {land.totalStudies === 1 ? 'study' : 'studies'} across {land.totalPublications} {land.totalPublications === 1 ? 'publication' : 'publications'}.
+        A study may have several publications; each is counted once as a study.
+      </p>
+
+      <p class="mt-4 rounded-md bg-slate-100 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+        Studies are organized by evidence level for navigation and comparison.
+        Position does <strong>not</strong> indicate positivity, negativity, truth,
+        or treatment effectiveness. Evidence level, reported outcome, evidence
+        quality, and criticism are distinct — see the
+        <a href="/statistics" class="underline">statistics</a> and
+        <a href="/methodology" class="underline">methodology</a>.
+      </p>
+
+      <DistributionChart
+        title="Evidence pyramid — studies by evidence level"
+        caption="Study count at each evidence level (navigation ordering, not a ranking of validity). Select a level to browse those studies."
+        items={levelItems}
+      />
+
+      <DistributionChart
+        title="Study type (separate facet)"
+        caption="Study type is related to but distinct from evidence level; it is not the same concept."
+        items={typeItems}
+      />
+    </>
+  )}
+</BaseLayout>

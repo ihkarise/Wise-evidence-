@@ -104,6 +104,21 @@ labeled chips — **no combined score, no efficacy meter, no evidence pyramid**
 (those are later, methodology-gated). Demo records are badged `DEMO`. Canonical
 URL is `/research` (filter permutations are not indexed).
 
+# 10b. Evidence Visualization (M5)
+
+`/evidence` (evidence pyramid — studies by evidence level, plus a separate
+study-type facet) and `/statistics` (reported-outcome, evidence-quality, and
+criticism distributions) are server-rendered from study-based aggregates
+(`getEvidenceLandscape`, anon RLS, PUBLISHED-only). They are governed by
+`docs/24-EVIDENCE-VISUALIZATION-METHODOLOGY.md` and ADR-015: study is the unit
+(`count(distinct study_id)`; publications counted separately and labelled),
+distributions not conclusions, **valence-neutral** encoding (single neutral hue;
+meaning in labels), explicit "Unclassified" buckets, and **no** efficacy score,
+balance, or weighting. Every chart (`DistributionChart.astro`) carries the value
+and label as text with a `<table>` equivalent — no information lives only in
+geometry or colour. Evidence-level segments link into the M4 explorer
+(`/research?evidenceLevel=…`).
+
 # 11. Copy DOI & Source
 
 Copy-DOI is a first-class island action (`02` §MVP, `03` §6). Every published

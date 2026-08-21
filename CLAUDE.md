@@ -12,15 +12,14 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**Milestones 0–4 are delivered:** the architecture doc set (M0), the repository
+**Milestones 0–5 are delivered:** the architecture doc set (M0), the repository
 foundation (M1), the canonical database schema + RLS (M2), the manual research
-MVP (M3 — Supabase auth, admin editor, DOI metadata via Crossref/mock,
-review→publish workflow, public `/research/[id]`), and the public research
-explorer (M4 — `/research` PostgreSQL search/filter/sort/paginate, ADR-014).
-There is **no evidence-visualization or AI integration yet** (M5+), and
+MVP (M3), the public research explorer (M4 — `/research`, ADR-014), and evidence
+visualization (M5 — `/evidence` pyramid + `/statistics` distributions, study-based
+aggregates, ADR-015/`docs/24`). There is **no AI integration yet** (M6+), and
 **real-Supabase integration is a documented pending gate** (`docs/19` §11) — the
-workflow, RLS, and explorer are verified deterministically on PGlite. Current
-layout:
+workflow, RLS, explorer, and landscape are verified deterministically on PGlite.
+Current layout:
 
 ```text
 .
@@ -42,9 +41,8 @@ layout:
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Still **no** evidence-visualization or AI wiring, and no live Supabase. Do not
-assume features exist — inspect first (`git status`, `ls`, read files) before
-acting.
+Still **no** AI wiring, and no live Supabase. Do not assume features exist —
+inspect first (`git status`, `ls`, read files) before acting.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked

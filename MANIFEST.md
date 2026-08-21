@@ -107,11 +107,21 @@ The runnable foundation now lives alongside the docs:
   landing hero search + Research nav.
 - `docs/adr/ADR-014-postgres-explorer-search.md`; docs 14/15/19/20 updated.
 
+## Evidence Visualization (Milestone 5)
+
+- `docs/24-EVIDENCE-VISUALIZATION-METHODOLOGY.md` + `docs/adr/ADR-015-evidence-visualization-honesty.md`
+  (study-based counting, distributions-not-conclusions, valence-neutral, no
+  efficacy/balance/weighting).
+- `packages/database/src/landscape.ts` — `getEvidenceLandscape` (study-based
+  aggregates under anon RLS); `landscape.test.ts` (12).
+- `apps/web/src/pages/{evidence,statistics}.astro` + `components/DistributionChart.astro`
+  (accessible CSS bars + table equivalents); Evidence/Statistics nav links.
+
 ## Next
 
-Milestone 5 — Evidence Visualization (evidence pyramid, outcome distribution,
-quality/criticism displays, explore pages) — methodology-gated, not started.
-Previously-planned Milestone 2 database work below is now delivered:
+Milestone 6 — AI Enrichment (provider config, cheap-model strategy, prompt
+versioning, cache, summaries, classification suggestions, human review) — not
+started. Previously-planned Milestone 2 database work below is now delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See

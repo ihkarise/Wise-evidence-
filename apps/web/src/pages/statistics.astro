@@ -1,0 +1,88 @@
+---
+export const prerender = false;
+import BaseLayout from '../layouts/BaseLayout.astro';
+import DistributionChart from '../components/DistributionChart.astro';
+import { getEvidenceLandscape, type EvidenceLandscape } from '@wise-evidence/database';
+import { withActor, isDbConfigured } from '../server/db.ts';
+
+let land: EvidenceLandscape | null = null;
+let state: 'ok' | 'pending' | 'error' = isDbConfigured() ? 'ok' : 'pending';
+if (state === 'ok') {
+  try {
+    land = await withActor({ role: 'anon', sub: null }, (exec) => getEvidenceLandscape(exec));
+  } catch {
+    state = 'error';
+  }
+}
+
+const OUTCOME_LABELS: Record<string, string> = {
+  STRONG_POSITIVE: 'Strong Positive', POSITIVE: 'Positive', LEANING_POSITIVE: 'Mixed / Leaning Positive',
+  NEUTRAL_INCONCLUSIVE: 'Neutral / Inconclusive', LEANING_NEGATIVE: 'Mixed / Leaning Negative',
+  NEGATIVE: 'Negative', STRONG_NEGATIVE: 'Strong Negative',
+};
+const outcomeItems = land
+  ? [
+      ...land.outcomeDistribution.map((o) => ({ label: OUTCOME_LABELS[o.value] ?? o.value, value: o.studies, href: `/research?outcome=${o.value}` })),
+      { label: 'Unclassified', value: land.unclassifiedOutcome },
+    ]
+  : [];
+const qualityItems = land
+  ? [...land.qualityDistribution.map((q) => ({ label: q.value, value: q.studies })), { label: 'Unclassified', value: land.unclassifiedQuality }]
+  : [];
+const criticismItems = land ? land.criticismByCategory.map((c) => ({ label: c.category, value: c.studies })) : [];
+const canonical = new URL('/statistics', Astro.url).toString();
+---
+
+<BaseLayout title="Statistics — WiseEvidence" canonical={canonical}
+  description="Distributions of reported outcome, evidence quality, and criticism across published homeopathy research studies. Descriptive counts only — not a measure of effectiveness.">
+  <h1 class="text-3xl font-bold tracking-tight">Statistics</h1>
+
+  {state === 'pending' && (
+    <p class="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+      Research data is not available in this environment yet (Supabase integration pending — docs/19 §11).
+    </p>
+  )}
+  {state === 'error' && (
+    <p class="mt-6 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+      Something went wrong loading statistics. Please try again.
+    </p>
+  )}
+
+  {land && (
+    <>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        Based on {land.totalStudies} research {land.totalStudies === 1 ? 'study' : 'studies'} across {land.totalPublications} {land.totalPublications === 1 ? 'publication' : 'publications'}.
+        Counts are per research study. Demo records are included and labeled on each research page.
+      </p>
+
+      <p class="mt-4 rounded-md bg-slate-100 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+        These are descriptive counts of what the indexed studies reported and how
+        they were assessed — <strong>not</strong> a measure of effectiveness.
+        WiseEvidence shows no efficacy score, no positive-vs-negative balance, and
+        no weighting. Reported outcome, evidence quality, and criticism are
+        independent dimensions. More positive studies does not mean “proven”; more
+        negative studies does not mean “disproven.” See the
+        <a href="/methodology" class="underline">methodology</a>.
+      </p>
+
+      <DistributionChart
+        title="Reported outcome"
+        caption="How many studies reported each outcome category. Neutral labels; colour carries no meaning. Not collapsed into positive-vs-negative and not an efficacy measure."
+        items={outcomeItems}
+      />
+
+      <DistributionChart
+        title="Evidence quality"
+        caption="Methodological quality, shown independently of outcome. A positive study can be low quality and a negative study high quality — quality ≠ outcome."
+        items={qualityItems}
+      />
+
+      <DistributionChart
+        title="Criticism by category"
+        caption="Studies with recorded criticism, by category. Criticism ≠ negative outcome: a study may report a positive outcome and still carry criticism."
+        items={criticismItems}
+        unit="studies with this criticism"
+      />
+    </>
+  )}
+</BaseLayout>
