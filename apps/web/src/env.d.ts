@@ -10,3 +10,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare namespace App {
+  interface Locals {
+    /** Authenticated staff (REVIEWER/ADMIN), or null. Set by middleware. */
+    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+    staff: import('./server/auth').StaffContext | null;
+  }
+}

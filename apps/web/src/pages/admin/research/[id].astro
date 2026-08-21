@@ -1,0 +1,193 @@
+---
+export const prerender = false;
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getStudyForEditor, type EditorStudy } from '@wise-evidence/database';
+import { withActor } from '../../../server/db.ts';
+
+const staff = Astro.locals.staff!;
+const { id } = Astro.params;
+
+let study: EditorStudy | null = null;
+let studyTypes: { code: string; label: string }[] = [];
+let evidenceLevels: { code: string; label: string }[] = [];
+let pending = false;
+try {
+  const loaded = await withActor({ role: 'authenticated', sub: staff.sub }, async (exec) => {
+    const s = id ? await getStudyForEditor(exec, id) : null;
+    const st = (await exec.query<{ code: string; label: string }>(`select code, label from study_type order by hierarchy_position`)).rows;
+    const el = (await exec.query<{ code: string; label: string }>(`select code, label from evidence_level order by pyramid_rank`)).rows;
+    return { s, st, el };
+  });
+  study = loaded.s;
+  studyTypes = loaded.st;
+  evidenceLevels = loaded.el;
+} catch {
+  pending = true;
+}
+
+const cls = (d: string) => study?.classifications.find((c) => c.dimension === d)?.value ?? '';
+const OUTCOMES = ['STRONG_POSITIVE', 'POSITIVE', 'LEANING_POSITIVE', 'NEUTRAL_INCONCLUSIVE', 'LEANING_NEGATIVE', 'NEGATIVE', 'STRONG_NEGATIVE'];
+const QUALITY = ['ADEQUATE', 'UNCLEAR', 'INADEQUATE', 'NOT_APPLICABLE'];
+const CONFIDENCE = ['LOW', 'MODERATE', 'HIGH'];
+const SUBJECTS = ['HUMAN', 'ANIMAL', 'IN_VITRO', 'MIXED', 'NOT_APPLICABLE'];
+const canPublish = staff.role === 'ADMIN';
+---
+
+<BaseLayout title="Edit research — WiseEvidence admin">
+  {pending && <p class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">Database not configured (Supabase pending gate — docs/19 §11).</p>}
+  {!pending && !study && <p>Study not found. <a class="underline" href="/admin">Back</a>.</p>}
+
+  {study && (
+    <div data-study-id={study.id}>
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Edit research</h1>
+        <span class="text-sm text-slate-500">{study.lifecycle_state}{study.is_demo ? ' · DEMO' : ''}</span>
+      </div>
+      {study.is_demo && <p class="mt-2 text-sm text-red-600">This is demo data and cannot be published.</p>}
+
+      <form id="editor" class="mt-6 max-w-2xl space-y-6">
+        <fieldset class="space-y-3">
+          <legend class="text-sm font-semibold text-slate-500">Identity & study</legend>
+          <label class="block text-sm">Title
+            <input name="title" value={study.title} class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+          </label>
+          <label class="block text-sm">Summary (human-authored; not an abstract, never AI)
+            <textarea name="summary" rows="3" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">{study.summary ?? ''}</textarea>
+          </label>
+          <label class="block text-sm">Study type
+            <select name="studyTypeCode" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {studyTypes.map((t) => <option value={t.code} selected={study!.study_type_code === t.code}>{t.label}</option>)}
+            </select>
+          </label>
+          <label class="block text-sm">Subject
+            <select name="subject" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {SUBJECTS.map((s) => <option value={s} selected={study!.subject === s}>{s}</option>)}
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="grid grid-cols-2 gap-3">
+          <legend class="col-span-2 text-sm font-semibold text-slate-500">Classification — separate dimensions (no combined score)</legend>
+          <label class="block text-sm">Outcome
+            <select name="OUTCOME" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {OUTCOMES.map((o) => <option value={o} selected={cls('OUTCOME') === o}>{o}</option>)}
+            </select>
+          </label>
+          <label class="block text-sm">Confidence
+            <select name="CONFIDENCE" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {CONFIDENCE.map((c) => <option value={c} selected={cls('CONFIDENCE') === c}>{c}</option>)}
+            </select>
+          </label>
+          <label class="block text-sm">Evidence quality
+            <select name="QUALITY" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {QUALITY.map((q) => <option value={q} selected={cls('QUALITY') === q}>{q}</option>)}
+            </select>
+          </label>
+          <label class="block text-sm">Evidence level
+            <select name="EVIDENCE_LEVEL" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">—</option>
+              {evidenceLevels.map((e) => <option value={e.code} selected={cls('EVIDENCE_LEVEL') === e.code}>{e.label}</option>)}
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="space-y-2">
+          <legend class="text-sm font-semibold text-slate-500">Add criticism (separate from outcome)</legend>
+          <div class="flex flex-wrap gap-2">
+            <select name="critCategory" class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Category…</option>
+              {['METHODOLOGY','RANDOMIZATION','BLINDING','SAMPLE_SIZE','STATISTICS','CONTROLS','REPLICATION','PUBLICATION_BIAS','REPORTING','INTERPRETATION','GENERALIZABILITY','OTHER'].map((c) => <option value={c}>{c}</option>)}
+            </select>
+            <select name="critOrigin" class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900">
+              <option value="AUTHOR_REPORTED">AUTHOR_REPORTED</option>
+              <option value="REVIEWER_ASSESSED">REVIEWER_ASSESSED</option>
+              <option value="EXTERNAL_PUBLICATION">EXTERNAL_PUBLICATION</option>
+            </select>
+            <input name="critBody" placeholder="Criticism note" class="flex-1 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900" />
+          </div>
+          {study.criticisms.length > 0 && (
+            <ul class="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
+              {study.criticisms.map((c) => <li>• {c.category} ({c.origin}): {c.body}</li>)}
+            </ul>
+          )}
+        </fieldset>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Save</button>
+          <button type="button" data-action="submit" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">Submit for review</button>
+          <button type="button" data-action="reject" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">Reject</button>
+          {canPublish && <button type="button" data-action="approve" class="rounded-md bg-green-700 px-3 py-2 text-sm font-medium text-white">Approve & publish</button>}
+          {canPublish && <button type="button" data-action="archive" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">Archive</button>}
+        </div>
+        <p id="msg" class="text-sm" aria-live="polite"></p>
+      </form>
+    </div>
+  )}
+
+  <script>
+    const root = document.querySelector('[data-study-id]') as HTMLElement | null;
+    const form = document.getElementById('editor') as HTMLFormElement | null;
+    const msg = document.getElementById('msg');
+    if (root && form) {
+      const studyId = root.dataset.studyId!;
+      const val = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? '';
+
+      const save = async () => {
+        const dims = ['OUTCOME', 'CONFIDENCE', 'QUALITY', 'EVIDENCE_LEVEL'];
+        const classifications = dims
+          .filter((d) => val(d))
+          .map((d) => ({ dimension: d, value: val(d) }));
+        const body: Record<string, unknown> = {
+          patch: {
+            title: val('title'),
+            summary: val('summary'),
+            studyTypeCode: val('studyTypeCode') || null,
+            subject: val('subject') || null,
+          },
+          classifications,
+        };
+        if (val('critCategory') && val('critBody')) {
+          body.criticism = { category: val('critCategory'), origin: val('critOrigin'), body: val('critBody') };
+        }
+        const res = await fetch(`/api/admin/research/${studyId}/save`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (msg) msg.textContent = data.ok ? 'Saved.' : `Error: ${data.error}`;
+        return data.ok;
+      };
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await save();
+      });
+
+      form.querySelectorAll('[data-action]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const action = (btn as HTMLElement).dataset.action!;
+          if (msg) msg.textContent = 'Saving…';
+          if (!(await save())) return;
+          const res = await fetch(`/api/admin/research/${studyId}/transition`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ action }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            if (msg) msg.textContent = `Error: ${data.error}`;
+            return;
+          }
+          if (action === 'approve') window.location.href = `/research/${studyId}`;
+          else window.location.href = '/admin';
+        });
+      });
+    }
+  </script>
+</BaseLayout>

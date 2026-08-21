@@ -1,0 +1,137 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CopyDoiButton from '../../components/CopyDoiButton.tsx';
+import { getPublishedStudyDetail, type PublicResearchDetail } from '@wise-evidence/database';
+import { withActor, isDbConfigured } from '../../server/db.ts';
+
+const { id } = Astro.params;
+
+let detail: PublicResearchDetail | null = null;
+let configured = isDbConfigured();
+if (configured && id) {
+  try {
+    // Anonymous/public read: RLS returns PUBLISHED records only. Drafts, AI,
+    // reviews, corrections, import candidates, and audit can never appear here.
+    detail = await withActor({ role: 'anon', sub: null }, (exec) => getPublishedStudyDetail(exec, id));
+  } catch {
+    configured = false;
+  }
+}
+
+if (configured && !detail) {
+  Astro.response.status = 404;
+}
+
+const byDim = (d: string) => detail?.classifications.find((c) => c.dimension === d)?.value ?? '—';
+const outcomeLabels: Record<string, string> = {
+  STRONG_POSITIVE: 'Strong Positive',
+  POSITIVE: 'Positive',
+  LEANING_POSITIVE: 'Mixed / Leaning Positive',
+  NEUTRAL_INCONCLUSIVE: 'Neutral / Inconclusive',
+  LEANING_NEGATIVE: 'Mixed / Leaning Negative',
+  NEGATIVE: 'Negative',
+  STRONG_NEGATIVE: 'Strong Negative',
+};
+---
+
+<BaseLayout title={detail ? `${detail.title} — WiseEvidence` : 'Research — WiseEvidence'}>
+  {!configured && (
+    <p class="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+      Research data is not available in this environment yet (Supabase integration
+      pending — see docs/19 §11).
+    </p>
+  )}
+
+  {configured && !detail && (
+    <section>
+      <h1 class="text-2xl font-bold">Research not found</h1>
+      <p class="mt-2 text-slate-600 dark:text-slate-300">
+        This record does not exist or is not published. <a href="/" class="underline">Go home</a>.
+      </p>
+    </section>
+  )}
+
+  {detail && (
+    <article>
+      <p class="text-xs uppercase tracking-wide text-slate-500">Research record</p>
+      <h1 class="mt-1 text-3xl font-bold tracking-tight">{detail.title}</h1>
+
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        {detail.authors.length > 0 && <span>{detail.authors.join(', ')}. </span>}
+        {detail.journal_name && <em>{detail.journal_name}. </em>}
+        {detail.publication_date && <span>{detail.publication_date}.</span>}
+      </p>
+
+      <div class="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        {detail.doi && (
+          <span class="inline-flex items-center gap-2">
+            DOI: <code>{detail.doi}</code>
+            <CopyDoiButton doi={detail.doi} client:load />
+            <a class="underline" href={`https://doi.org/${detail.doi}`} rel="noopener noreferrer" target="_blank">Open source</a>
+          </span>
+        )}
+        {!detail.doi && detail.url && (
+          <a class="underline" href={detail.url} rel="noopener noreferrer" target="_blank">Open source</a>
+        )}
+      </div>
+
+      <!-- Separate dimensions, shown separately and never combined into one score. -->
+      <section class="mt-8 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+          <h2 class="text-sm font-semibold text-slate-500">Reported outcome</h2>
+          <p class="mt-1 text-lg">{outcomeLabels[byDim('OUTCOME')] ?? byDim('OUTCOME')}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+          <h2 class="text-sm font-semibold text-slate-500">Evidence quality</h2>
+          <p class="mt-1 text-lg">{byDim('QUALITY')}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+          <h2 class="text-sm font-semibold text-slate-500">Confidence</h2>
+          <p class="mt-1 text-lg">{byDim('CONFIDENCE')}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+          <h2 class="text-sm font-semibold text-slate-500">Evidence level / study type</h2>
+          <p class="mt-1 text-lg">{byDim('EVIDENCE_LEVEL')} · {detail.study_type_code ?? '—'}</p>
+        </div>
+      </section>
+
+      {detail.summary && (
+        <section class="mt-8">
+          <h2 class="text-xl font-semibold">Summary</h2>
+          <p class="mt-2 text-slate-700 dark:text-slate-200">{detail.summary}</p>
+        </section>
+      )}
+
+      {(detail.conditions.length > 0 || detail.interventions.length > 0) && (
+        <section class="mt-6 text-sm">
+          {detail.conditions.length > 0 && <p><strong>Conditions:</strong> {detail.conditions.map((c) => c.name).join(', ')}</p>}
+          {detail.interventions.length > 0 && <p class="mt-1"><strong>Interventions:</strong> {detail.interventions.map((i) => i.name).join(', ')}</p>}
+        </section>
+      )}
+
+      {detail.criticisms.length > 0 && (
+        <section class="mt-8">
+          <h2 class="text-xl font-semibold">Criticism</h2>
+          <p class="mt-1 text-xs text-slate-500">Criticism is a separate dimension — not a negative outcome.</p>
+          <ul class="mt-3 space-y-2">
+            {detail.criticisms.map((c) => (
+              <li class="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800">
+                <span class="font-medium">{c.category}</span>
+                <span class="text-slate-500"> · {c.origin}</span>
+                <p class="mt-1 text-slate-700 dark:text-slate-200">{c.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <p class="mt-10 rounded-md bg-slate-100 p-4 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+        These labels are a structured interpretation of what this research reported.
+        They are <strong>not</strong> a claim of scientific proof, and WiseEvidence
+        does not present an overall efficacy score. Outcome, evidence quality,
+        confidence, and criticism are distinct and shown separately.
+      </p>
+    </article>
+  )}
+</BaseLayout>

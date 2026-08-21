@@ -1,0 +1,94 @@
+---
+export const prerender = false;
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+const staff = Astro.locals.staff!;
+---
+
+<BaseLayout title="Add research — WiseEvidence admin">
+  <h1 class="text-2xl font-bold">Add research</h1>
+  <p class="mt-1 text-sm text-slate-500">
+    Enter a DOI or URL and (optionally) fetch bibliographic metadata to prefill.
+    Metadata is a suggestion — you remain responsible for the final record.
+    Signed in as {staff.role}.
+  </p>
+
+  <form id="new" class="mt-6 max-w-xl space-y-3">
+    <div class="flex gap-2">
+      <label class="flex-1 text-sm">DOI
+        <input name="doi" placeholder="10.1234/abcd" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+      </label>
+      <button type="button" id="fetch" class="mt-6 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">Fetch metadata</button>
+    </div>
+    <label class="block text-sm">Source URL
+      <input name="url" placeholder="https://…" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+    </label>
+    <label class="block text-sm">Title
+      <input name="title" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+    </label>
+    <label class="block text-sm">Journal / source name
+      <input name="sourceName" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+    </label>
+    <label class="block text-sm">Publication date
+      <input name="publicationDate" placeholder="YYYY-MM-DD" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+    </label>
+    <label class="block text-sm">Abstract (where permitted)
+      <textarea name="abstract" rows="4" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"></textarea>
+    </label>
+    <button type="submit" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Create draft</button>
+    <p id="msg" class="text-sm" aria-live="polite"></p>
+  </form>
+
+  <script>
+    const form = document.getElementById('new') as HTMLFormElement;
+    const msg = document.getElementById('msg');
+    const val = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | HTMLTextAreaElement | null)?.value ?? '';
+    const set = (n: string, v: string) => {
+      const el = form.elements.namedItem(n) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (el && v) el.value = v;
+    };
+
+    document.getElementById('fetch')?.addEventListener('click', async () => {
+      if (msg) msg.textContent = 'Fetching…';
+      const res = await fetch('/api/admin/metadata', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ doi: val('doi') }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        if (msg) msg.textContent = `Metadata: ${data.error ?? 'unavailable'} (you can still enter it manually).`;
+        return;
+      }
+      const m = data.metadata;
+      set('title', m.title ?? '');
+      set('sourceName', m.journal ?? '');
+      set('publicationDate', m.publicationDate ?? '');
+      if (m.url) set('url', m.url);
+      if (msg) msg.textContent = 'Metadata loaded (review and edit before saving).';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (msg) msg.textContent = 'Creating…';
+      const res = await fetch('/api/admin/research/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: val('title'),
+          doi: val('doi') || undefined,
+          url: val('url') || undefined,
+          sourceName: val('sourceName') || undefined,
+          sourceUrl: val('url') || undefined,
+          abstract: val('abstract') || undefined,
+          publicationDate: val('publicationDate') || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        if (msg) msg.textContent = `Error: ${data.error ?? 'could not create'}`;
+        return;
+      }
+      window.location.href = `/admin/research/${data.studyId}`;
+    });
+  </script>
+</BaseLayout>

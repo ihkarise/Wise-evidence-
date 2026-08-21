@@ -1,0 +1,49 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const configured = Boolean(import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+---
+
+<BaseLayout title="Sign in — WiseEvidence admin">
+  <section class="max-w-sm">
+    <h1 class="text-2xl font-bold">Staff sign in</h1>
+    {!configured && (
+      <p class="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+        Supabase authentication is not configured in this environment (pending gate — docs/19 §11).
+      </p>
+    )}
+    <form id="signin" class="mt-4 space-y-3">
+      <label class="block text-sm">Email
+        <input name="email" type="email" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+      </label>
+      <label class="block text-sm">Password
+        <input name="password" type="password" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+      </label>
+      <button type="submit" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Sign in</button>
+      <p id="err" class="text-sm text-red-600" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <script>
+    import { getPublicSupabaseClient, isSupabaseConfigured } from '../../lib/supabase.ts';
+    const form = document.getElementById('signin') as HTMLFormElement | null;
+    const err = document.getElementById('err');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!isSupabaseConfigured()) {
+        if (err) err.textContent = 'Supabase is not configured in this environment.';
+        return;
+      }
+      const data = new FormData(form);
+      const { error } = await getPublicSupabaseClient().auth.signInWithPassword({
+        email: String(data.get('email')),
+        password: String(data.get('password')),
+      });
+      if (error) {
+        if (err) err.textContent = error.message;
+        return;
+      }
+      window.location.href = '/admin';
+    });
+  </script>
+</BaseLayout>

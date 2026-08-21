@@ -12,11 +12,16 @@
     "typecheck": "astro check"
   },
   "dependencies": {
+    "@astrojs/node": "^9.1.0",
     "@astrojs/react": "^4.2.0",
+    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@wise-evidence/database": "workspace:*",
     "@wise-evidence/domain": "workspace:*",
+    "@wise-evidence/metadata": "workspace:*",
     "astro": "^5.2.0",
+    "postgres": "^3.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0"
