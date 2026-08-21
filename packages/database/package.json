@@ -1,0 +1,25 @@
+{
+  "name": "@wise-evidence/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Database access layer: migration runner, PGlite test harness, and typed schema mirror for WiseEvidence.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.5",
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
