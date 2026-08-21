@@ -15,7 +15,9 @@ export const LIMITS = {
 } as const;
 
 // Control characters (C0 range U+0000–U+001F and DEL U+007F). Built from escape
-// sequences so no literal control byte appears in source.
+// sequences so no literal control byte appears in source. Matching control chars
+// is the intent here (we strip them), so no-control-regex is disabled.
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g');
 
 export function sanitizeString(input: unknown, max: number): string | null {
