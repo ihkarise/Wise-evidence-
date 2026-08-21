@@ -91,6 +91,19 @@ Public entities carry canonical URL, title, description, Open Graph, structured
 data where appropriate, and sitemap inclusion (`03` §25, master prompt §56). Do
 not mass-generate thin pages purely for SEO (master prompt §56).
 
+# 10a. Public Explorer (M4)
+
+The `/research` explorer (`apps/web/src/pages/research/index.astro`) is
+server-rendered with a URL-persistent GET form: search box, filter controls
+populated from DB facets (study type, evidence level, reported outcome, quality,
+condition, intervention, year range), sort, result count, `ResearchCard`s, and
+pagination. Filters live in the URL (bookmarkable/shareable) and work without
+JavaScript. Mobile filters use a native `<details>` drawer (no hover
+dependency). Cards keep outcome, evidence quality, and evidence level as separate
+labeled chips — **no combined score, no efficacy meter, no evidence pyramid**
+(those are later, methodology-gated). Demo records are badged `DEMO`. Canonical
+URL is `/research` (filter permutations are not indexed).
+
 # 11. Copy DOI & Source
 
 Copy-DOI is a first-class island action (`02` §MVP, `03` §6). Every published

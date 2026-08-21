@@ -69,3 +69,24 @@ Semantic search, citation-graph-aware ranking, and multilingual search are P3
 (`02` §12) and require their own ADR + cost justification before adoption. A
 vector database is not introduced without a demonstrated requirement (master
 prompt §28).
+
+# 10. Milestone 4 Implementation (ADR-014)
+
+The public explorer (`/research`) is implemented in
+`packages/database/src/search.ts`:
+
+- **`searchPublishedResearch`** — one parameterized query per page: FTS over a
+  composed document (title, summary, publication title/abstract, journal,
+  authors, conditions, interventions) via `websearch_to_tsquery`, plus
+  exact-DOI matching. Ranking tiers: exact DOI → exact title → title/summary FTS
+  → related-entity FTS; ties by publication date. Filters (study type, evidence
+  level, outcome, quality, condition, intervention, year) apply on canonical
+  relations. Sorts: relevance/newest/oldest/title. Offset pagination (page size
+  capped), keyset-ready API.
+- **`getPublishedResearchFacets`** — facet options present among PUBLISHED
+  research for the filter controls.
+- **`normalizeExplorerParams`** — enum/integer validation of query-string input.
+- Index-backed by `research_study_fts_idx` (GIN, migration `0012`).
+- All reads run under the `anon` RLS role → PUBLISHED only; multi-publication
+  studies de-duplicated to one card. Deterministic — no AI, popularity, or
+  efficacy weighting. Scale path (trigger-maintained `search_tsv`) is deferred.

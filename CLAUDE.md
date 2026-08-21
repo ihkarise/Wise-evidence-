@@ -12,13 +12,15 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**Milestones 0–3 are delivered:** the architecture doc set (M0), the repository
-foundation (M1), the canonical database schema + RLS (M2), and the manual
-research MVP (M3 — Supabase auth, admin editor, DOI metadata via Crossref/mock,
-review→publish workflow, public `/research/[id]`). There is **no public
-search/explorer or AI integration yet** (M4+), and **real-Supabase integration
-is a documented pending gate** (`docs/19` §11) — the workflow and RLS are
-verified deterministically on PGlite. Current layout:
+**Milestones 0–4 are delivered:** the architecture doc set (M0), the repository
+foundation (M1), the canonical database schema + RLS (M2), the manual research
+MVP (M3 — Supabase auth, admin editor, DOI metadata via Crossref/mock,
+review→publish workflow, public `/research/[id]`), and the public research
+explorer (M4 — `/research` PostgreSQL search/filter/sort/paginate, ADR-014).
+There is **no evidence-visualization or AI integration yet** (M5+), and
+**real-Supabase integration is a documented pending gate** (`docs/19` §11) — the
+workflow, RLS, and explorer are verified deterministically on PGlite. Current
+layout:
 
 ```text
 .
@@ -29,7 +31,7 @@ verified deterministically on PGlite. Current layout:
 ├── package.json · pnpm-workspace.yaml · tsconfig.base.json · eslint.config.js
 ├── apps/web/                     # Astro hybrid app (static pages + SSR admin/api/detail)
 ├── packages/domain/              # portable, framework-free logic (DOI normalizer + tests)
-├── packages/database/            # schema mirror, migrations, workflow service, PGlite RLS tests
+├── packages/database/            # schema mirror, migrations, workflow service, explorer search, PGlite RLS tests
 ├── packages/metadata/            # bibliographic providers (Crossref + mock) + fixtures
 ├── supabase/                     # migrations/ (canonical schema) + seed/ (reference + demo fixtures)
 ├── prompts/ · scripts/           # placeholders for later milestones
@@ -40,7 +42,7 @@ verified deterministically on PGlite. Current layout:
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Still **no** public search/explorer or AI wiring, and no live Supabase. Do not
+Still **no** evidence-visualization or AI wiring, and no live Supabase. Do not
 assume features exist — inspect first (`git status`, `ls`, read files) before
 acting.
 

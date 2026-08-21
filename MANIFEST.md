@@ -97,11 +97,21 @@ The runnable foundation now lives alongside the docs:
   `/research/[id]`. `ADR-013`, docs 05/12/16/19 updated.
 - Real Supabase integration is a documented **pending gate** (`docs/19` §11).
 
+## Public Research Explorer (Milestone 4)
+
+- `packages/database/src/search.ts` — `searchPublishedResearch`,
+  `getPublishedResearchFacets`, `normalizeExplorerParams` (ADR-014); migration
+  `0012_explorer_search_index.sql` (study-level GIN FTS); `search.test.ts` (22).
+- `apps/web/src/pages/research/index.astro` — SSR explorer (URL-persistent
+  filters, facets, sort, pagination, mobile drawer); `components/ResearchCard.astro`;
+  landing hero search + Research nav.
+- `docs/adr/ADR-014-postgres-explorer-search.md`; docs 14/15/19/20 updated.
+
 ## Next
 
-Milestone 4 — Public Research Explorer (search, filters, sorting, research cards,
-conditions/interventions). Previously-planned Milestone 2 database work below is
-now delivered:
+Milestone 5 — Evidence Visualization (evidence pyramid, outcome distribution,
+quality/criticism displays, explore pages) — methodology-gated, not started.
+Previously-planned Milestone 2 database work below is now delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See

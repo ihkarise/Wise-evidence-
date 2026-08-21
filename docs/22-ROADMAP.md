@@ -47,13 +47,16 @@ SSR `/research/[id]`, and 75 tests. Real-Supabase integration is a documented
 pending gate (`19` §11); the workflow + RLS are verified deterministically on
 PGlite (ADR-012).
 
-# 6. Phase 4 — Public Research Explorer  ← current
+# 6. Phase 4 — Public Research Explorer  ✅ delivered
 
 Homepage, search, research list, filters, sorting, research detail, DOI copy,
 source links, conditions, interventions, research cards (master prompt §82, `14`,
-`15`).
+`15`). Delivered: PostgreSQL explorer query layer (ADR-014, migration 0012),
+`/research` SSR explorer (URL-persistent filters, facets, pagination, mobile
+drawer, accessible), research cards with separate dimensions (no efficacy score),
+and 22 search tests (97 total). No AI/vector/community/pyramid/weighting.
 
-# 7. Phase 5 — Evidence Visualization
+# 7. Phase 5 — Evidence Visualization  ← current
 
 Evidence pyramid, outcome distribution, quality display, criticism display,
 explore pages (master prompt §83, `15` §5). Honesty rules apply (`15` §6).

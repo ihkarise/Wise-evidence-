@@ -76,6 +76,16 @@ perform admin-only operations; (7) service_role performs intended privileged
 operations; (8) one user's private data is not readable by another where
 applicable.
 
+# 4b. Explorer Search Tests (M4)
+
+The public explorer query layer (`packages/database/src/search.ts`, ADR-014) is
+tested on PGlite under the `anon` RLS role with deterministic service-role
+fixtures: title/author/DOI search, no-results, case/whitespace/special-char
+handling, every filter + combinations, sorting, pagination (first/next/out-of-
+range), facets, param validation, de-duplication of multi-publication studies,
+and security (drafts/rejected/archived/internal excluded; injection-safe
+parameters). No live network, no AI.
+
 # 5. DOI Normalization (test contract)
 
 Normalization must handle at least (master prompt §50):

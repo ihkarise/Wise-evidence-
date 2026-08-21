@@ -94,6 +94,9 @@ performed. When a controlled Supabase project exists, verify in order:
 8. Verify draft/private (AI, audit, review, import) data isolation.
 9. Verify the first-admin bootstrap (privileged SQL/seed — never self-service).
 10. Verify the public research page (`/research/[id]`) against real Supabase.
+11. Verify the public research explorer (`/research`) — search, filters, sorting,
+    pagination, PUBLISHED-only results — and check query performance/plans at the
+    expected dataset size (ADR-014).
 
 Runtime rendering: hybrid via `@astrojs/node` (ADR-013). Server env holds
 privileged secrets only; the frontend reads only `PUBLIC_*` (`16` §5).
