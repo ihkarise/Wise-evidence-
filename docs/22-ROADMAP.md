@@ -14,19 +14,21 @@
 Define the staged milestone sequence. Build in order; do not silently jump ahead
 (master prompt §34, §77). Each milestone ends with a checkpoint report (§13).
 
-# 2. Phase 0 — Architecture Completion  ← current
+# 2. Phase 0 — Architecture Completion  ✅ complete
 
 Complete architecture specs `05`–`23`, ADRs, cross-check/contradiction report,
 final MVP scope, tech-stack decision. **No major features.** (master prompt §78.)
 
-# 3. Phase 1 — Repository Foundation
+# 3. Phase 1 — Repository Foundation  ✅ complete
 
 Astro app, base styling, folder structure (`apps/web`, `packages/*`), environment
 config, Supabase connection strategy, CI, test runner, lint, type checking,
 `README`/`CONTRIBUTING`/`SECURITY`/`LICENSE`. No unnecessary features
-(master prompt §79, §28).
+(master prompt §79, §28). Delivered: pnpm workspace, `apps/web` (Astro + React
+island + Tailwind), `packages/domain` (`normalizeDoi` + tests), strict TS,
+ESLint, Prettier, Vitest, GitHub Actions CI, and the governance files.
 
-# 4. Phase 2 — Database Foundation
+# 4. Phase 2 — Database Foundation  ← current
 
 Migrations, core entities & relationships, indexes, RLS, seed data, database
 tests (master prompt §80, `05`, `20`).

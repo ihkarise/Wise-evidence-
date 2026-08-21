@@ -1,46 +1,71 @@
-# WiseEvidence Architecture Package
+# WiseEvidence
 
-This ZIP contains the current approved/drafted architecture foundation for WiseEvidence.
+An open, searchable, structured, **AI-assisted and human-curated evidence
+platform for homeopathy research**. WiseEvidence makes scattered research
+discoverable, understandable, comparable, and critically reviewable — while
+keeping study **outcome**, evidence **quality**, **confidence**, methodological
+**criticism**, and source **provenance** as *separate* dimensions.
 
-## Included
+> Find it. Understand it. Compare it. Question it. Follow the source. Explore the
+> evidence.
+
+## Project status
+
+Early, staged development. **Milestone 0 (Architecture Completion)** and
+**Milestone 1 (Repository Foundation)** are complete: the architecture is fully
+documented and a runnable foundation exists (Astro app, workspace, tests, CI). No
+research records are published yet — the data model and manual research MVP arrive
+in Milestones 2–3 (see [`docs/22-ROADMAP.md`](docs/22-ROADMAP.md)).
+
+## What it is (and isn't)
+
+WiseEvidence represents supportive, mixed, neutral, inconclusive, and critical
+findings — never a positive-vs-negative binary — and never presents a validated
+"efficacy score." AI is an **assistant, not the final authority**: important
+public classifications are human-reviewed, traceable, and reversible, and always
+link back to the original source. See [`docs/01-VISION.md`](docs/01-VISION.md).
+
+## Repository layout
 
 ```text
-docs/
-├── 00-ARCHITECTURE-BASELINE.md
-├── 01-VISION.md
-├── 02-PRODUCT-REQUIREMENTS.md
-├── 03-INFORMATION-ARCHITECTURE.md
-└── 04-SYSTEM-ARCHITECTURE.md
+apps/web           Astro app (static-first + React islands)
+packages/domain    portable, framework-free domain logic (e.g. DOI normalization)
+docs/              architecture specs (00–23), ADRs, and reports — the source of truth
+supabase/          database config (migrations/seed) — schema arrives in Milestone 2
+prompts/           versioned AI prompts (Milestone 6)
 ```
 
-## Important
+Start with [`CLAUDE.md`](CLAUDE.md) and [`docs/00-ARCHITECTURE-BASELINE.md`](docs/00-ARCHITECTURE-BASELINE.md);
+[`MANIFEST.md`](MANIFEST.md) indexes every document.
 
-These five documents are the current architecture foundation.
+## Development
 
-The following documents have NOT yet been finalized and must not be invented silently by an AI coding agent:
+Prerequisites: **Node ≥ 22** and **pnpm 10**.
 
-```text
-05-DATABASE-ARCHITECTURE.md
-06-EVIDENCE-TAXONOMY.md
-07-OUTCOME-CLASSIFICATION.md
-08-EVIDENCE-QUALITY.md
-09-CRITICISM-FRAMEWORK.md
-10-AI-ARCHITECTURE.md
-11-DATA-IMPORT-ARCHITECTURE.md
-12-ADMIN-ARCHITECTURE.md
-13-COMMUNITY-ARCHITECTURE.md
-14-SEARCH-ARCHITECTURE.md
-15-UI-UX-SPECIFICATION.md
-16-SECURITY.md
-17-DATA-GOVERNANCE.md
-18-OPEN-SOURCE-GOVERNANCE.md
-19-DEPLOYMENT.md
-20-TESTING.md
-21-COST-CONTROL.md
-22-ROADMAP.md
-23-AI-AGENT-INSTRUCTIONS.md
+```bash
+pnpm install              # install workspace dependencies
+pnpm --filter web dev     # run the web app locally (http://localhost:4321)
+pnpm --filter web build   # build the static site
+pnpm -w test              # run the test suite (Vitest)
+pnpm -w typecheck         # type-check all packages
+pnpm -w lint              # lint
+pnpm -w format            # format with Prettier
 ```
 
-Claude Code must inspect the existing repository before changing anything and must continue the architecture documentation before implementing the application.
+Copy [`.env.example`](.env.example) to `.env` for local config. **Never commit
+real credentials** — only `.env.example` is tracked. The frontend reads only the
+public `PUBLIC_SUPABASE_*` variables; privileged secrets are server-side only
+(see [`docs/16-SECURITY.md`](docs/16-SECURITY.md)).
 
-See `CLAUDE-CODE-MASTER-PROMPT.md`.
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md),
+and [`SECURITY.md`](SECURITY.md). Significant architectural decisions are recorded
+as ADRs in [`docs/adr/`](docs/adr/).
+
+## License
+
+- **Code:** Apache-2.0 — see [`LICENSE`](LICENSE).
+- **Curated research data & metadata:** CC-BY-4.0 (attribution required).
+
+See [`docs/adr/ADR-011-licensing.md`](docs/adr/ADR-011-licensing.md).

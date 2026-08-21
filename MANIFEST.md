@@ -55,7 +55,21 @@ Milestone 0 reports (`docs/reports/`):
 - `MVP-SCOPE.md` — finalized MVP scope
 - `TECH-STACK-DECISION.md` — confirmed technology stack
 
+## Application foundation (Milestone 1)
+
+The runnable foundation now lives alongside the docs:
+
+- Root: `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
+  `eslint.config.js`, `.prettierrc.json`, `vitest.config.ts`, `.env.example`.
+- `apps/web/` — Astro app (static-first + a React `CopyDoi` island, Tailwind).
+- `packages/domain/` — portable logic: `normalizeDoi()` + Vitest tests.
+- `supabase/README.md` — connection strategy only (schema is Milestone 2).
+- `.github/workflows/ci.yml` + issue/PR templates.
+- Governance: `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
+  `CODE_OF_CONDUCT.md`.
+
 ## Next
 
-Milestone 1 — Repository Foundation (Astro app, `packages/*`, CI, tests, env
-config, hygiene files). See `docs/22-ROADMAP.md`.
+Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
+entities, indexes, RLS, seed + fixtures, database/data-access tests). See
+`docs/22-ROADMAP.md`.

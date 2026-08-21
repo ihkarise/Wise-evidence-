@@ -12,30 +12,54 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**The repository is in the architecture-to-development transition. There is no
-application code yet — but the full architecture doc set is now complete
-(Milestone 0 done).** The repository is documentation only:
+**The architecture doc set is complete (Milestone 0) and the repository
+foundation now exists (Milestone 1).** There is a runnable Astro app and a pnpm
+workspace, but **no product features yet** — no database schema, research CRUD,
+search, or AI integration (those are Milestones 2+). Current layout:
 
 ```text
 .
 ├── CLAUDE.md                     # this file
 ├── CLAUDE-CODE-MASTER-PROMPT.md  # authoritative lead-architect brief
-├── README.md
-├── MANIFEST.md                   # index of all docs
+├── README.md · MANIFEST.md       # project readme · doc index
+├── CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md · LICENSE (Apache-2.0)
+├── package.json · pnpm-workspace.yaml · tsconfig.base.json · eslint.config.js
+├── apps/web/                     # Astro app (static-first + React islands)
+├── packages/domain/              # portable, framework-free logic (DOI normalizer + tests)
+├── supabase/                     # connection strategy only; schema is Milestone 2
+├── prompts/ · scripts/           # placeholders for later milestones
+├── .github/workflows/ci.yml      # install → lint → typecheck → test → build
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
     ├── adr/     ADR-001 … ADR-011 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-There is **no** `package.json`, no source tree, no database, no CI, no build
-tooling, and no framework installed. Do not assume any of these exist — inspect
-first (`git status`, `ls`, read files) before acting.
+Still **no** database, migrations, or AI wiring. Do not assume features exist —
+inspect first (`git status`, `ls`, read files) before acting.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
 > into tracked files and the zip retired; specs `05`–`23`, ADRs, and the three
-> reports were then written. See `MANIFEST.md`.
+> reports were written. Milestone 1 then added the runnable foundation above.
+> See `MANIFEST.md`.
+
+### Development
+
+Prerequisites: Node ≥ 22 and pnpm 10. Common commands (see `README.md`):
+
+```bash
+pnpm install
+pnpm --filter web dev     # run the web app
+pnpm --filter web build   # build the static site
+pnpm -w test              # Vitest suite (e.g. DOI normalization)
+pnpm -w typecheck         # tsc + astro check
+pnpm -w lint              # ESLint
+```
+
+`packages/domain` must stay portable — no Astro/React/Supabase/AI-SDK imports.
+The frontend reads only `PUBLIC_SUPABASE_*`; privileged secrets are server-side
+only. Copy `.env.example` to `.env`; never commit real credentials.
 
 ### The architecture docs
 
