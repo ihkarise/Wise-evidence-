@@ -4,9 +4,10 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  canonical?: string;
 }
 
-const { title, description = 'An open, human-curated, AI-assisted evidence platform for homeopathy research.' } =
+const { title, description = 'An open, human-curated, AI-assisted evidence platform for homeopathy research.', canonical } =
   Astro.props;
 ---
 
@@ -16,6 +17,7 @@ const { title, description = 'An open, human-curated, AI-assisted evidence platf
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {canonical && <link rel="canonical" href={canonical} />}
     <title>{title}</title>
   </head>
   <body class="min-h-screen bg-white text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
@@ -30,6 +32,7 @@ const { title, description = 'An open, human-curated, AI-assisted evidence platf
         <a href="/" class="font-semibold">WiseEvidence</a>
         <ul class="flex gap-4 text-sm">
           <li><a href="/" class="hover:underline">Home</a></li>
+          <li><a href="/research" class="hover:underline">Research</a></li>
           <li><a href="/methodology" class="hover:underline">Methodology</a></li>
         </ul>
       </nav>

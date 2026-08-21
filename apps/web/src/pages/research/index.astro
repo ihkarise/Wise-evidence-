@@ -1,0 +1,173 @@
+---
+export const prerender = false;
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ResearchCard from '../../components/ResearchCard.astro';
+import {
+  searchPublishedResearch,
+  getPublishedResearchFacets,
+  normalizeExplorerParams,
+  type ResearchCard as Card,
+  type Facets,
+} from '@wise-evidence/database';
+import { withActor, isDbConfigured } from '../../server/db.ts';
+
+const raw = Object.fromEntries(Astro.url.searchParams.entries());
+const params = normalizeExplorerParams(raw);
+
+let cards: Card[] = [];
+let total = 0;
+let pageSize = 20;
+let facets: Facets = { studyTypes: [], evidenceLevels: [], outcomes: [], qualities: [], conditions: [], interventions: [], yearMin: null, yearMax: null };
+let state: 'ok' | 'pending' | 'error' = isDbConfigured() ? 'ok' : 'pending';
+
+if (state === 'ok') {
+  try {
+    await withActor({ role: 'anon', sub: null }, async (exec) => {
+      const res = await searchPublishedResearch(exec, params);
+      cards = res.cards;
+      total = res.total;
+      pageSize = res.pageSize;
+      facets = await getPublishedResearchFacets(exec);
+    });
+  } catch {
+    state = 'error';
+  }
+}
+
+const OUTCOME_LABELS: Record<string, string> = {
+  STRONG_POSITIVE: 'Strong Positive', POSITIVE: 'Positive', LEANING_POSITIVE: 'Mixed / Leaning Positive',
+  NEUTRAL_INCONCLUSIVE: 'Neutral / Inconclusive', LEANING_NEGATIVE: 'Mixed / Leaning Negative',
+  NEGATIVE: 'Negative', STRONG_NEGATIVE: 'Strong Negative',
+};
+
+const page = params.page ?? 1;
+const totalPages = Math.max(1, Math.ceil(total / pageSize));
+const hasFilters = Boolean(params.q || params.studyType || params.evidenceLevel || params.outcome || params.quality || params.condition || params.intervention || params.yearFrom || params.yearTo);
+
+// Build a query string for pagination links, preserving current filters.
+function pageHref(target: number): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(raw)) if (v && k !== 'page') sp.set(k, v);
+  sp.set('page', String(target));
+  return `/research?${sp.toString()}`;
+}
+const canonical = new URL('/research', Astro.url).toString();
+---
+
+<BaseLayout title="Research explorer — WiseEvidence" canonical={canonical}
+  description="Search and filter published homeopathy research by condition, intervention, study type, evidence level, and reported outcome.">
+  <h1 class="text-3xl font-bold tracking-tight">Research</h1>
+  <p class="mt-1 text-sm text-slate-500">
+    Discover published research. Reported outcome, evidence quality, confidence, and
+    criticism are distinct dimensions — WiseEvidence shows no overall efficacy score.
+  </p>
+
+  {state === 'pending' && (
+    <p class="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+      Research data is not available in this environment yet (Supabase integration pending — docs/19 §11).
+    </p>
+  )}
+  {state === 'error' && (
+    <p class="mt-6 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+      Something went wrong loading research. Please try again.
+    </p>
+  )}
+
+  {state === 'ok' && (
+    <form method="get" action="/research" class="mt-6" role="search">
+      <div class="flex gap-2">
+        <label class="sr-only" for="q">Search</label>
+        <input id="q" name="q" value={params.q ?? ''} placeholder="Search title, author, journal, condition, intervention, DOI…"
+          class="flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+        <button type="submit" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Search</button>
+      </div>
+
+      <details class="mt-3 rounded-md border border-slate-200 dark:border-slate-800">
+        <summary class="cursor-pointer px-3 py-2 text-sm font-medium">Filters &amp; sorting</summary>
+        <fieldset class="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          <legend class="sr-only">Filters</legend>
+          <label class="text-sm">Study type
+            <select name="studyType" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.studyTypes.map((t) => <option value={t.code} selected={params.studyType === t.code}>{t.label}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Evidence level
+            <select name="evidenceLevel" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.evidenceLevels.map((e) => <option value={e.code} selected={params.evidenceLevel === e.code}>{e.label}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Reported outcome
+            <select name="outcome" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.outcomes.map((o) => <option value={o} selected={params.outcome === o}>{OUTCOME_LABELS[o] ?? o}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Evidence quality
+            <select name="quality" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.qualities.map((q) => <option value={q} selected={params.quality === q}>{q}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Condition
+            <select name="condition" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.conditions.map((c) => <option value={c.slug} selected={params.condition === c.slug}>{c.name}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Intervention
+            <select name="intervention" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="">Any</option>
+              {facets.interventions.map((i) => <option value={i.slug} selected={params.intervention === i.slug}>{i.name}</option>)}
+            </select>
+          </label>
+          <label class="text-sm">Year from
+            <input name="yearFrom" inputmode="numeric" value={params.yearFrom ?? ''} placeholder={facets.yearMin ? String(facets.yearMin) : ''}
+              class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900" />
+          </label>
+          <label class="text-sm">Year to
+            <input name="yearTo" inputmode="numeric" value={params.yearTo ?? ''} placeholder={facets.yearMax ? String(facets.yearMax) : ''}
+              class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900" />
+          </label>
+          <label class="text-sm">Sort
+            <select name="sort" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900">
+              <option value="relevance" selected={params.sort === 'relevance'}>Relevance</option>
+              <option value="newest" selected={params.sort === 'newest' || !params.sort}>Newest</option>
+              <option value="oldest" selected={params.sort === 'oldest'}>Oldest</option>
+              <option value="title" selected={params.sort === 'title'}>Title A–Z</option>
+            </select>
+          </label>
+          <div class="flex items-end gap-2">
+            <button type="submit" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Apply</button>
+            <a href="/research" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">Clear</a>
+          </div>
+        </fieldset>
+      </details>
+    </form>
+  )}
+
+  {state === 'ok' && (
+    <section class="mt-6" aria-live="polite">
+      <p class="text-sm text-slate-500">{total} {total === 1 ? 'result' : 'results'}{hasFilters ? ' for your filters' : ''}.</p>
+
+      {cards.length === 0 ? (
+        <p class="mt-6 rounded-md border border-slate-200 p-6 text-center text-slate-600 dark:border-slate-800 dark:text-slate-300">
+          No published research matched your current filters. Try broadening your search.
+        </p>
+      ) : (
+        <ul class="mt-4 space-y-4">
+          {cards.map((card) => <li><ResearchCard card={card} /></li>)}
+        </ul>
+      )}
+
+      {totalPages > 1 && (
+        <nav class="mt-8 flex items-center justify-between text-sm" aria-label="Pagination">
+          {page > 1 ? <a href={pageHref(page - 1)} class="rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600">← Previous</a> : <span></span>}
+          <span class="text-slate-500">Page {page} of {totalPages}</span>
+          {page < totalPages ? <a href={pageHref(page + 1)} class="rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600">Next →</a> : <span></span>}
+        </nav>
+      )}
+    </section>
+  )}
+</BaseLayout>

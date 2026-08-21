@@ -13,8 +13,17 @@ import CopyDoi from '../components/CopyDoi.tsx';
     </p>
     <p class="mt-3 max-w-2xl text-sm text-slate-500">
       This is an early foundation. The application is being built in documented, testable stages —
-      see the <a href="/methodology" class="underline">methodology</a>. No research records are
-      published yet.
+      see the <a href="/methodology" class="underline">methodology</a>.
+    </p>
+
+    <form method="get" action="/research" role="search" class="mt-6 flex max-w-xl gap-2">
+      <label class="sr-only" for="hero-q">Search research</label>
+      <input id="hero-q" name="q" placeholder="Search research by condition, intervention, author, DOI…"
+        class="flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-900" />
+      <button type="submit" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">Search</button>
+    </form>
+    <p class="mt-2 text-sm">
+      <a href="/research" class="underline">Browse all published research →</a>
     </p>
   </section>
 
