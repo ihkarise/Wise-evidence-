@@ -284,6 +284,11 @@ schema) with these concrete decisions:
 - **Demo-data flag.** `research_study.is_demo boolean not null default false`
   marks fixture/demo studies so they can never be mistaken for real research and
   are excluded from public/statistical views (`17` §10).
+- **Human summary (M3, migration 0010).** `research_study.summary text` is a
+  **human-authored** concise description. It is distinct from
+  `publication.abstract` (the source's abstract) and from any future AI summary
+  (`10` §11): it is never auto-generated and never silently copied from the
+  abstract. `publication.abstract ≠ research_study.summary`.
 - **AI/human enforcement.** `ai_result` rows are immutable; a check constraint and
   the `review` linkage keep an AI value from being written as a human
   `final_value` without a review. Overrides retain both (§9).

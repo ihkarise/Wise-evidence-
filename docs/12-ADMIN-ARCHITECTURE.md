@@ -108,6 +108,29 @@ Publishing requires the human-reviewed final values to be set for the required
 dimensions. Nothing publishes automatically while review is required (`05` §6–7,
 `00` §human-review).
 
+## 9a. M3 Approval Authority (single-approver model)
+
+Milestone 3 uses a simple, single-approver workflow — **no** two-person sign-off
+(none of the architecture docs require one). Authority is split by role so that
+"authorized staff" performing approval/publication is explicit, not "any
+authenticated user":
+
+| Operation | REVIEWER | ADMIN |
+|-----------|:--------:|:-----:|
+| create / edit research, classify, add criticism | ✅ | ✅ |
+| submit for review (`DRAFT → PENDING_REVIEW`) | ✅ | ✅ |
+| reject (`→ REJECTED`) | ✅ | ✅ |
+| **approve & publish (`→ PUBLISHED`)** | ❌ | ✅ |
+| **archive (`→ ARCHIVED`)** | ❌ | ✅ |
+| manage `app_user` roles / taxonomy / privileged corrections | ❌ | ✅ |
+
+`approveAndPublish()` and `archive()` execute **only** for ADMIN. This is enforced
+at **both** the service layer and the database/RLS boundary (a reviewer's UPDATE
+policy `WITH CHECK` forbids setting `PUBLISHED`/`ARCHIVED`; only admin may). A
+user can never grant themselves REVIEWER/ADMIN — `app_user` writes are admin-only
+(`16` §3). A later milestone may introduce a SENIOR_REVIEWER approver role; M3
+does not.
+
 # 10. Bulk Operations
 
 Bulk actions (e.g. bulk approve low-risk imports, bulk tag) are permitted but

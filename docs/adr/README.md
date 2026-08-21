@@ -20,6 +20,7 @@ ADR (master prompt §38).
 | [ADR-010](ADR-010-cost-first-infrastructure.md) | Cost-First Infrastructure | Accepted |
 | [ADR-011](ADR-011-licensing.md) | Licensing: Apache-2.0 (code) + CC-BY-4.0 (data) | Accepted |
 | [ADR-012](ADR-012-pglite-database-testing.md) | PGlite for deterministic database and RLS tests | Accepted |
+| [ADR-013](ADR-013-hybrid-rendering.md) | Hybrid rendering (static + SSR via @astrojs/node) | Accepted |
 
 ## Template
 

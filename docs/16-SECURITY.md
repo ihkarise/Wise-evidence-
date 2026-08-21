@@ -36,6 +36,16 @@ client-side hiding** (`04` §15). Privileged logic and secrets live server-side.
 - RLS policies are the enforcement boundary; the UI merely reflects them
   (`04` §15).
 
+**M3 reviewer-write extension (migration 0011).** M2 made all `research_study`/
+`publication` writes admin-only. M3 extends RLS so a REVIEWER may create and edit
+research and drive it up to `PENDING_REVIEW`/`REJECTED` (and create reference
+`author`/`journal`/`research_source` rows), matching the `docs/12` workflow —
+but a reviewer's UPDATE `WITH CHECK` forbids setting `PUBLISHED`/`ARCHIVED`, which
+remain **admin-only** (`12` §9a). Taxonomy tables, `app_user`, `ai_*`, `import_*`,
+and audit inserts stay as in M2. Reviewer permissions are broadened only for the
+exact M3 workflow; everything remains fail-closed and role changes stay
+admin-only.
+
 # 5. Secrets
 
 Never expose to the frontend (`04` §41, master prompt §53):

@@ -74,3 +74,26 @@ master prompt §7). Errors are surfaced, not swallowed (`16` §12).
 
 Deployments must preserve the guarantees in `04` §46 / `11` §11: AI, import, and
 automation failures do not break research browsing or the core application.
+
+# 11. M3 Supabase Go-Live Gate (PENDING)
+
+M3 is built production-compatibly but **no real Supabase project has been tested
+yet** (ADR-012 keeps PGlite as the deterministic CI DB). Real-Supabase auth/RLS
+verification is an explicit **pending gate** — it is not claimed complete until
+performed. When a controlled Supabase project exists, verify in order:
+
+1. Create the Supabase project (controlled access).
+2. Configure environment variables (`.env` from `.env.example`;
+   `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, server-only
+   `SUPABASE_DB_URL`/`SUPABASE_SERVICE_ROLE_KEY`).
+3. Apply the existing migrations (`supabase db push` — same `supabase/migrations`).
+4. Verify authentication (Supabase Auth sign-in).
+5. Verify `auth user → app_user → app role` mapping.
+6. Verify anon / reviewer / admin RLS behavior.
+7. Verify published-only public reads.
+8. Verify draft/private (AI, audit, review, import) data isolation.
+9. Verify the first-admin bootstrap (privileged SQL/seed — never self-service).
+10. Verify the public research page (`/research/[id]`) against real Supabase.
+
+Runtime rendering: hybrid via `@astrojs/node` (ADR-013). Server env holds
+privileged secrets only; the frontend reads only `PUBLIC_*` (`16` §5).
