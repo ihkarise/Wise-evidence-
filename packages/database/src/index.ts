@@ -27,10 +27,12 @@ export {
 } from './service.js';
 export {
   getPublishedStudyDetail,
+  getStudyForEditor,
   listReviewQueue,
   type PublicResearchDetail,
   type PublicClassification,
   type PublicCriticism,
+  type EditorStudy,
 } from './read.js';
 export {
   runMigrations,

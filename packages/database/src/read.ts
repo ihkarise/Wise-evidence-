@@ -137,6 +137,73 @@ export async function getPublishedStudyDetail(
   };
 }
 
+export interface EditorStudy {
+  id: string;
+  title: string;
+  summary: string | null;
+  study_type_code: string | null;
+  subject: string | null;
+  lifecycle_state: string;
+  is_demo: boolean;
+  publication_state: string | null;
+  doi: string | null;
+  classifications: { dimension: string; value: string }[];
+  criticisms: { category: string; origin: string; body: string }[];
+}
+
+/**
+ * Load a study for the admin editor (staff context — RLS lets reviewers/admins
+ * see any state). Returns null if not visible/found.
+ */
+export async function getStudyForEditor(exec: QueryExecutor, studyId: string): Promise<EditorStudy | null> {
+  const base = await exec.query<{
+    id: string;
+    canonical_title: string;
+    summary: string | null;
+    study_type_code: string | null;
+    subject: string | null;
+    lifecycle_state: string;
+    is_demo: boolean;
+    publication_state: string | null;
+    doi: string | null;
+  }>(
+    `select s.id, s.canonical_title, s.summary, s.study_type_code, s.subject,
+            s.lifecycle_state, s.is_demo,
+            p.publication_state,
+            (select value_canonical from research_identifier i
+               where i.publication_id = p.id and i.id_type = 'DOI' limit 1) as doi
+       from research_study s
+       left join publication p on p.study_id = s.id and p.is_primary = true
+      where s.id = $1 limit 1`,
+    [studyId]
+  );
+  const row = base.rows[0];
+  if (!row) return null;
+  const [cls, crit] = await Promise.all([
+    exec.query<{ dimension: string; value: string }>(
+      `select dimension, value from classification where study_id = $1`,
+      [studyId]
+    ),
+    exec.query<{ category: string; origin: string; body: string }>(
+      `select category, origin, body from criticism where study_id = $1 and status = 'active'`,
+      [studyId]
+    ),
+  ]);
+  return {
+    id: row.id,
+    title: row.canonical_title,
+    summary: row.summary,
+    study_type_code: row.study_type_code,
+    subject: row.subject,
+    lifecycle_state: row.lifecycle_state,
+    is_demo: row.is_demo,
+    publication_state: row.publication_state,
+    doi: row.doi,
+    classifications: cls.rows,
+    criticisms: crit.rows,
+  };
+}
+
 /** List studies awaiting review (staff context). */
 export async function listReviewQueue(
   exec: QueryExecutor
