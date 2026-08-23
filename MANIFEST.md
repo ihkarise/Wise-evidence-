@@ -1,7 +1,7 @@
 # WiseEvidence Architecture Manifest
 
-**Status:** Milestone 0 (Architecture Completion) complete.
-**Updated:** 2026-08-21
+**Status:** Milestones 0–6 delivered (through AI-assisted evidence enrichment).
+**Updated:** 2026-08-23
 
 The architecture package was originally distributed as
 `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 the package was
@@ -117,11 +117,27 @@ The runnable foundation now lives alongside the docs:
 - `apps/web/src/pages/{evidence,statistics}.astro` + `components/DistributionChart.astro`
   (accessible CSS bars + table equivalents); Evidence/Statistics nav links.
 
+## AI-Assisted Evidence Enrichment (Milestone 6)
+
+- `docs/adr/ADR-016-ai-enrichment-suggestion-only.md` + `docs/10` §16: AI is
+  **suggestion-only** (`Research data → AI suggestion → Human review → Canonical
+  value`); provider-neutral; all six tasks; no live AI in CI.
+- `packages/ai/` — `AIProvider` interface, `MockAIProvider` (default), and
+  `OpenAICompatibleProvider` (OpenRouter/DeepSeek-style aggregator via server-only
+  `AI_*` env); per-task structured-output validation; prompt-injection defense;
+  SHA-256 input hashing. `prompts/<task>/v1.md` for all six tasks.
+- `packages/database/src/ai-jobs.ts` — `ai_job`/`ai_result` persistence + cache
+  (staff-write RLS, immutable results); migrations `0013` (CLASSIFY_EVIDENCE_LEVEL)
+  and `0014` (staff-write). `ai-jobs.test.ts` (7) proves cache, immutability, RLS,
+  and that AI never writes a canonical classification.
+- `apps/web/src/server/ai.ts` orchestrator + `/api/admin/research/[id]/enrich`
+  endpoint + editor AI panel (per-task Accept/Edit/Reject, provenance-linked).
+- Real AI provider access is a documented **pending gate** (`docs/19` §11).
+
 ## Next
 
-Milestone 6 — AI Enrichment (provider config, cheap-model strategy, prompt
-versioning, cache, summaries, classification suggestions, human review) — not
-started. Previously-planned Milestone 2 database work below is now delivered:
+Milestone 7 — Automated Research Discovery (first structured source connector) —
+not started. See `docs/22-ROADMAP.md`. Earlier milestones below are delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See

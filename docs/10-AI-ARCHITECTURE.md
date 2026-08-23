@@ -163,3 +163,45 @@ are the default AI provider in development and tests.
 
 Where the provider exposes it, per-job cost is estimated and recorded on `AIJob`,
 enabling the AI-cost success metric (`02` §14) and cost controls (`21`).
+
+# 16. Milestone 6 — Delivered Implementation
+
+M6 realizes this architecture as staff-triggered, suggestion-only enrichment.
+Binding decisions are recorded in `ADR-016`.
+
+- **`packages/ai`** — the provider-neutral surface. `AIProvider` interface +
+  `enrich(task, input)`; `MockAIProvider` (deterministic; default in dev/test/CI)
+  and `OpenAICompatibleProvider` (a host-configurable `chat/completions` client
+  for **OpenRouter / DeepSeek / any OpenAI-compatible aggregator** — chosen at the
+  M6 review gate for no model lock-in). No provider SDK is imported anywhere;
+  `packages/domain` stays provider-free.
+- **Six tasks** (all exposed in the editor): `summary`, `study-type`,
+  `evidence-level`, `outcome`, `quality`, `criticism`. Each maps to an
+  `ai_operation` (`0013` adds `CLASSIFY_EVIDENCE_LEVEL`) and to a strict output
+  schema validated before storage (§6). AI confidence is the model's own
+  certainty — labeled as such, distinct from the human `CONFIDENCE` dimension,
+  and **never** part of the M5 statistics (§11, `docs/24`).
+- **Prompt registry** — `prompts/<task>/v1.md`, loaded by the AI package; the
+  active version is recorded on every `ai_job.prompt_version` (§5).
+- **Persistence & cache** — `packages/database/src/ai-jobs.ts` writes `ai_job` +
+  immutable `ai_result` under RLS (staff-read + staff-write, reviewer/admin;
+  results are insert-only — migration `0014`) and reuses a prior
+  `SUCCEEDED` result matching `study_id + operation + model + prompt_version +
+  input_hash` (§8). No `RUNNING` state: a job is `PENDING` while in flight, then
+  `SUCCEEDED`/`FAILED` (synchronous request; no enum change).
+- **Orchestration** — `apps/web/src/server/ai.ts` selects the provider from
+  server-only env (`AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, `AI_API_KEY`; never
+  `PUBLIC_`), reads study input in a transaction, calls the provider *outside* the
+  transaction, validates, persists, and returns the suggestion. The provider call
+  never holds a DB lock, and AI failure leaves the record untouched (§13).
+- **Editor UI** — per-task "Get AI suggestion" with Accept / Edit / Reject.
+  Accept fills the matching control and threads `ai_result_id` into the save
+  payload, so the human-final `classification` records which AI result it came
+  from. Suggestions are labeled "AI-assisted — pending human review".
+- **Copyright & injection** — input is built only from fields already held
+  (title, human summary, study type, subject, journal, year, and abstract only
+  where stored/permitted); full-paper text is never sent. Untrusted content is
+  delimiter-wrapped and can never override instructions (§12, `docs/16`).
+- **CI** — no live AI. The mock runs the full pipeline; the OpenAI-compatible
+  adapter is tested through an injected fake `fetch`. Real provider access is a
+  documented pending gate alongside Supabase (`docs/19` §11).

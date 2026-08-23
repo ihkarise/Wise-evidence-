@@ -56,7 +56,7 @@ source links, conditions, interventions, research cards (master prompt §82, `14
 drawer, accessible), research cards with separate dimensions (no efficacy score),
 and 22 search tests (97 total). No AI/vector/community/pyramid/weighting.
 
-# 7. Phase 5 — Evidence Visualization  ← current
+# 7. Phase 5 — Evidence Visualization  ✅ delivered
 
 Evidence pyramid, outcome distribution, quality display, criticism display,
 explore pages (master prompt §83, `15` §5). Honesty rules apply (`15` §6). Governed
@@ -64,11 +64,19 @@ by `docs/24-EVIDENCE-VISUALIZATION-METHODOLOGY.md` and ADR-015: study-based
 counting, distributions-not-conclusions, valence-neutral encoding, no efficacy/
 balance/weighting.
 
-# 8. Phase 6 — AI Enrichment
+# 8. Phase 6 — AI Enrichment  ← current
 
 AI abstraction, provider config, cheap-model strategy, prompt system + versioning,
 cache, summaries, classification suggestions, human approval, AI provenance
-(master prompt §84, `10`).
+(master prompt §84, `10`). Governed by `ADR-016`: **suggestion-only**
+(`Research data → AI suggestion → Human review → Canonical value`), a
+provider-neutral `packages/ai` (`MockAIProvider` default; `OpenAICompatibleProvider`
+for OpenRouter/DeepSeek-style aggregators via server-only `AI_*` env), all six
+tasks (summary, study-type, evidence-level, outcome, quality, criticism) with
+validated structured output, `ai_job`/`ai_result` provenance + cache, and an
+editor Accept/Edit/Reject panel. AI never publishes, never writes a canonical
+classification, never enters the M5 statistics. No live AI in CI (mock + injected
+fake `fetch`); real provider access is a pending gate (`19` §11).
 
 # 9. Phase 7 — Automated Discovery
 

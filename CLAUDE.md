@@ -12,13 +12,18 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**Milestones 0–5 are delivered:** the architecture doc set (M0), the repository
+**Milestones 0–6 are delivered:** the architecture doc set (M0), the repository
 foundation (M1), the canonical database schema + RLS (M2), the manual research
-MVP (M3), the public research explorer (M4 — `/research`, ADR-014), and evidence
+MVP (M3), the public research explorer (M4 — `/research`, ADR-014), evidence
 visualization (M5 — `/evidence` pyramid + `/statistics` distributions, study-based
-aggregates, ADR-015/`docs/24`). There is **no AI integration yet** (M6+), and
-**real-Supabase integration is a documented pending gate** (`docs/19` §11) — the
-workflow, RLS, explorer, and landscape are verified deterministically on PGlite.
+aggregates, ADR-015/`docs/24`), and **AI-assisted evidence enrichment** (M6 —
+suggestion-only AI behind `packages/ai`, ADR-016/`docs/10` §16). AI is an
+**assistant only**: it writes to `ai_job`/`ai_result`, and a value becomes
+canonical only when a human accepts it in the editor — the mock provider is the
+CI default and a real provider (OpenAI-compatible aggregator) is opt-in via
+server-only env. **Real-Supabase and real-AI-provider integration are documented
+pending gates** (`docs/19` §11) — the workflow, RLS, explorer, landscape, and AI
+pipeline are verified deterministically on PGlite + mock providers.
 Current layout:
 
 ```text
@@ -30,19 +35,21 @@ Current layout:
 ├── package.json · pnpm-workspace.yaml · tsconfig.base.json · eslint.config.js
 ├── apps/web/                     # Astro hybrid app (static pages + SSR admin/api/detail)
 ├── packages/domain/              # portable, framework-free logic (DOI normalizer + tests)
-├── packages/database/            # schema mirror, migrations, workflow service, explorer search, PGlite RLS tests
+├── packages/database/            # schema mirror, migrations, workflow service, explorer search, AI job/cache, PGlite RLS tests
 ├── packages/metadata/            # bibliographic providers (Crossref + mock) + fixtures
+├── packages/ai/                  # provider-neutral AI enrichment (mock + OpenAI-compatible adapter, M6)
 ├── supabase/                     # migrations/ (canonical schema) + seed/ (reference + demo fixtures)
-├── prompts/ · scripts/           # placeholders for later milestones
+├── prompts/                      # versioned AI prompts (prompts/<task>/vN.md, M6) · scripts/ placeholder
 ├── .github/workflows/ci.yml      # install → lint → typecheck → test → build
 └── docs/
-    ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
-    ├── adr/     ADR-001 … ADR-011 (+ index/template)
+    ├── 00-ARCHITECTURE-BASELINE.md … 24-EVIDENCE-VISUALIZATION-METHODOLOGY.md
+    ├── adr/     ADR-001 … ADR-016 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Still **no** AI wiring, and no live Supabase. Do not assume features exist —
-inspect first (`git status`, `ls`, read files) before acting.
+AI is wired as **suggestion-only** (M6) with a **mock provider by default**; there
+is still no live Supabase and no live AI provider (both are pending gates). Do not
+assume features exist — inspect first (`git status`, `ls`, read files) before acting.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
