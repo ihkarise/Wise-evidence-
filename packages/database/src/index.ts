@@ -46,6 +46,15 @@ export {
   type Facets,
 } from './search.js';
 export {
+  findCachedSuggestion,
+  persistSuggestion,
+  listLatestSuggestions,
+  type AiCacheKey,
+  type AiJobStatus,
+  type AiSuggestionRecord,
+  type PersistSuggestionInput,
+} from './ai-jobs.js';
+export {
   getEvidenceLandscape,
   type EvidenceLandscape,
   type LevelCount,
