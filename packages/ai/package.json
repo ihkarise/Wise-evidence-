@@ -1,0 +1,20 @@
+{
+  "name": "@wise-evidence/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider-neutral AI enrichment: AIProvider interface, deterministic mock, and an OpenAI-compatible aggregator adapter. Suggestion-only — never a canonical authority (ADR-016).",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
