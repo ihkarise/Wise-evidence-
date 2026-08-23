@@ -31,6 +31,17 @@ const QUALITY = ['ADEQUATE', 'UNCLEAR', 'INADEQUATE', 'NOT_APPLICABLE'];
 const CONFIDENCE = ['LOW', 'MODERATE', 'HIGH'];
 const SUBJECTS = ['HUMAN', 'ANIMAL', 'IN_VITRO', 'MIXED', 'NOT_APPLICABLE'];
 const canPublish = staff.role === 'ADMIN';
+
+// AI assistance tasks (M6, ADR-016). Each maps to a target editor control the
+// reviewer fills on Accept. AI is a suggestion only — never auto-applied.
+const AI_TASKS = [
+  { task: 'summary', label: 'Summary' },
+  { task: 'study-type', label: 'Study type' },
+  { task: 'outcome', label: 'Reported outcome' },
+  { task: 'evidence-level', label: 'Evidence level' },
+  { task: 'quality', label: 'Evidence quality' },
+  { task: 'criticism', label: 'Criticism' },
+];
 ---
 
 <BaseLayout title="Edit research — WiseEvidence admin">
@@ -107,6 +118,7 @@ const canPublish = staff.role === 'ADMIN';
               <option value="AUTHOR_REPORTED">AUTHOR_REPORTED</option>
               <option value="REVIEWER_ASSESSED">REVIEWER_ASSESSED</option>
               <option value="EXTERNAL_PUBLICATION">EXTERNAL_PUBLICATION</option>
+              <option value="AI_SUGGESTED">AI_SUGGESTED</option>
             </select>
             <input name="critBody" placeholder="Criticism note" class="flex-1 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900" />
           </div>
@@ -115,6 +127,28 @@ const canPublish = staff.role === 'ADMIN';
               {study.criticisms.map((c) => <li>• {c.category} ({c.origin}): {c.body}</li>)}
             </ul>
           )}
+        </fieldset>
+
+        <fieldset class="space-y-3 rounded-md border border-indigo-200 bg-indigo-50/40 p-3 dark:border-indigo-900 dark:bg-indigo-950/30">
+          <legend class="px-1 text-sm font-semibold text-indigo-700 dark:text-indigo-300">AI assistance (suggestions only)</legend>
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            AI proposes values to speed review. Every suggestion is
+            <strong>pending human review</strong> and is never authoritative — nothing is applied until you
+            <em>Accept</em> it, and you can edit or reject it. The confidence shown is the model's own
+            self-report, <strong>not</strong> the evidence-confidence dimension above.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {AI_TASKS.map((t) => (
+              <button
+                type="button"
+                data-ai-task={t.task}
+                class="rounded-md border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:bg-slate-900 dark:text-indigo-300"
+              >
+                Suggest: {t.label}
+              </button>
+            ))}
+          </div>
+          <div id="ai-panel" class="space-y-2" aria-live="polite"></div>
         </fieldset>
 
         <div class="flex flex-wrap gap-2">
@@ -137,11 +171,21 @@ const canPublish = staff.role === 'ADMIN';
       const studyId = root.dataset.studyId!;
       const val = (n: string) => (form.elements.namedItem(n) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? '';
 
+      // Dimension -> { resultId, value } for AI suggestions the reviewer accepted,
+      // so an accepted value keeps its provenance link (ai_result_id) on save.
+      const acceptedAi: Record<string, { resultId: string; value: string }> = {};
+
       const save = async () => {
         const dims = ['OUTCOME', 'CONFIDENCE', 'QUALITY', 'EVIDENCE_LEVEL'];
         const classifications = dims
           .filter((d) => val(d))
-          .map((d) => ({ dimension: d, value: val(d) }));
+          .map((d) => {
+            const c: { dimension: string; value: string; aiResultId?: string } = { dimension: d, value: val(d) };
+            const acc = acceptedAi[d];
+            // Only attach provenance if the accepted value is still the current value.
+            if (acc && acc.value === val(d)) c.aiResultId = acc.resultId;
+            return c;
+          });
         const body: Record<string, unknown> = {
           patch: {
             title: val('title'),
@@ -186,6 +230,132 @@ const canPublish = staff.role === 'ADMIN';
           }
           if (action === 'approve') window.location.href = `/research/${studyId}`;
           else window.location.href = '/admin';
+        });
+      });
+
+      // --- AI assistance (M6, ADR-016): suggestion-only, human accepts/edits/rejects. ---
+      interface CriticismItem { category: string; note: string }
+      interface AiOutput { value?: string; summary?: string; items?: CriticismItem[]; rationale?: string }
+      interface AiSuggestionPayload {
+        resultId: string;
+        suggestedValue: string | null;
+        output: AiOutput | null;
+        confidence: string | null;
+        provider: string;
+        model: string;
+        promptVersion: string;
+      }
+      interface EnrichResponse { ok: boolean; cached?: boolean; error?: string; suggestion?: AiSuggestionPayload | null }
+
+      const aiPanel = document.getElementById('ai-panel');
+      // Which editor control each task fills, and whether it carries classification provenance.
+      const TASK_TARGET: Record<string, { field: string; dimension?: string }> = {
+        summary: { field: 'summary' },
+        'study-type': { field: 'studyTypeCode' },
+        outcome: { field: 'OUTCOME', dimension: 'OUTCOME' },
+        'evidence-level': { field: 'EVIDENCE_LEVEL', dimension: 'EVIDENCE_LEVEL' },
+        quality: { field: 'QUALITY', dimension: 'QUALITY' },
+        criticism: { field: 'critBody' },
+      };
+      const setField = (name: string, value: string) => {
+        const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+        if (el) el.value = value;
+      };
+      const esc = (s: string) => s.replace(/[<>&]/g, (c) => (c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;'));
+
+      const renderSuggestion = (task: string, label: string, data: EnrichResponse) => {
+        if (!aiPanel) return;
+        const s = data.suggestion ?? null;
+        const box = document.createElement('div');
+        box.className = 'rounded-md border border-indigo-200 bg-white p-3 text-sm dark:border-indigo-800 dark:bg-slate-900';
+        const conf = s && s.confidence ? ` · AI-confidence: ${esc(s.confidence)}` : '';
+        const prov = s ? `${esc(s.provider)}/${esc(s.model)} · prompt ${esc(s.promptVersion)}` : '';
+        const cachedTag = data.cached ? ' · cached' : '';
+
+        let bodyHtml = '';
+        if (!s) {
+          bodyHtml = '<p class="text-slate-500">No suggestion produced.</p>';
+        } else if (task === 'criticism') {
+          const items = s.output?.items ?? [];
+          bodyHtml = items.length
+            ? '<ul class="list-disc pl-5">' + items.map((i) => `<li><strong>${esc(i.category)}</strong>: ${esc(i.note)}</li>`).join('') + '</ul>'
+            : '<p class="text-slate-500">No criticism found in the provided data.</p>';
+        } else {
+          bodyHtml = `<p class="font-medium">${esc(String(s.suggestedValue ?? ''))}</p>`;
+        }
+        const rationale = s && s.output?.rationale ? `<p class="mt-1 text-xs text-slate-500">${esc(String(s.output.rationale))}</p>` : '';
+
+        box.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-semibold text-indigo-700 dark:text-indigo-300">AI suggestion — ${esc(label)}</span>
+            <span class="text-xs text-slate-500">pending human review${cachedTag}</span>
+          </div>
+          <div class="mt-1">${bodyHtml}${rationale}</div>
+          <p class="mt-1 text-xs text-slate-400">${prov}${conf}</p>
+          <div class="mt-2 flex gap-2"></div>`;
+        const actions = box.querySelector('div.mt-2') as HTMLElement;
+
+        const mkBtn = (text: string, cls: string) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = text;
+          b.className = cls;
+          return b;
+        };
+        const target = TASK_TARGET[task];
+        const acceptBtn = mkBtn('Accept', 'rounded border border-green-600 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400');
+        const rejectBtn = mkBtn('Reject', 'rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600');
+
+        const applyAccept = () => {
+          if (!s) return;
+          if (task === 'criticism') {
+            const items = s.output?.items ?? [];
+            const first = items[0];
+            if (first) {
+              setField('critCategory', first.category);
+              setField('critOrigin', 'AI_SUGGESTED');
+              setField('critBody', first.note);
+            }
+          } else if (target) {
+            const value = String(s.suggestedValue ?? '');
+            setField(target.field, value);
+            // Preserve provenance for classification dimensions on the next save.
+            if (target.dimension && s.resultId) acceptedAi[target.dimension] = { resultId: s.resultId, value };
+          }
+          box.querySelector('.mt-1')?.insertAdjacentHTML('beforeend', ' <span class="text-xs text-green-700 dark:text-green-400">✓ applied to the form (review, then Save)</span>');
+          acceptBtn.disabled = true;
+        };
+        acceptBtn.addEventListener('click', applyAccept);
+        rejectBtn.addEventListener('click', () => box.remove());
+        actions.append(acceptBtn, rejectBtn);
+        aiPanel.prepend(box);
+      };
+
+      document.querySelectorAll('[data-ai-task]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const task = (btn as HTMLElement).dataset.aiTask!;
+          const label = (btn as HTMLElement).textContent?.replace(/^Suggest:\s*/, '') ?? task;
+          (btn as HTMLButtonElement).disabled = true;
+          const original = (btn as HTMLElement).textContent;
+          (btn as HTMLElement).textContent = 'Thinking…';
+          try {
+            const res = await fetch(`/api/admin/research/${studyId}/enrich`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ task }),
+            });
+            const data = await res.json();
+            if (!data.ok) {
+              if (msg) msg.textContent = `AI error: ${data.error}`;
+            } else {
+              renderSuggestion(task, label, data);
+            }
+          } catch {
+            if (msg) msg.textContent = 'AI request failed.';
+          } finally {
+            (btn as HTMLButtonElement).disabled = false;
+            if (original) (btn as HTMLElement).textContent = original;
+          }
         });
       });
     }

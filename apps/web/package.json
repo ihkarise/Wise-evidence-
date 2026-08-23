@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@wise-evidence/ai": "workspace:*",
     "@wise-evidence/database": "workspace:*",
     "@wise-evidence/domain": "workspace:*",
     "@wise-evidence/metadata": "workspace:*",
