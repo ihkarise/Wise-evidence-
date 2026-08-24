@@ -121,6 +121,9 @@ importers:
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.1
+      '@wise-evidence/ai':
+        specifier: workspace:*
+        version: link:../ai
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

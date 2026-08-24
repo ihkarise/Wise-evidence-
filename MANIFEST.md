@@ -49,11 +49,13 @@ Architecture Decision Records (`docs/adr/`):
 - `README.md` (index + template)
 - `ADR-001-modular-monolith.md` … `ADR-012-pglite-database-testing.md`
 
-Milestone 0 reports (`docs/reports/`):
+Reports (`docs/reports/`):
 
-- `ARCHITECTURE-CROSSCHECK.md` — contradiction/consistency report
-- `MVP-SCOPE.md` — finalized MVP scope
-- `TECH-STACK-DECISION.md` — confirmed technology stack
+- `ARCHITECTURE-CROSSCHECK.md` — contradiction/consistency report (M0)
+- `MVP-SCOPE.md` — finalized MVP scope (M0)
+- `TECH-STACK-DECISION.md` — confirmed technology stack (M0)
+- `M6.1-OPERATIONAL-VERIFICATION.md` — real-provider/cost verification gate
+  (mock-verified; live run + official pricing are operator-gated blockers)
 
 ## Application foundation (Milestone 1)
 
