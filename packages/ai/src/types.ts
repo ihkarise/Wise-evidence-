@@ -90,9 +90,16 @@ export type AIErrorCode =
   | 'UNSUPPORTED_TASK'
   | 'NOT_CONFIGURED';
 
+/** Provider-reported token usage for one call (null fields where unavailable). */
+export interface AIUsage {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+}
+
 /** Raw provider output before validation — a parsed JSON object or an error. */
 export type AIProviderResult =
-  | { ok: true; raw: unknown; costEstimate?: number | null }
+  | { ok: true; raw: unknown; usage?: AIUsage | null; costEstimate?: number | null }
   | { ok: false; error: AIErrorCode; message: string };
 
 /** A swappable provider. Selected by configuration; never imported into the domain. */

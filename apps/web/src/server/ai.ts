@@ -3,6 +3,8 @@ import {
   OpenAICompatibleProvider,
   computeInputHash,
   validateOutput,
+  estimateCostUsd,
+  pricingFromEnv,
   PROMPT_VERSION,
   TASK_OPERATION,
   type AIProvider,
@@ -159,10 +161,15 @@ export async function enrichStudy(staff: StaffContext, studyId: string, task: AI
     return { ok: false, cached: false, error: providerResult.message };
   }
 
+  // Real cost = provider-reported usage × operator-configured current pricing.
+  // Null when usage or pricing is unavailable — never a guessed number.
+  const pricing = pricingFromEnv(process.env);
+  const costEstimate = pricing ? estimateCostUsd(providerResult.usage, pricing) : null;
+
   const validated = validateOutput(task, providerResult.raw, loaded.allowedValues);
   if (!validated.ok) {
     await withActor({ role: 'authenticated', sub: staff.sub }, (exec) =>
-      persistSuggestion(exec, actor, { key, status: 'FAILED', costEstimate: providerResult.costEstimate ?? null })
+      persistSuggestion(exec, actor, { key, status: 'FAILED', costEstimate })
     );
     return { ok: false, cached: false, error: `AI output rejected: ${validated.message}` };
   }
@@ -171,7 +178,7 @@ export async function enrichStudy(staff: StaffContext, studyId: string, task: AI
     persistSuggestion(exec, actor, {
       key,
       status: 'SUCCEEDED',
-      costEstimate: providerResult.costEstimate ?? null,
+      costEstimate,
       result: {
         output: validated.suggestion.output,
         suggestedValue: validated.suggestion.suggestedValue,

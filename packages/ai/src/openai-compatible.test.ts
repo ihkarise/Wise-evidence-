@@ -21,7 +21,10 @@ function fakeFetch(content: string, status = 200): { impl: typeof fetch; seen: {
   const seen: { url: string; init: RequestInit }[] = [];
   const impl = (async (url: string | URL | Request, init?: RequestInit) => {
     seen.push({ url: String(url), init: init ?? {} });
-    const body = JSON.stringify({ choices: [{ message: { content } }] });
+    const body = JSON.stringify({
+      choices: [{ message: { content } }],
+      usage: { prompt_tokens: 320, completion_tokens: 40, total_tokens: 360 },
+    });
     return new Response(body, { status, headers: { 'content-type': 'application/json' } });
   }) as unknown as typeof fetch;
   return { impl, seen };
@@ -63,6 +66,8 @@ describe('OpenAICompatibleProvider', () => {
       const v = validateOutput('outcome', res.raw, req().allowedValues);
       expect(v.ok).toBe(true);
       if (v.ok) expect(v.suggestion.suggestedValue).toBe('NEGATIVE');
+      // Provider-reported token usage is captured for cost measurement.
+      expect(res.usage).toEqual({ inputTokens: 320, outputTokens: 40, totalTokens: 360 });
     }
   });
 

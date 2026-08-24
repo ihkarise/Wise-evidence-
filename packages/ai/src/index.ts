@@ -11,9 +11,11 @@ export type {
   AIEnrichmentRequest,
   AISuggestion,
   AIErrorCode,
+  AIUsage,
   AIProviderResult,
   AIProvider,
 } from './types.js';
+export { estimateCostUsd, pricingFromEnv, type ModelPricing } from './cost.js';
 export { AI_TASKS, TASK_OPERATION, TASK_DIMENSION } from './types.js';
 export { validateOutput, CRITICISM_CATEGORIES, type ValidationResult } from './schemas.js';
 export { computeInputHash } from './hash.js';

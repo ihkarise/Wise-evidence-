@@ -11,7 +11,7 @@
  */
 import { renderUntrustedInput } from './injection.js';
 import { loadPromptText } from './prompts.js';
-import type { AIEnrichmentRequest, AIProvider, AIProviderResult } from './types.js';
+import type { AIEnrichmentRequest, AIProvider, AIProviderResult, AIUsage } from './types.js';
 
 export interface OpenAICompatibleOptions {
   baseUrl: string;
@@ -28,6 +28,11 @@ export interface OpenAICompatibleOptions {
 
 interface ChatResponse {
   choices?: { message?: { content?: unknown } }[];
+  usage?: { prompt_tokens?: unknown; completion_tokens?: unknown; total_tokens?: unknown };
+}
+
+function num(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
 const SYSTEM_GUARD =
@@ -112,10 +117,16 @@ export class OpenAICompatibleProvider implements AIProvider {
       } catch {
         return { ok: false, error: 'MALFORMED_RESPONSE', message: 'Model content was not valid JSON.' };
       }
-      // Token usage is available but is not a dollar cost; do not write token
-      // counts into the cost column. Real cost estimation needs per-model pricing
-      // config (a later cost-control concern, docs/21) — leave cost null for now.
-      return { ok: true, raw, costEstimate: null };
+      // Capture provider-reported token usage (OpenAI-compatible `usage` object).
+      // Dollar cost is derived separately from configured per-model pricing
+      // (see cost.ts) — token counts are never written into a cost field here.
+      const u = envelope.usage;
+      const usage: AIUsage = {
+        inputTokens: num(u?.prompt_tokens),
+        outputTokens: num(u?.completion_tokens),
+        totalTokens: num(u?.total_tokens),
+      };
+      return { ok: true, raw, usage, costEstimate: null };
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return { ok: false, error: 'TIMEOUT', message: 'Provider request timed out.' };
       return { ok: false, error: 'PROVIDER_ERROR', message: 'Provider request failed.' };
