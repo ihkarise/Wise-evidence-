@@ -14,6 +14,7 @@
  *
  *   RUN_M6_1=1 pnpm exec vitest run packages/database/src/m6-1-verify.test.ts
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   MockAIProvider,
@@ -36,6 +37,35 @@ import { findCachedSuggestion, persistSuggestion, type AiCacheKey } from './ai-j
 import type { ActorContext } from './service.js';
 
 const RUN = process.env.RUN_M6_1 === '1';
+
+/**
+ * Load AI_* keys from a local, gitignored `.env` at the repo root into
+ * process.env (Vitest does not auto-load .env). Only `AI_`-prefixed keys are
+ * read, only when not already set, so the credential stays local and is never
+ * committed, logged, or pulled from anywhere but the operator's own file. Real
+ * injected env vars (if present) always win.
+ */
+function loadAiEnvFromDotenv(): void {
+  let text: string;
+  try {
+    text = readFileSync(new URL('../../../.env', import.meta.url), 'utf8');
+  } catch {
+    return; // no .env — rely on real env vars (or fall back to the mock)
+  }
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    if (!key.startsWith('AI_') || process.env[key] !== undefined) continue;
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
 // Deterministic DEMO record from the seed fixtures (is_demo = true).
 const DEMO_STUDY = '00000000-0000-0000-0000-000000001001';
 const REVIEWER: ActorContext = { appUserId: '00000000-0000-0000-0000-0000000000a1', role: 'REVIEWER' };
@@ -69,6 +99,7 @@ interface Row {
 
 describe.skipIf(!RUN)('M6.1 operational verification (gated by RUN_M6_1)', () => {
   it('runs one controlled six-task cycle on a DEMO study, with cache + cost', async () => {
+    loadAiEnvFromDotenv();
     const db: TestDatabase = await createTestDatabase({ seed: true });
     try {
       const provider = selectProvider();
