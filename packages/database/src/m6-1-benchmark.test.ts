@@ -57,6 +57,9 @@ const REVIEWER_SUB = '00000000-0000-0000-0000-0000000000b1';
 
 const OUTCOME_VALUES = ['STRONG_POSITIVE', 'POSITIVE', 'LEANING_POSITIVE', 'NEUTRAL_INCONCLUSIVE', 'LEANING_NEGATIVE', 'NEGATIVE', 'STRONG_NEGATIVE'];
 const QUALITY_VALUES = ['ADEQUATE', 'UNCLEAR', 'INADEQUATE', 'NOT_APPLICABLE'];
+// "Essential enrichment" scenario (a cheaper production subset). Its cost is
+// DERIVED from these four actual task results — no separate run is made.
+const ESSENTIAL_TASKS: AITask[] = ['summary', 'study-type', 'evidence-level', 'outcome'];
 
 /** Read only AI_-prefixed keys from a local gitignored .env into process.env (Vitest does not). */
 function loadAiEnvFromDotenv(): void {
@@ -110,6 +113,7 @@ interface Cell {
   retried: boolean;
   validation: 'VALID' | 'INVALID' | 'ERROR';
   value: string | null;
+  output: unknown;
   usage: AIUsage | null | undefined;
   cost: number | null;
   latencyMs: number | null;
@@ -199,14 +203,14 @@ describe.skipIf(!RUN)('M6.1 model benchmark (gated by RUN_M6_1_BENCH)', () => {
 
           if (!pr.ok) {
             await db.asRolePersistent('authenticated', REVIEWER_SUB, (exec) => persistSuggestion(exec, REVIEWER, { key, status: 'FAILED' }));
-            cells.push({ model, task, ok: false, retried, validation: 'ERROR', value: null, usage: null, cost: null, latencyMs, note: pr.error });
+            cells.push({ model, task, ok: false, retried, validation: 'ERROR', value: null, output: null, usage: null, cost: null, latencyMs, note: pr.error });
             continue;
           }
           const cost = pricing ? estimateCostUsd(pr.usage, pricing) : null;
           const v = validateOutput(task, pr.raw, req.allowedValues);
           if (!v.ok) {
             await db.asRolePersistent('authenticated', REVIEWER_SUB, (exec) => persistSuggestion(exec, REVIEWER, { key, status: 'FAILED', costEstimate: cost }));
-            cells.push({ model, task, ok: true, retried, validation: 'INVALID', value: null, usage: pr.usage, cost, latencyMs, note: v.message });
+            cells.push({ model, task, ok: true, retried, validation: 'INVALID', value: null, output: pr.raw, usage: pr.usage, cost, latencyMs, note: v.message });
             continue;
           }
           await db.asRolePersistent('authenticated', REVIEWER_SUB, (exec) =>
@@ -217,7 +221,7 @@ describe.skipIf(!RUN)('M6.1 model benchmark (gated by RUN_M6_1_BENCH)', () => {
               result: { output: v.suggestion.output, suggestedValue: v.suggestion.suggestedValue, confidence: v.suggestion.confidence, validationStatus: 'VALID' },
             })
           );
-          cells.push({ model, task, ok: true, retried, validation: 'VALID', value: v.suggestion.suggestedValue, usage: pr.usage, cost, latencyMs, note: 'ok' });
+          cells.push({ model, task, ok: true, retried, validation: 'VALID', value: v.suggestion.suggestedValue, output: v.suggestion.output, usage: pr.usage, cost, latencyMs, note: 'ok' });
         }
       }
 
@@ -256,15 +260,25 @@ describe.skipIf(!RUN)('M6.1 model benchmark (gated by RUN_M6_1_BENCH)', () => {
         const mc = cells.filter((c) => c.model === model);
         const valid = mc.filter((c) => c.validation === 'VALID').length;
         const failed = mc.filter((c) => c.validation !== 'VALID').length;
+        const retries = mc.filter((c) => c.retried).length;
         const anyCost = mc.some((c) => c.cost !== null);
         const sixCost = anyCost ? mc.reduce((n, c) => n + (c.cost ?? 0), 0) : null;
+        // Essential-4 cost only when ALL four essential tasks have a real cost.
+        const essCells = ESSENTIAL_TASKS.map((t) => mc.find((c) => c.task === t));
+        const essCost = essCells.every((c) => c && c.cost !== null) ? essCells.reduce((n, c) => n + (c!.cost ?? 0), 0) : null;
         const tokens = mc.reduce((n, c) => n + (c.usage?.totalTokens ?? 0), 0);
+        const avgLat = Math.round(mc.reduce((n, c) => n + (c.latencyMs ?? 0), 0) / mc.length);
         lines.push(
-          `SUMMARY ${model}: valid=${valid}/6 failed=${failed} tokens=${tokens || 'n/a'} six_task_cost=${sixCost === null ? 'n/a (configure AI_BENCH_PRICING)' : fmtCost(sixCost)}`
+          `SUMMARY ${model}: valid=${valid}/6 failed=${failed} retries=${retries} tokens=${tokens || 'n/a'} avg_latency=${avgLat}ms`
         );
-        if (sixCost !== null) {
-          lines.push(`  projections (ESTIMATE): 100=${fmtCost(sixCost * 100)}  1,000=${fmtCost(sixCost * 1000)}  10,000=${fmtCost(sixCost * 10000)}`);
-        }
+        lines.push(`  FULL(6):      cost=${sixCost === null ? 'n/a (set AI_BENCH_PRICING)' : fmtCost(sixCost)}` + (sixCost !== null ? `  100=${fmtCost(sixCost * 100)}  1,000=${fmtCost(sixCost * 1000)}  10,000=${fmtCost(sixCost * 10000)} [ESTIMATE]` : ''));
+        lines.push(`  ESSENTIAL(4): cost=${essCost === null ? 'n/a' : fmtCost(essCost)}` + (essCost !== null ? `  100=${fmtCost(essCost * 100)}  1,000=${fmtCost(essCost * 1000)}  10,000=${fmtCost(essCost * 10000)} [ESTIMATE, derived from 4 task results]` : ''));
+      }
+      // Full outputs, for the manual source-grounding + human-review assessment.
+      lines.push('-------------------------------------------------------------', 'OUTPUTS (for manual grounding / human-review assessment):');
+      for (const c of cells) {
+        const body = c.output !== null && c.output !== undefined ? JSON.stringify(c.output).slice(0, 600) : c.note;
+        lines.push(`  [${c.model} · ${c.task}] ${c.validation}: ${body}`);
       }
       lines.push(`cache verification: ${cacheHit ? 'HIT (repeat served from stored result — no new call)' : 'MISS'}`);
       lines.push('=============================================================', '');
