@@ -84,7 +84,8 @@ export type ImportState =
   | 'DUPLICATE_CANDIDATE'
   | 'IMPORTED'
   | 'FAILED'
-  | 'REVIEW_REQUIRED';
+  | 'REVIEW_REQUIRED'
+  | 'REJECTED';
 
 export type AiOperation =
   | 'SUMMARIZE'
@@ -317,6 +318,11 @@ export interface ImportJobRow {
   state: ImportState;
   discovered_count: number;
   imported_count: number;
+  // Honest per-stage counts (migration 0016).
+  normalized_count: number;
+  duplicate_count: number;
+  candidate_count: number;
+  error_count: number;
   started_at: string;
   ended_at: string | null;
 }
@@ -329,6 +335,12 @@ export interface ImportCandidateRow {
   state: ImportState;
   duplicate_of_study_id: string | null;
   error_detail: string | null;
+  // Review + provenance fields (migration 0016).
+  source_record_id: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_reason: string | null;
+  imported_study_id: string | null;
   created_at: string;
 }
 
