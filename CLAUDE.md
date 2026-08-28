@@ -10,11 +10,14 @@ Guidance for AI assistants (Claude Code and others) working in this repository.
 **evidence platform for homeopathy research**. Its purpose is to make scattered
 homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
-and provenance as *separate* dimensions.
+and provenance as _separate_ dimensions.
 
-**The repository is in the architecture-to-development transition. There is no
-application code yet — but the full architecture doc set is now complete
-(Milestone 0 done).** The repository is documentation only:
+**Milestone 0 (Architecture) and Milestone 1 (Repository Foundation) are
+complete.** The full architecture doc set exists, and so does the project
+foundation: a pnpm workspace, an Astro web app with a React island, a
+framework-independent `packages/domain` (with `normalizeDoi()`), CI, tooling,
+and governance. There is still **no database schema, no research catalogue, no
+authentication, and no AI pipeline** — those belong to Milestone 2+.
 
 ```text
 .
@@ -22,6 +25,11 @@ application code yet — but the full architecture doc set is now complete
 ├── CLAUDE-CODE-MASTER-PROMPT.md  # authoritative lead-architect brief
 ├── README.md
 ├── MANIFEST.md                   # index of all docs
+├── package.json / pnpm-workspace.yaml / tsconfig.base.json  # M1 tooling
+├── apps/web/                     # Astro (static-first) + React island + Tailwind
+├── packages/domain/              # portable domain logic — normalizeDoi()
+├── supabase/README.md            # DB strategy only; schema deferred to M2
+├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
     ├── 24-MULTI-SOURCE-INGESTION.md  # M8 design checkpoint (design-only)
@@ -29,9 +37,9 @@ application code yet — but the full architecture doc set is now complete
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-There is **no** `package.json`, no source tree, no database, no CI, no build
-tooling, and no framework installed. Do not assume any of these exist — inspect
-first (`git status`, `ls`, read files) before acting.
+Do not assume anything beyond M1 exists — inspect first (`git status`, `ls`,
+read files) before acting. Do **not** implement Milestone 2+ features without
+explicit authorization.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
@@ -54,8 +62,8 @@ any coding agent.
 Specs `05`–`23` and ADRs `001`–`011` now exist. Do **not** silently invent new
 architecture that contradicts them — when a decision changes, update the relevant
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
-The next step is **Milestone 1 — Repository Foundation** (`docs/22-ROADMAP.md`),
-still no premature features.
+Milestone 1 (Repository Foundation) is complete; the next step is **Milestone 2
+— Database Foundation** (`docs/22-ROADMAP.md`), still no premature features.
 
 Forward design may be documented ahead of build order without changing that
 order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved
@@ -67,7 +75,7 @@ implementation is blocked on Phases 1–7 and must not be coded before them.
 ## 2. First rule: architecture before code
 
 **Do not start writing application code.** The master prompt is explicit: the
-first milestone is *Architecture Completion + Repository Foundation*, not features.
+first milestone is _Architecture Completion + Repository Foundation_, not features.
 
 Before any substantial change:
 
@@ -75,7 +83,7 @@ Before any substantial change:
 2. Inspect the repository (`git status`, directory structure, existing files).
 3. Identify any existing technology and any existing user work.
 4. Report what you found.
-5. Propose the *smallest* plan that follows the architecture.
+5. Propose the _smallest_ plan that follows the architecture.
 
 Complete or advance the remaining architecture specs (§1, "documents that do not
 yet exist") **before** substantial implementation. Do not invent a large
@@ -169,7 +177,7 @@ duplicate-review workflow.
   over HTML scraping.
 - **Do not build scraping first.** The first working data flow is manual:
   `Admin → DOI/URL → Metadata → Research Record → AI enrichment → Review →
-  Publish`. Source connectors come only after that works reliably.
+Publish`. Source connectors come only after that works reliably.
 - Do **not** build researcher upvote/downvote reputation scoring. Focus community
   feedback on research objects (summary/metadata accuracy, classification
   disagreement, usefulness), not personal reputation.
@@ -199,7 +207,7 @@ do **not** turn them into microservices.
 **Cost philosophy: _Free first. Cheap second. Paid only when justified._** Do not
 introduce Kubernetes, microservices, Elasticsearch, a dedicated vector database,
 expensive observability, or expensive AI-on-every-paper without a measured
-requirement. If a paid service seems necessary, explain why *before* adding it.
+requirement. If a paid service seems necessary, explain why _before_ adding it.
 
 **Do not overbuild:** no mobile app, social network, recommendation engine, vector
 DB, complex analytics, autonomous research agent, or search cluster unless it is
@@ -219,7 +227,7 @@ credentials to the frontend.
 
 ### Git discipline
 
-- **Work on the branch `claude/claude-md-documentation-sllemq`** (create it from
+- **Work on the feature branch assigned for your current task** (create it from
   the latest default branch if it does not exist). Never push to another branch
   without explicit permission.
 - Run `git status` and inspect existing changes **before** modifying files.

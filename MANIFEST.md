@@ -1,7 +1,8 @@
 # WiseEvidence Architecture Manifest
 
-**Status:** Milestone 0 (Architecture Completion) complete.
-**Updated:** 2026-08-21
+**Status:** Milestone 0 (Architecture Completion) and Milestone 1 (Repository
+Foundation) complete.
+**Updated:** 2026-08-28
 
 The architecture package was originally distributed as
 `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 the package was
@@ -58,7 +59,18 @@ Milestone 0 reports (`docs/reports/`):
 - `MVP-SCOPE.md` — finalized MVP scope
 - `TECH-STACK-DECISION.md` — confirmed technology stack
 
+## Application foundation (Milestone 1)
+
+- `apps/web/` — Astro app (static-first) with React island + Tailwind; landing
+  and methodology pages; Supabase connection strategy (no schema).
+- `packages/domain/` — portable domain logic; `normalizeDoi()` + Vitest suite.
+- `supabase/README.md` — migrations-first strategy; schema deferred to M2.
+- Root tooling — pnpm workspace, strict TypeScript, ESLint, Prettier, Vitest.
+- `.github/workflows/ci.yml` — CI (lint · typecheck · test · build; no secrets).
+- Governance — `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
+  `CODE_OF_CONDUCT.md`, PR + issue templates.
+
 ## Next
 
-Milestone 1 — Repository Foundation (Astro app, `packages/*`, CI, tests, env
-config, hygiene files). See `docs/22-ROADMAP.md`.
+Milestone 2 — Database Foundation (migrations, core entities, RLS, seed data,
+database tests). See `docs/22-ROADMAP.md`.

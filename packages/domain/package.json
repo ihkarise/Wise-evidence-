@@ -1,0 +1,17 @@
+{
+  "name": "@wise-evidence/domain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable, framework-independent domain logic for WiseEvidence. No Astro, React, Supabase, or AI SDK imports.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

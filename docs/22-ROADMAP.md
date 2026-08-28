@@ -14,19 +14,28 @@
 Define the staged milestone sequence. Build in order; do not silently jump ahead
 (master prompt §34, §77). Each milestone ends with a checkpoint report (§13).
 
-# 2. Phase 0 — Architecture Completion  ← current
+# 2. Phase 0 — Architecture Completion  ✅ complete
 
 Complete architecture specs `05`–`23`, ADRs, cross-check/contradiction report,
 final MVP scope, tech-stack decision. **No major features.** (master prompt §78.)
 
-# 3. Phase 1 — Repository Foundation
+# 3. Phase 1 — Repository Foundation  ✅ complete
 
 Astro app, base styling, folder structure (`apps/web`, `packages/*`), environment
 config, Supabase connection strategy, CI, test runner, lint, type checking,
 `README`/`CONTRIBUTING`/`SECURITY`/`LICENSE`. No unnecessary features
 (master prompt §79, §28).
 
-# 4. Phase 2 — Database Foundation
+**Delivered:** pnpm workspace + strict TypeScript; `packages/domain` with
+`normalizeDoi()` and its Vitest suite; `apps/web` (Astro static-first + React
+island `CopyDoi` + Tailwind) with landing and methodology pages; Supabase
+connection strategy (`apps/web/src/lib/supabase.ts`) with **no schema yet**;
+ESLint/Prettier/Vitest; `.env.example`; GitHub Actions CI (lint · typecheck ·
+test · build, no secrets/AI/network); governance files (`LICENSE` Apache-2.0,
+`CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`, PR + issue templates);
+`supabase/README.md`. Database schema is deferred to Phase 2.
+
+# 4. Phase 2 — Database Foundation  ← next
 
 Migrations, core entities & relationships, indexes, RLS, seed data, database
 tests (master prompt §80, `05`, `20`).
