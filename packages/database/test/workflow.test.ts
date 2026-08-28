@@ -94,13 +94,24 @@ describe("full manual research lifecycle", () => {
         summary: "Human-authored plain-language summary of the study.",
       }),
     );
-    await svc((s) => setOutcome(s, REVIEWER, studyId, "POSITIVE", "MODERATE", "Primary endpoint favoured intervention"));
+    await svc((s) =>
+      setOutcome(
+        s,
+        REVIEWER,
+        studyId,
+        "POSITIVE",
+        "MODERATE",
+        "Primary endpoint favoured intervention",
+      ),
+    );
     await svc((s) => setQualitySummary(s, REVIEWER, studyId, "MODERATE", "Some risk of bias"));
-    await svc((s) => addCriticism(s, REVIEWER, studyId, {
-      category: "SAMPLE_SIZE",
-      origin: "REVIEWER_ASSESSED",
-      text: "Small sample limits strength.",
-    }));
+    await svc((s) =>
+      addCriticism(s, REVIEWER, studyId, {
+        category: "SAMPLE_SIZE",
+        origin: "REVIEWER_ASSESSED",
+        text: "Small sample limits strength.",
+      }),
+    );
     await svc((s) => linkCondition(s, REVIEWER, studyId, "asthma"));
     await svc((s) => linkIntervention(s, REVIEWER, studyId, "individualized-homeopathy"));
 
@@ -182,7 +193,9 @@ describe("review decisions", () => {
   it("archive is admin-only and hides a published study from anon", async () => {
     const id = await freshPending("10.1234/wise.m3.archive");
     await svc((s) => approveAndPublish(s, ADMIN, id));
-    await expect(svc((s) => archiveStudy(s, REVIEWER, id, "x"))).rejects.toBeInstanceOf(ServiceError);
+    await expect(svc((s) => archiveStudy(s, REVIEWER, id, "x"))).rejects.toBeInstanceOf(
+      ServiceError,
+    );
     await svc((s) => archiveStudy(s, ADMIN, id, "Superseded"));
     expect((await svc((s) => getStudyDetail(s, id)))?.publicationState).toBe("ARCHIVED");
     expect(await db.asAnon((s) => getStudyDetail(s, id))).toBeNull();
@@ -192,13 +205,18 @@ describe("review decisions", () => {
 describe("fail-closed publication", () => {
   it("refuses to publish without a human OUTCOME classification", async () => {
     const created = await svc((s) =>
-      createDraftFromMetadata(s, REVIEWER, { doi: "10.1234/wise.m3.nooutcome", title: "No outcome" }),
+      createDraftFromMetadata(s, REVIEWER, {
+        doi: "10.1234/wise.m3.nooutcome",
+        title: "No outcome",
+      }),
     );
     await svc((s) => submitForReview(s, REVIEWER, created.studyId));
     const err = await svc((s) => approveAndPublish(s, ADMIN, created.studyId)).catch((e) => e);
     expect(err).toBeInstanceOf(ServiceError);
     expect((err as ServiceError).reason).toBe("precondition-failed");
-    expect((await svc((s) => getStudyDetail(s, created.studyId)))?.publicationState).toBe("PENDING_REVIEW");
+    expect((await svc((s) => getStudyDetail(s, created.studyId)))?.publicationState).toBe(
+      "PENDING_REVIEW",
+    );
   });
 
   it("refuses to publish a study that is not PENDING_REVIEW", async () => {

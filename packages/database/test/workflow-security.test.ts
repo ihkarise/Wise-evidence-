@@ -49,7 +49,9 @@ describe("anon is fully read-limited and cannot mutate", () => {
   });
   it("cannot read a draft study", async () => {
     const rows = await db.asAnon((s) =>
-      s.query<{ n: string }>("select count(*)::text n from research_study where id = $1", [DEMO_DRAFT]),
+      s.query<{ n: string }>("select count(*)::text n from research_study where id = $1", [
+        DEMO_DRAFT,
+      ]),
     );
     expect(rows.rows[0]?.n).toBe("0");
   });
@@ -61,7 +63,9 @@ describe("anon is fully read-limited and cannot mutate", () => {
 describe("authenticated non-staff cannot mutate", () => {
   it("cannot insert a study", async () => {
     await expect(
-      db.asUser(STRANGER_ID, (s) => s.query("insert into research_study (canonical_title) values ('x')")),
+      db.asUser(STRANGER_ID, (s) =>
+        s.query("insert into research_study (canonical_title) values ('x')"),
+      ),
     ).rejects.toThrow();
   });
 });
@@ -91,7 +95,9 @@ describe("reviewer authorization limits (DB-enforced)", () => {
       ),
     ).rejects.toThrow();
     // role unchanged
-    const row = await db.query<{ role: string }>("select role from app_user where id = $1", [REVIEWER_ID]);
+    const row = await db.query<{ role: string }>("select role from app_user where id = $1", [
+      REVIEWER_ID,
+    ]);
     expect(row.rows[0]?.role).toBe("REVIEWER");
   });
 });
@@ -129,7 +135,9 @@ describe("demo records can never be published", () => {
     ]);
     await expect(
       db.asUser(ADMIN_ID, (s) =>
-        s.query("update research_study set publication_state = 'PUBLISHED' where id = $1", [DEMO_DRAFT]),
+        s.query("update research_study set publication_state = 'PUBLISHED' where id = $1", [
+          DEMO_DRAFT,
+        ]),
       ),
     ).rejects.toThrow(/demo/i);
   });

@@ -54,7 +54,10 @@ export interface StudyDetail {
  * (e.g. anon on a non-published study). One study, its primary publication, and
  * the independent classification dimensions — never collapsed into a score.
  */
-export async function getStudyDetail(db: SqlExecutor, studyId: string): Promise<StudyDetail | null> {
+export async function getStudyDetail(
+  db: SqlExecutor,
+  studyId: string,
+): Promise<StudyDetail | null> {
   const study = await first<{
     id: string;
     canonical_title: string;
@@ -124,7 +127,11 @@ export async function getStudyDetail(db: SqlExecutor, studyId: string): Promise<
       ).map((r) => ({ displayName: r.display_name, order: r.author_order }))
     : [];
 
-  const outcome = await first<{ final_value: string | null; confidence: string | null; explanation: string | null }>(
+  const outcome = await first<{
+    final_value: string | null;
+    confidence: string | null;
+    explanation: string | null;
+  }>(
     db,
     "select final_value, confidence, explanation from classification where study_id = $1 and dimension = 'OUTCOME'",
     [studyId],

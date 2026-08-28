@@ -13,7 +13,12 @@
  * no Astro/React/Supabase/AI.
  */
 import { normalizeTitle, toCanonicalDoi } from "@wise-evidence/domain";
-import type { OutcomeValue, ConfidenceLevel, CriticismCategory, CriticismOrigin } from "../constants.js";
+import type {
+  OutcomeValue,
+  ConfidenceLevel,
+  CriticismCategory,
+  CriticismOrigin,
+} from "../constants.js";
 import {
   type Actor,
   type SqlExecutor,
@@ -98,7 +103,11 @@ async function writeAudit(
 }
 
 /** Get-or-create the manual research_source used as provenance for a draft. */
-async function getOrCreateSource(db: SqlExecutor, name: string, url: string | null): Promise<string> {
+async function getOrCreateSource(
+  db: SqlExecutor,
+  name: string,
+  url: string | null,
+): Promise<string> {
   const existing = await one<{ id: string }>(
     db,
     "select id from research_source where name = $1 limit 1",
@@ -274,10 +283,19 @@ export async function createDraftFromMetadata(
       );
     }
 
-    await writeAudit(db, actor, "create_draft", "research_study", study.id, null, {
-      doi: canonical,
-      title,
-    }, null);
+    await writeAudit(
+      db,
+      actor,
+      "create_draft",
+      "research_study",
+      study.id,
+      null,
+      {
+        doi: canonical,
+        title,
+      },
+      null,
+    );
 
     await db.query("commit");
     return { created: true, studyId: study.id };
@@ -318,7 +336,8 @@ export async function updateStudyIdentity(
       const st = await one<{ id: string }>(db, "select id from study_type where code = $1", [
         patch.studyTypeCode,
       ]);
-      if (!st) throw new ServiceError("invalid-input", `unknown study type: ${patch.studyTypeCode}`);
+      if (!st)
+        throw new ServiceError("invalid-input", `unknown study type: ${patch.studyTypeCode}`);
       studyTypeId = st.id;
     }
   }
@@ -482,10 +501,27 @@ export async function addCriticism(
     db,
     `insert into criticism (study_id, category, origin, text, source_reference, source_url, actor, status)
      values ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE') returning id`,
-    [studyId, input.category, input.origin, text, input.sourceReference ?? null, input.sourceUrl ?? null, actor.id],
+    [
+      studyId,
+      input.category,
+      input.origin,
+      text,
+      input.sourceReference ?? null,
+      input.sourceUrl ?? null,
+      actor.id,
+    ],
   );
   if (!row) throw new ServiceError("invalid-input", "failed to add criticism");
-  await writeAudit(db, actor, "add_criticism", "criticism", row.id, null, { category: input.category }, null);
+  await writeAudit(
+    db,
+    actor,
+    "add_criticism",
+    "criticism",
+    row.id,
+    null,
+    { category: input.category },
+    null,
+  );
   return row.id;
 }
 
@@ -501,7 +537,16 @@ export async function withdrawCriticism(
     [criticismId],
   );
   if (rows.length === 0) throw new ServiceError("not-found", "active criticism not found");
-  await writeAudit(db, actor, "withdraw_criticism", "criticism", criticismId, "ACTIVE", "WITHDRAWN", null);
+  await writeAudit(
+    db,
+    actor,
+    "withdraw_criticism",
+    "criticism",
+    criticismId,
+    "ACTIVE",
+    "WITHDRAWN",
+    null,
+  );
 }
 
 // --- taxonomy links ----------------------------------------------------------
@@ -513,7 +558,9 @@ export async function linkCondition(
   conditionSlug: string,
 ): Promise<void> {
   requireStaff(actor);
-  const cond = await one<{ id: string }>(db, "select id from condition where slug = $1", [conditionSlug]);
+  const cond = await one<{ id: string }>(db, "select id from condition where slug = $1", [
+    conditionSlug,
+  ]);
   if (!cond) throw new ServiceError("invalid-input", `unknown condition: ${conditionSlug}`);
   await db.query(
     "insert into study_condition (study_id, condition_id) values ($1, $2) on conflict do nothing",
@@ -541,14 +588,30 @@ export async function linkIntervention(
 // --- lifecycle transitions ---------------------------------------------------
 
 /** DRAFT → PENDING_REVIEW (reviewer or admin) (docs/26 §18). */
-export async function submitForReview(db: SqlExecutor, actor: Actor, studyId: string): Promise<void> {
+export async function submitForReview(
+  db: SqlExecutor,
+  actor: Actor,
+  studyId: string,
+): Promise<void> {
   requireStaff(actor);
   const states = await getStudyStates(db, studyId);
   if (!states) throw new ServiceError("not-found", "study not found");
   if (states.publication_state !== "DRAFT") {
-    throw new ServiceError("invalid-state", `can only submit a DRAFT (was ${states.publication_state})`);
+    throw new ServiceError(
+      "invalid-state",
+      `can only submit a DRAFT (was ${states.publication_state})`,
+    );
   }
-  await transition(db, actor, studyId, "PENDING_REVIEW", "PENDING_REVIEW", "SUBMIT", null, states.publication_state);
+  await transition(
+    db,
+    actor,
+    studyId,
+    "PENDING_REVIEW",
+    "PENDING_REVIEW",
+    "SUBMIT",
+    null,
+    states.publication_state,
+  );
 }
 
 /** PENDING_REVIEW → DRAFT (reviewer requests changes). */
@@ -564,7 +627,16 @@ export async function requestChanges(
   if (states.publication_state !== "PENDING_REVIEW") {
     throw new ServiceError("invalid-state", "can only request changes on a PENDING_REVIEW study");
   }
-  await transition(db, actor, studyId, "PROCESSING", "DRAFT", "REQUEST_CHANGES", reason, states.publication_state);
+  await transition(
+    db,
+    actor,
+    studyId,
+    "PROCESSING",
+    "DRAFT",
+    "REQUEST_CHANGES",
+    reason,
+    states.publication_state,
+  );
 }
 
 /** → REJECTED (reviewer or admin). */
@@ -580,7 +652,16 @@ export async function rejectStudy(
   if (states.publication_state === "PUBLISHED") {
     throw new ServiceError("invalid-state", "cannot reject a published study; archive it instead");
   }
-  await transition(db, actor, studyId, "REJECTED", "REJECTED", "REJECT", reason, states.publication_state);
+  await transition(
+    db,
+    actor,
+    studyId,
+    "REJECTED",
+    "REJECTED",
+    "REJECT",
+    reason,
+    states.publication_state,
+  );
 }
 
 /** ARCHIVED (admin only). */
@@ -593,7 +674,16 @@ export async function archiveStudy(
   requireAdmin(actor);
   const states = await getStudyStates(db, studyId);
   if (!states) throw new ServiceError("not-found", "study not found");
-  await transition(db, actor, studyId, "ARCHIVED", "ARCHIVED", "EDIT", reason, states.publication_state);
+  await transition(
+    db,
+    actor,
+    studyId,
+    "ARCHIVED",
+    "ARCHIVED",
+    "EDIT",
+    reason,
+    states.publication_state,
+  );
 }
 
 /** Shared transition writer: update states, log review + audit atomically. */
@@ -616,9 +706,25 @@ async function transition(
     await db.query(
       `insert into review (study_id, reviewer_id, action, before_snapshot, after_snapshot, reason)
        values ($1, $2, $3::review_action, $4, $5, $6)`,
-      [studyId, actor.id, action === "SUBMIT" || action === "REQUEST_CHANGES" ? "EDIT" : action, JSON.stringify({ publication_state: fromPublication }), JSON.stringify({ publication_state: publication }), reason],
+      [
+        studyId,
+        actor.id,
+        action === "SUBMIT" || action === "REQUEST_CHANGES" ? "EDIT" : action,
+        JSON.stringify({ publication_state: fromPublication }),
+        JSON.stringify({ publication_state: publication }),
+        reason,
+      ],
     );
-    await writeAudit(db, actor, action.toLowerCase(), "research_study", studyId, { publication_state: fromPublication }, { publication_state: publication }, reason);
+    await writeAudit(
+      db,
+      actor,
+      action.toLowerCase(),
+      "research_study",
+      studyId,
+      { publication_state: fromPublication },
+      { publication_state: publication },
+      reason,
+    );
     await db.query("commit");
   } catch (error) {
     await db.query("rollback").catch(() => undefined);
@@ -689,7 +795,10 @@ export async function approveAndPublish(
       [studyId, pub.id],
     );
     if (!ident || Number(ident.n) === 0) {
-      throw new ServiceError("precondition-failed", "at least one identifier (DOI/PMID) is required");
+      throw new ServiceError(
+        "precondition-failed",
+        "at least one identifier (DOI/PMID) is required",
+      );
     }
   }
 
@@ -716,9 +825,23 @@ export async function approveAndPublish(
     await db.query(
       `insert into review (study_id, reviewer_id, action, before_snapshot, after_snapshot, reason)
        values ($1, $2, 'PUBLISH', $3, $4, null)`,
-      [studyId, actor.id, JSON.stringify({ publication_state: "PENDING_REVIEW" }), JSON.stringify({ publication_state: "PUBLISHED" })],
+      [
+        studyId,
+        actor.id,
+        JSON.stringify({ publication_state: "PENDING_REVIEW" }),
+        JSON.stringify({ publication_state: "PUBLISHED" }),
+      ],
     );
-    await writeAudit(db, actor, "publish", "research_study", studyId, { publication_state: "PENDING_REVIEW" }, { publication_state: "PUBLISHED" }, null);
+    await writeAudit(
+      db,
+      actor,
+      "publish",
+      "research_study",
+      studyId,
+      { publication_state: "PENDING_REVIEW" },
+      { publication_state: "PUBLISHED" },
+      null,
+    );
     await db.query("commit");
   } catch (error) {
     await db.query("rollback").catch(() => undefined);

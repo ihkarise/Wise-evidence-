@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { CrossrefMetadataProvider, type FetchLike, type FetchLikeResponse } from "./crossref.js";
 
 /** Build a fake JSON response, optionally with a size-capped stream body. */
-function jsonResponse(status: number, payload: unknown, opts?: { stream?: boolean }): FetchLikeResponse {
+function jsonResponse(
+  status: number,
+  payload: unknown,
+  opts?: { stream?: boolean },
+): FetchLikeResponse {
   const text = typeof payload === "string" ? payload : JSON.stringify(payload);
   const bytes = new TextEncoder().encode(text);
   return {
@@ -71,9 +75,7 @@ describe("CrossrefMetadataProvider", () => {
   });
 
   it("normalizes and sanitizes a successful response", async () => {
-    const provider = providerWith(() =>
-      Promise.resolve(jsonResponse(200, crossrefMessage(DOI))),
-    );
+    const provider = providerWith(() => Promise.resolve(jsonResponse(200, crossrefMessage(DOI))));
     const result = await provider.fetchByDoi(DOI);
     expect(result.ok).toBe(true);
     if (!result.ok) return;

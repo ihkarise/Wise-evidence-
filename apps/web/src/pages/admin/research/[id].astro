@@ -1,0 +1,443 @@
+---
+/**
+ * Research editor (docs/26 §14-21). Staff-only. Structured controls map directly
+ * onto the M2 schema — never raw rows. Outcome, quality, confidence, and
+ * criticism are edited as independent sections; there is no combined score.
+ * Each section posts to /api/admin/research/[id] with an `op` and redirects back.
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getStudyDetail } from "@wise-evidence/database";
+import {
+  OUTCOME_VALUES,
+  CONFIDENCE_LEVELS,
+  QUALITY_SUMMARIES,
+  CRITICISM_CATEGORIES,
+  CRITICISM_ORIGINS,
+  SUBJECT_TYPES,
+} from "@wise-evidence/database";
+import { asService, isDatabaseConfigured } from "../../../lib/db.js";
+import { outcomeLabel, humanize } from "../../../lib/labels.js";
+
+export const prerender = false;
+
+const id = Astro.params.id!;
+const role = Astro.locals.role;
+
+if (!isDatabaseConfigured) {
+  return Astro.redirect("/admin?error=" + encodeURIComponent("Database is not configured"), 302);
+}
+
+const detail = await asService((db) => getStudyDetail(db, id));
+if (!detail) {
+  return new Response("Study not found", { status: 404 });
+}
+
+type Ref = { code: string; label: string };
+type Slug = { slug: string; name: string };
+const [studyTypes, conditions, interventions] = await asService(async (db) => {
+  const st = await db.query<Ref>("select code, label from study_type order by label");
+  const co = await db.query<Slug>(
+    "select slug, canonical_name as name from condition order by canonical_name",
+  );
+  const iv = await db.query<Slug>(
+    "select slug, canonical_name as name from intervention order by canonical_name",
+  );
+  return [st.rows, co.rows, iv.rows] as const;
+});
+
+const isAdmin = role === "ADMIN";
+const state = detail.publicationState;
+const editable = state === "DRAFT" || state === "PENDING_REVIEW";
+---
+
+<AdminLayout title="Edit research">
+  <div class="mb-6 flex flex-wrap items-center gap-3">
+    <span
+      class="rounded bg-slate-100 px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-600"
+      >{humanize(state)}</span
+    >
+    {
+      detail.isDemo && (
+        <span class="rounded bg-amber-100 px-2 py-1 text-xs text-amber-800">
+          DEMO — cannot be published
+        </span>
+      )
+    }
+    {
+      state === "PUBLISHED" && (
+        <a href={`/research/${detail.id}`} class="text-sm text-brand underline">
+          View public page →
+        </a>
+      )
+    }
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <!-- IDENTITY / STUDY / SUMMARY -->
+    <section class="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-semibold text-ink">Identity &amp; study</h2>
+      <form method="post" action={`/api/admin/research/${id}`} class="mt-3 space-y-3">
+        <input type="hidden" name="op" value="identity" />
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Title</span>
+          <input
+            name="title"
+            value={detail.title}
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-sm">
+            <span class="font-medium text-ink">Study type</span>
+            <select
+              name="studyTypeCode"
+              class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">—</option>
+              {
+                studyTypes.map((s) => (
+                  <option value={s.code} selected={s.code === detail.studyTypeCode}>
+                    {s.label}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+          <label class="block text-sm">
+            <span class="font-medium text-ink">Subject</span>
+            <select
+              name="subjectType"
+              class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              {
+                SUBJECT_TYPES.map((s) => (
+                  <option value={s} selected={s === detail.subjectType}>
+                    {humanize(s)}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+        </div>
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Journal</span>
+          <input
+            name="journalTitle"
+            value={detail.journalTitle ?? ""}
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Publication date</span>
+          <input
+            name="publicationDate"
+            type="text"
+            placeholder="YYYY-MM-DD"
+            value={detail.publicationDate ?? ""}
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Abstract</span>
+          <textarea
+            name="abstract"
+            rows="3"
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >{detail.abstract ?? ""}</textarea
+          >
+        </label>
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Human-authored summary</span>
+          <textarea
+            name="summary"
+            rows="3"
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >{detail.humanSummary ?? ""}</textarea
+          >
+        </label>
+        <button
+          class="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+          type="submit">Save identity</button
+        >
+      </form>
+      <dl class="mt-4 border-t border-slate-100 pt-3 text-xs text-ink-muted">
+        <div class="flex justify-between">
+          <dt>DOI</dt><dd class="font-mono">{detail.doi ?? "—"}</dd>
+        </div>
+        <div class="flex justify-between"><dt>Source</dt><dd>{detail.sourceName ?? "—"}</dd></div>
+      </dl>
+    </section>
+
+    <!-- CLASSIFICATION: outcome + quality (independent) -->
+    <section class="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-semibold text-ink">Classification</h2>
+      <p class="mt-1 text-xs text-ink-muted">
+        Outcome, quality, and confidence are independent dimensions. There is no combined or
+        efficacy score.
+      </p>
+
+      <form method="post" action={`/api/admin/research/${id}`} class="mt-3 space-y-3">
+        <input type="hidden" name="op" value="outcome" />
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-sm">
+            <span class="font-medium text-ink">Reported outcome</span>
+            <select
+              name="outcome"
+              class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              {
+                OUTCOME_VALUES.map((o) => (
+                  <option value={o} selected={o === detail.outcome}>
+                    {outcomeLabel(o)}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+          <label class="block text-sm">
+            <span class="font-medium text-ink">Confidence</span>
+            <select
+              name="confidence"
+              class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">—</option>
+              {
+                CONFIDENCE_LEVELS.map((c) => (
+                  <option value={c} selected={c === detail.outcomeConfidence}>
+                    {humanize(c)}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+        </div>
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Explanation</span>
+          <input
+            name="explanation"
+            value={detail.outcomeExplanation ?? ""}
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          class="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+          type="submit">Save outcome</button
+        >
+      </form>
+
+      <form
+        method="post"
+        action={`/api/admin/research/${id}`}
+        class="mt-4 space-y-3 border-t border-slate-100 pt-4"
+      >
+        <input type="hidden" name="op" value="quality" />
+        <label class="block text-sm">
+          <span class="font-medium text-ink">Evidence quality (methodological)</span>
+          <select
+            name="quality"
+            class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            {
+              QUALITY_SUMMARIES.map((q) => (
+                <option value={q} selected={q === detail.qualitySummary}>
+                  {humanize(q)}
+                </option>
+              ))
+            }
+          </select>
+        </label>
+        <button
+          class="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+          type="submit">Save quality</button
+        >
+      </form>
+    </section>
+
+    <!-- CRITICISM (separate object) -->
+    <section class="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-semibold text-ink">Criticism</h2>
+      <p class="mt-1 text-xs text-ink-muted">A separate dimension — never a negative outcome.</p>
+      <ul class="mt-3 space-y-2">
+        {
+          detail.criticism.length === 0 ? (
+            <li class="text-sm text-ink-muted">None yet.</li>
+          ) : (
+            detail.criticism.map((c) => (
+              <li class="flex items-start justify-between gap-3 rounded border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                <div>
+                  <span class="font-medium text-ink">{humanize(c.category)}</span>
+                  <span class="ml-2 text-xs text-ink-muted">{humanize(c.origin)}</span>
+                  <p class="mt-0.5 text-ink-muted">{c.text}</p>
+                </div>
+                <form method="post" action={`/api/admin/research/${id}`}>
+                  <input type="hidden" name="op" value="withdraw-criticism" />
+                  <input type="hidden" name="criticismId" value={c.id} />
+                  <button class="text-xs text-red-700 hover:underline" type="submit">
+                    Withdraw
+                  </button>
+                </form>
+              </li>
+            ))
+          )
+        }
+      </ul>
+      <form
+        method="post"
+        action={`/api/admin/research/${id}`}
+        class="mt-3 space-y-2 border-t border-slate-100 pt-3"
+      >
+        <input type="hidden" name="op" value="criticism" />
+        <div class="grid grid-cols-2 gap-2">
+          <select name="category" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
+            {CRITICISM_CATEGORIES.map((c) => <option value={c}>{humanize(c)}</option>)}
+          </select>
+          <select name="origin" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
+            {CRITICISM_ORIGINS.map((o) => <option value={o}>{humanize(o)}</option>)}
+          </select>
+        </div>
+        <textarea
+          name="text"
+          rows="2"
+          required
+          placeholder="Describe the criticism"
+          class="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"></textarea>
+        <button
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+          type="submit">+ Add criticism</button
+        >
+      </form>
+    </section>
+
+    <!-- TAXONOMY LINKS -->
+    <section class="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 class="text-lg font-semibold text-ink">Conditions &amp; interventions</h2>
+      <div class="mt-3">
+        <p class="text-sm font-medium text-ink">Conditions</p>
+        <p class="text-sm text-ink-muted">
+          {detail.conditions.length ? detail.conditions.join(", ") : "None"}
+        </p>
+        <form method="post" action={`/api/admin/research/${id}`} class="mt-1 flex gap-2">
+          <input type="hidden" name="op" value="link-condition" />
+          <select name="slug" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
+            {conditions.map((c) => <option value={c.slug}>{c.name}</option>)}
+          </select>
+          <button
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
+            type="submit">+ Add</button
+          >
+        </form>
+      </div>
+      <div class="mt-4">
+        <p class="text-sm font-medium text-ink">Interventions</p>
+        <p class="text-sm text-ink-muted">
+          {detail.interventions.length ? detail.interventions.join(", ") : "None"}
+        </p>
+        <form method="post" action={`/api/admin/research/${id}`} class="mt-1 flex gap-2">
+          <input type="hidden" name="op" value="link-intervention" />
+          <select name="slug" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
+            {interventions.map((c) => <option value={c.slug}>{c.name}</option>)}
+          </select>
+          <button
+            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
+            type="submit">+ Add</button
+          >
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- WORKFLOW -->
+  <section class="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+    <h2 class="text-lg font-semibold text-ink">Workflow</h2>
+    <p class="mt-1 text-sm text-ink-muted">
+      Current state: <strong>{humanize(state)}</strong>. Publishing requires a human outcome, an
+      identifier, provenance, and admin approval — nothing publishes automatically.
+    </p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {
+        state === "DRAFT" && (
+          <form method="post" action={`/api/admin/research/${id}`}>
+            <input type="hidden" name="op" value="submit" />
+            <button
+              class="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark"
+              type="submit"
+            >
+              Submit for review
+            </button>
+          </form>
+        )
+      }
+      {
+        state === "PENDING_REVIEW" && (
+          <>
+            <form
+              method="post"
+              action={`/api/admin/research/${id}`}
+              class="flex items-center gap-2"
+            >
+              <input type="hidden" name="op" value="request-changes" />
+              <input
+                name="reason"
+                placeholder="Reason"
+                class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+              />
+              <button
+                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
+                type="submit"
+              >
+                Request changes
+              </button>
+            </form>
+            {isAdmin && !detail.isDemo && (
+              <form method="post" action={`/api/admin/research/${id}`}>
+                <input type="hidden" name="op" value="publish" />
+                <button
+                  class="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+                  type="submit"
+                >
+                  Approve &amp; publish
+                </button>
+              </form>
+            )}
+          </>
+        )
+      }
+      {
+        editable && (
+          <form method="post" action={`/api/admin/research/${id}`} class="flex items-center gap-2">
+            <input type="hidden" name="op" value="reject" />
+            <input
+              name="reason"
+              placeholder="Reason"
+              class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+              type="submit"
+            >
+              Reject
+            </button>
+          </form>
+        )
+      }
+      {
+        isAdmin && state === "PUBLISHED" && (
+          <form method="post" action={`/api/admin/research/${id}`} class="flex items-center gap-2">
+            <input type="hidden" name="op" value="archive" />
+            <input
+              name="reason"
+              placeholder="Reason"
+              class="rounded border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100"
+              type="submit"
+            >
+              Archive
+            </button>
+          </form>
+        )
+      }
+    </div>
+  </section>
+</AdminLayout>

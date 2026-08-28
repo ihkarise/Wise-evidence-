@@ -1,0 +1,64 @@
+---
+/**
+ * Add research from a DOI (docs/26 §13). Staff-only. The form posts the DOI to
+ * /api/admin/research, which normalizes it, checks for duplicates, fetches
+ * sanitized Crossref metadata, and creates a DRAFT — then redirects to the
+ * editor. An optional title override covers the no-metadata case.
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { isDatabaseConfigured } from "../../../lib/db.js";
+
+export const prerender = false;
+---
+
+<AdminLayout title="Add research">
+  {
+    !isDatabaseConfigured && (
+      <p class="mb-6 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        The database is not configured — creating records requires a Supabase project (docs/26 §25).
+      </p>
+    )
+  }
+
+  <div class="max-w-xl rounded-lg border border-slate-200 bg-white p-6">
+    <p class="text-sm text-ink-muted">
+      Enter a DOI in any form (<code>doi:</code>, a <code>doi.org</code> URL, or a bare DOI). It is normalized,
+      checked against existing records, and enriched with bibliographic metadata from Crossref. Nothing
+      is published — this creates an editable <strong>draft</strong>.
+    </p>
+
+    <form method="post" action="/api/admin/research" class="mt-5 space-y-4">
+      <div>
+        <label for="doi" class="block text-sm font-medium text-ink">DOI</label>
+        <input
+          id="doi"
+          name="doi"
+          type="text"
+          required
+          spellcheck="false"
+          placeholder="https://doi.org/10.1234/abcd"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
+        />
+      </div>
+      <div>
+        <label for="title" class="block text-sm font-medium text-ink">
+          Title <span class="font-normal text-ink-muted"
+            >(optional — used if no metadata is found)</span
+          >
+        </label>
+        <input
+          id="title"
+          name="title"
+          type="text"
+          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
+        />
+      </div>
+      <button
+        type="submit"
+        class="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/40"
+      >
+        Look up &amp; create draft
+      </button>
+    </form>
+  </div>
+</AdminLayout>

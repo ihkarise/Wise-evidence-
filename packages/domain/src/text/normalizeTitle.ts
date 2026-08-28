@@ -13,12 +13,14 @@ export function normalizeTitle(input: string): string {
   if (typeof input !== "string") {
     return "";
   }
-  return input
-    .normalize("NFKD")
-    // Drop combining marks (accent folding).
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    // Any run of non-alphanumerics becomes a single space.
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  return (
+    input
+      .normalize("NFKD")
+      // Drop combining marks (accent folding).
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      // Any run of non-alphanumerics becomes a single space.
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+  );
 }

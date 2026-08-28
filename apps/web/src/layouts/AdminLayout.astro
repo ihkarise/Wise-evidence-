@@ -1,0 +1,105 @@
+---
+/**
+ * Admin shell (docs/26 §8-9). Only reachable by staff (middleware-guarded).
+ * Shows the signed-in role and a sign-out control; renders a flash message from
+ * ?ok=/?error= query params after a form redirect.
+ */
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const role = Astro.locals.role;
+const ok = Astro.url.searchParams.get("ok");
+const error = Astro.url.searchParams.get("error");
+
+const nav = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/research/new", label: "Add research" },
+  { href: "/admin/research", label: "All research" },
+  { href: "/admin/review", label: "Review queue" },
+];
+---
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} · WiseEvidence Admin</title>
+  </head>
+  <body class="flex min-h-full flex-col bg-slate-50 text-ink antialiased">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+        <div class="flex items-center gap-4">
+          <a href="/admin" class="text-lg font-semibold tracking-tight text-brand">WiseEvidence</a>
+          <span
+            class="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-600"
+            >Admin</span
+          >
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+          {
+            role && (
+              <span class="text-ink-muted">
+                Role: <strong class="text-ink">{role}</strong>
+              </span>
+            )
+          }
+          <form method="post" action="/api/session">
+            <input type="hidden" name="action" value="signout" />
+            <button
+              class="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+              type="submit">Sign out</button
+            >
+          </form>
+        </div>
+      </div>
+      <nav class="mx-auto max-w-5xl px-6" aria-label="Admin">
+        <ul class="flex flex-wrap gap-4 pb-2 text-sm">
+          {
+            nav.map((n) => (
+              <li>
+                <a
+                  href={n.href}
+                  class="text-ink-muted hover:text-brand"
+                  aria-current={Astro.url.pathname === n.href ? "page" : undefined}
+                >
+                  {n.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </header>
+
+    <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
+      {
+        ok && (
+          <p
+            role="status"
+            class="mb-4 rounded border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-900"
+          >
+            {ok}
+          </p>
+        )
+      }
+      {
+        error && (
+          <p
+            role="alert"
+            class="mb-4 rounded border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900"
+          >
+            {error}
+          </p>
+        )
+      }
+      <h1 class="mb-6 text-2xl font-bold tracking-tight text-ink">{title}</h1>
+      <slot />
+    </main>
+  </body>
+</html>

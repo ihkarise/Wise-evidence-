@@ -12,7 +12,12 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@wise-evidence/domain": "workspace:*"
+    "@astrojs/node": "^9.4.4",
+    "@supabase/ssr": "^0.7.0",
+    "@wise-evidence/database": "workspace:*",
+    "@wise-evidence/domain": "workspace:*",
+    "@wise-evidence/metadata": "workspace:*",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

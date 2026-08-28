@@ -24,11 +24,19 @@ const REASON_MESSAGE: Record<string, string> = {
   "invalid-format": "That does not look like a valid DOI.",
 };
 
-export default function CopyDoi(): React.ReactElement {
+interface CopyDoiProps {
+  /** Optional DOI to prefill (e.g. a research record's DOI on its detail page). */
+  initial?: string;
+}
+
+export default function CopyDoi({ initial = "" }: CopyDoiProps): React.ReactElement {
   const inputId = useId();
   const feedbackId = useId();
-  const [value, setValue] = useState("");
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [value, setValue] = useState(initial);
+  const [status, setStatus] = useState<Status>(() => {
+    const seeded = normalizeDoi(initial);
+    return seeded.ok ? { kind: "normalized", doi: seeded.doi } : { kind: "idle" };
+  });
 
   function handleNormalize(): void {
     const result = normalizeDoi(value);

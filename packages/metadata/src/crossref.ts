@@ -225,8 +225,7 @@ function extractAuthors(value: unknown): MetadataAuthor[] {
     const given = sanitizeText(getProp(entry, "given"), LIMITS.authorName);
     const family = sanitizeText(getProp(entry, "family"), LIMITS.authorName);
     const literal = sanitizeText(getProp(entry, "name"), LIMITS.authorName);
-    const displayName =
-      [given, family].filter((p): p is string => p !== null).join(" ") || literal;
+    const displayName = [given, family].filter((p): p is string => p !== null).join(" ") || literal;
     if (displayName) {
       authors.push({ displayName: displayName.slice(0, LIMITS.authorName), order: authors.length });
     }

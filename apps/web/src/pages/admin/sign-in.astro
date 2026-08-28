@@ -1,0 +1,93 @@
+---
+/**
+ * Admin sign-in (docs/26 §1). Public page. Posts to /api/session which signs in
+ * via Supabase Auth and sets an httpOnly cookie session. If already signed in as
+ * staff, redirect to the dashboard.
+ */
+import "../../styles/global.css";
+import { isAuthConfigured } from "../../lib/auth.js";
+
+export const prerender = false;
+
+if (Astro.locals.actor) {
+  return Astro.redirect("/admin", 302);
+}
+
+const next = Astro.url.searchParams.get("next") ?? "/admin";
+const error = Astro.url.searchParams.get("error");
+---
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Sign in · WiseEvidence Admin</title>
+  </head>
+  <body class="flex min-h-full items-center justify-center bg-slate-50 px-6 text-ink antialiased">
+    <main class="w-full max-w-sm">
+      <a href="/" class="text-lg font-semibold tracking-tight text-brand">WiseEvidence</a>
+      <h1 class="mt-6 text-xl font-bold tracking-tight text-ink">Reviewer / admin sign-in</h1>
+      <p class="mt-1 text-sm text-ink-muted">
+        Public browsing needs no account. This page is for reviewers and administrators.
+      </p>
+
+      {
+        error && (
+          <p
+            role="alert"
+            class="mt-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900"
+          >
+            {error}
+          </p>
+        )
+      }
+      {
+        !isAuthConfigured && (
+          <p class="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Authentication is not configured in this environment (no Supabase project). Sign-in is
+            unavailable until credentials are supplied.
+          </p>
+        )
+      }
+
+      <form method="post" action="/api/session" class="mt-6 space-y-4">
+        <input type="hidden" name="next" value={next} />
+        <div>
+          <label for="email" class="block text-sm font-medium text-ink">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            required
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
+          />
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-ink">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/40"
+        >
+          Sign in
+        </button>
+      </form>
+
+      <p class="mt-6 text-sm text-ink-muted">
+        <a href="/" class="text-brand underline underline-offset-2">← Back to the public site</a>
+      </p>
+    </main>
+  </body>
+</html>

@@ -25,9 +25,4 @@ export {
 
 export { MockMetadataProvider, DEFAULT_MOCK_FIXTURES, type MockFixture } from "./mock.js";
 
-export {
-  sanitizeText,
-  sanitizeMarkupToText,
-  sanitizeHttpUrl,
-  LIMITS,
-} from "./sanitize.js";
+export { sanitizeText, sanitizeMarkupToText, sanitizeHttpUrl, LIMITS } from "./sanitize.js";

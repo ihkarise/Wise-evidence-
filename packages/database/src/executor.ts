@@ -14,10 +14,7 @@ import type { AppRole } from "./constants.js";
 
 /** A query surface: parameterized SQL in, typed rows out. */
 export interface SqlExecutor {
-  query<T = Record<string, unknown>>(
-    sql: string,
-    params?: unknown[],
-  ): Promise<{ rows: T[] }>;
+  query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
 }
 
 /**
