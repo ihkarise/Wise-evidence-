@@ -46,6 +46,23 @@ export {
   type Facets,
 } from './search.js';
 export {
+  startImportJob,
+  finalizeImportJob,
+  findExistingStudyIdsByDois,
+  recordCandidate,
+  listImportJobs,
+  getImportJob,
+  listCandidates,
+  getCandidate,
+  approveCandidate,
+  rejectCandidate,
+  markCandidateDuplicate,
+  type StartImportJobInput,
+  type ImportJobCounts,
+  type RecordCandidateInput,
+  type CandidateView,
+} from './discovery.js';
+export {
   findCachedSuggestion,
   persistSuggestion,
   listLatestSuggestions,
