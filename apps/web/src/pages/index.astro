@@ -1,0 +1,88 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import CopyDoi from "../components/CopyDoi.tsx";
+
+const dimensions = [
+  {
+    name: "Outcome",
+    body: "What a study reported — supportive, mixed, neutral, inconclusive, or critical.",
+  },
+  {
+    name: "Evidence quality",
+    body: "How rigorous the method was. A positive study is not automatically high quality.",
+  },
+  { name: "Confidence", body: "How settled the picture is, given the body of evidence." },
+  {
+    name: "Criticism",
+    body: "Methodological critique. Criticism is not the same as a negative outcome.",
+  },
+  {
+    name: "Provenance",
+    body: "Where a claim comes from, preserved and attributable. Source ≠ truth.",
+  },
+];
+---
+
+<BaseLayout
+  title="WiseEvidence"
+  description="An open, structured, human-curated evidence platform for homeopathy research. Early-stage foundation — no research catalogue yet."
+>
+  <section class="max-w-2xl">
+    <p class="text-sm font-medium uppercase tracking-wide text-brand">Open evidence platform</p>
+    <h1 class="mt-2 text-4xl font-bold tracking-tight text-ink sm:text-5xl">
+      Homeopathy research, made discoverable and honestly represented.
+    </h1>
+    <p class="mt-5 text-lg text-ink-muted">
+      WiseEvidence aims to make scattered homeopathy research searchable, structured, and critically
+      reviewable — keeping study outcome, evidence quality, confidence, criticism, and provenance as <em
+        >separate</em
+      > dimensions.
+    </p>
+  </section>
+
+  <aside
+    class="mt-8 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"
+    role="note"
+  >
+    <strong class="font-semibold">Project status:</strong> this is the Milestone&nbsp;1 foundation. There
+    is <strong>no research catalogue, search, or classification here yet</strong>. What you see is
+    the scaffold — architecture docs, tooling, and one working domain utility below.
+  </aside>
+
+  <section class="mt-12">
+    <h2 class="text-2xl font-semibold tracking-tight text-ink">Five dimensions, never collapsed</h2>
+    <p class="mt-2 max-w-2xl text-ink-muted">
+      The credibility of the platform depends on never flattening these into a single score or a
+      positive-versus-negative binary.
+    </p>
+    <dl class="mt-6 grid gap-4 sm:grid-cols-2">
+      {
+        dimensions.map((d) => (
+          <div class="rounded-lg border border-slate-200 p-4">
+            <dt class="font-semibold text-ink">{d.name}</dt>
+            <dd class="mt-1 text-sm text-ink-muted">{d.body}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="text-2xl font-semibold tracking-tight text-ink">Try the DOI normalizer</h2>
+    <p class="mt-2 max-w-2xl text-ink-muted">
+      A small, real piece of the platform: the shared canonicalizer that later powers import and
+      search. It runs entirely in your browser — no data leaves this page.
+    </p>
+    <div class="mt-6 max-w-xl">
+      <CopyDoi client:load />
+    </div>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="text-2xl font-semibold tracking-tight text-ink">Learn more</h2>
+    <p class="mt-2 text-ink-muted">
+      Read the <a href="/methodology" class="text-brand underline underline-offset-2">methodology</a
+      > for how classification works — and, just as importantly, what it does not claim.
+    </p>
+  </section>
+</BaseLayout>
