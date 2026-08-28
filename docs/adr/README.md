@@ -20,6 +20,7 @@ ADR (master prompt §38).
 | [ADR-010](ADR-010-cost-first-infrastructure.md) | Cost-First Infrastructure | Accepted |
 | [ADR-011](ADR-011-licensing.md) | Licensing: Apache-2.0 (code) + CC-BY-4.0 (data) | Accepted |
 | [ADR-012](ADR-012-multi-source-ingestion.md) | Multi-Source Ingestion: Source Registry, Idempotent Checkpointing, Deferred Scheduler | Accepted (design) |
+| [ADR-013](ADR-013-database-foundation-schema-and-testing.md) | Database Foundation: Enum/Table Taxonomy Split and PGlite Deterministic Testing | Accepted |
 
 ## Template
 
