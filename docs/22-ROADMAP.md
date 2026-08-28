@@ -35,10 +35,25 @@ test · build, no secrets/AI/network); governance files (`LICENSE` Apache-2.0,
 `CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`, PR + issue templates);
 `supabase/README.md`. Database schema is deferred to Phase 2.
 
-# 4. Phase 2 — Database Foundation  ← next
+# 4. Phase 2 — Database Foundation  ✅ complete
 
 Migrations, core entities & relationships, indexes, RLS, seed data, database
 tests (master prompt §80, `05`, `20`).
+
+**Delivered:** ordered version-controlled migrations (`supabase/migrations/
+0001`–`0009`) for the canonical schema — Study/Publication separation, authors,
+journals, sources, identifiers (with the dedup unique constraint), conditions,
+interventions, tags, the independent classification dimensions, per-dimension
+quality, criticism, users/roles, review, correction, append-only audit, and the
+import + AI tables (schema only, no AI/scraping logic). Enum vocabularies,
+lifecycle/publication states, indexes, and FTS preparation (`tsvector` + GIN).
+Row-Level Security as the authoritative boundary (anon → published only; private
+tables reviewer/admin; mutation via `service_role`). Canonical `taxonomy-v1`
+reference seed; clearly-labelled DEMO fixtures (`supabase/seed/`).
+Framework-independent `packages/database` reusing `@wise-evidence/domain`.
+Deterministic PGlite database tests. Full design checkpoint in
+`docs/25-DATABASE-FOUNDATION.md`; decisions in `ADR-013`. Real-Supabase
+verification is PENDING a provisioned project.
 
 # 5. Phase 3 — Manual Research MVP
 

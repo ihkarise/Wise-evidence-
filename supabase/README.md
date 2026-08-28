@@ -3,33 +3,50 @@
 This directory will hold the WiseEvidence database migrations, seed data, and
 (where justified) Edge Functions.
 
-## Milestone 1: no schema yet
+## Milestone 2: schema, RLS, and seed have landed
 
-**There is deliberately no database schema in this repository at Milestone 1.**
-No migrations, no tables, no Row-Level Security policies. Milestone 1 establishes
-only the _connection strategy_ (see `apps/web/src/lib/supabase.ts`) so the public
-(anon) client can be constructed consistently once the schema lands.
+The Database Foundation (Milestone 2) is implemented. See
+`docs/25-DATABASE-FOUNDATION.md` for the full design checkpoint and
+`docs/adr/ADR-013` for the enum/table and testing decisions.
+
+```text
+supabase/
+├── migrations/   # 0001..0009 — ordered, version-controlled SQL (canonical schema,
+│                 #   enums, indexes, RLS, and taxonomy-v1 reference data)
+└── seed/
+    └── demo_fixtures.sql   # clearly-labelled DEMO data (is_demo=true, [DEMO] titles,
+                            #   reserved 10.0000/ DOIs) — never real research, never a migration
+```
+
+- **Reference taxonomy** (study types, evidence levels, starter conditions/
+  interventions/tags) is canonical and ships in migration `0009`.
+- **Demo research fixtures** are development/test only and live in `seed/`.
+- **Row-Level Security** is the authoritative boundary: anon reads only
+  `PUBLISHED` research; drafts, AI, review, correction, import, and audit rows
+  are private; all mutation goes through the server-side `service_role`.
+- The migrations use only roles/functions Supabase provides in production
+  (`anon`/`authenticated`/`service_role`, `auth.uid()`); they invent nothing.
+- **Deterministic tests** run against in-process PostgreSQL (PGlite) with a
+  clearly-labelled Supabase compatibility shim — no live project, no Docker, no
+  paid service. Real-Supabase verification (`supabase db push`) is PENDING a
+  provisioned project.
+
+The M1 _connection strategy_ (see `apps/web/src/lib/supabase.ts`) remains the
+client boundary; the schema it will query now exists.
 
 ## Migrations-first architecture
 
-When the database is introduced (**Milestone 2 — Database Foundation**), it
-follows a strict migrations-first rule (`docs/19-DEPLOYMENT.md` §6,
+The database follows a strict migrations-first rule (`docs/19-DEPLOYMENT.md` §6,
 `docs/17-DATA-GOVERNANCE.md` §2, `docs/adr/ADR-002`):
 
 - **PostgreSQL is the authoritative source of application state.**
 - **All schema changes are version-controlled migrations.** Never edit the
-  production schema by hand in a dashboard.
-- Core entities, relationships, indexes, RLS policies, and clearly-labeled seed
-  data all arrive together in M2, with database tests.
-
-Expected layout once M2 begins:
-
-```text
-supabase/
-├── migrations/   # timestamped, version-controlled SQL migrations
-├── seed/         # clearly-labeled demo/fixture data (never presented as real research)
-└── functions/    # Edge Functions, only where justified
-```
+  production schema by hand in a dashboard. Migrations are forward-only by
+  convention (`docs/19` §6–7); a destructive change needs a backup and an
+  ADR-level decision.
+- Add new schema by adding the next-numbered `migrations/NNNN_*.sql`; never edit
+  or reorder an already-applied migration.
+- Edge Functions (`functions/`) are added only where justified (`docs/21`).
 
 ## Secrets
 

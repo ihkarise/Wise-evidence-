@@ -12,12 +12,18 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as _separate_ dimensions.
 
-**Milestone 0 (Architecture) and Milestone 1 (Repository Foundation) are
-complete.** The full architecture doc set exists, and so does the project
-foundation: a pnpm workspace, an Astro web app with a React island, a
-framework-independent `packages/domain` (with `normalizeDoi()`), CI, tooling,
-and governance. There is still **no database schema, no research catalogue, no
-authentication, and no AI pipeline** — those belong to Milestone 2+.
+**Milestones 0 (Architecture), 1 (Repository Foundation), and 2 (Database
+Foundation) are complete.** The full architecture doc set exists, and so does
+the project foundation: a pnpm workspace, an Astro web app with a React island, a
+framework-independent `packages/domain` (with `normalizeDoi()`), CI, tooling, and
+governance. Milestone 2 added the canonical database: ordered Supabase/PostgreSQL
+migrations (`supabase/migrations/`), enums, indexes, FTS preparation,
+Row-Level Security, `taxonomy-v1` reference seed, clearly-labelled DEMO fixtures
+(`supabase/seed/`), the framework-independent `packages/database`, and
+deterministic PGlite tests (see `docs/25-DATABASE-FOUNDATION.md`, `ADR-013`).
+There is still **no research catalogue UI, no authentication, and no AI
+pipeline** — those belong to Milestone 3+. The AI and import _tables_ exist, but
+no AI or scraping _logic_ does.
 
 ```text
 .
@@ -28,12 +34,15 @@ authentication, and no AI pipeline** — those belong to Milestone 2+.
 ├── package.json / pnpm-workspace.yaml / tsconfig.base.json  # M1 tooling
 ├── apps/web/                     # Astro (static-first) + React island + Tailwind
 ├── packages/domain/              # portable domain logic — normalizeDoi()
-├── supabase/README.md            # DB strategy only; schema deferred to M2
+├── packages/database/            # M2 data-access boundary + PGlite tests
+├── supabase/migrations/          # M2 canonical schema, RLS, taxonomy-v1 seed
+├── supabase/seed/                # M2 clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
     ├── 24-MULTI-SOURCE-INGESTION.md  # M8 design checkpoint (design-only)
-    ├── adr/     ADR-001 … ADR-012 (+ index/template)
+    ├── 25-DATABASE-FOUNDATION.md     # M2 design checkpoint (implemented)
+    ├── adr/     ADR-001 … ADR-013 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
@@ -62,8 +71,8 @@ any coding agent.
 Specs `05`–`23` and ADRs `001`–`011` now exist. Do **not** silently invent new
 architecture that contradicts them — when a decision changes, update the relevant
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
-Milestone 1 (Repository Foundation) is complete; the next step is **Milestone 2
-— Database Foundation** (`docs/22-ROADMAP.md`), still no premature features.
+Milestone 2 (Database Foundation) is complete; the next step is **Milestone 3
+— Manual Research MVP** (`docs/22-ROADMAP.md`), still no premature features.
 
 Forward design may be documented ahead of build order without changing that
 order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved
