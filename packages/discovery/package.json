@@ -1,0 +1,22 @@
+{
+  "name": "@wise-evidence/discovery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Automated research discovery connectors (mock + Crossref) behind a replaceable interface (M7). Discovery generates review candidates only — never classification or publication.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
