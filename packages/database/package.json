@@ -1,0 +1,24 @@
+{
+  "name": "@wise-evidence/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-independent data-access boundary for WiseEvidence: canonical enum vocabularies, migration/seed locators, and deterministic PGlite test harness. No Astro, React, Supabase-client, or AI imports in its public surface.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22.10.0"
+  }
+}
