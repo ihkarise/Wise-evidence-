@@ -78,11 +78,19 @@ editor Accept/Edit/Reject panel. AI never publishes, never writes a canonical
 classification, never enters the M5 statistics. No live AI in CI (mock + injected
 fake `fetch`); real provider access is a pending gate (`19` §11).
 
-# 9. Phase 7 — Automated Discovery
+# 9. Phase 7 — Automated Discovery  ✅ delivered
 
 First structured source connector: discovery, fetch, normalize, deduplicate,
-review-queue integration, scheduled job. Not all sources at once (master prompt
-§85, `11` §11).
+review-queue integration (master prompt §85, `11` §11). Governed by `ADR-017` and
+`docs/25`: discovery is **candidate-generation only** (`discover → normalize →
+deduplicate → import_candidate → human review → createDraft`), never auto-publish,
+never auto-classify, never auto-AI. Delivered: `packages/discovery` (connector
+abstraction + `MockDiscoveryConnector` default + `CrossrefDiscoveryConnector`,
+host-pinned/bounded), `packages/database/src/discovery.ts` (job/candidate service,
+DOI dedup that flags-not-deletes, approve→`createDraft`), migrations `0015`/`0016`,
+admin `/admin/imports` review UI, and 22 tests (incl. the critical no-auto-publish
++ duplicate-not-deleted + RLS proofs; 172 total). **No scheduler** (staff-triggered
+on demand); real Crossref network is a pending gate (`19` §11, mock is CI default).
 
 # 10. Phase 8 — Additional Sources
 

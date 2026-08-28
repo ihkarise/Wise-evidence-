@@ -12,18 +12,23 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as *separate* dimensions.
 
-**Milestones 0–6 are delivered:** the architecture doc set (M0), the repository
+**Milestones 0–7 are delivered:** the architecture doc set (M0), the repository
 foundation (M1), the canonical database schema + RLS (M2), the manual research
 MVP (M3), the public research explorer (M4 — `/research`, ADR-014), evidence
 visualization (M5 — `/evidence` pyramid + `/statistics` distributions, study-based
-aggregates, ADR-015/`docs/24`), and **AI-assisted evidence enrichment** (M6 —
-suggestion-only AI behind `packages/ai`, ADR-016/`docs/10` §16). AI is an
-**assistant only**: it writes to `ai_job`/`ai_result`, and a value becomes
-canonical only when a human accepts it in the editor — the mock provider is the
-CI default and a real provider (OpenAI-compatible aggregator) is opt-in via
-server-only env. **Real-Supabase and real-AI-provider integration are documented
-pending gates** (`docs/19` §11) — the workflow, RLS, explorer, landscape, and AI
-pipeline are verified deterministically on PGlite + mock providers.
+aggregates, ADR-015/`docs/24`), **AI-assisted evidence enrichment** (M6 —
+suggestion-only AI behind `packages/ai`, ADR-016/`docs/10` §16), and **automated
+research discovery** (M7 — candidate-generation behind `packages/discovery`,
+ADR-017/`docs/25`). AI is an **assistant only**: it writes to `ai_job`/`ai_result`,
+and a value becomes canonical only when a human accepts it in the editor.
+Discovery is **candidate-generation only**: `discover → normalize → deduplicate →
+import_candidate → human review → createDraft` — never auto-publish/classify/AI,
+and no scheduler. Mock providers/connectors are the CI default; real providers
+(OpenAI-compatible AI aggregator, Crossref discovery) are opt-in via server-only
+env. **Real-Supabase, real-AI-provider, and real-discovery-network integration are
+documented pending gates** (`docs/19` §11) — the workflow, RLS, explorer,
+landscape, AI, and discovery pipelines are verified deterministically on PGlite +
+mock providers.
 Current layout:
 
 ```text
@@ -38,6 +43,7 @@ Current layout:
 ├── packages/database/            # schema mirror, migrations, workflow service, explorer search, AI job/cache, PGlite RLS tests
 ├── packages/metadata/            # bibliographic providers (Crossref + mock) + fixtures
 ├── packages/ai/                  # provider-neutral AI enrichment (mock + OpenAI-compatible adapter, M6)
+├── packages/discovery/           # research discovery connectors (mock + Crossref) — candidate-generation only (M7)
 ├── supabase/                     # migrations/ (canonical schema) + seed/ (reference + demo fixtures)
 ├── prompts/                      # versioned AI prompts (prompts/<task>/vN.md, M6) · scripts/ placeholder
 ├── .github/workflows/ci.yml      # install → lint → typecheck → test → build

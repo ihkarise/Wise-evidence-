@@ -1,7 +1,7 @@
 # WiseEvidence Architecture Manifest
 
-**Status:** Milestones 0–6 delivered (through AI-assisted evidence enrichment).
-**Updated:** 2026-08-23
+**Status:** Milestones 0–7 delivered (through automated research discovery).
+**Updated:** 2026-08-25
 
 The architecture package was originally distributed as
 `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 the package was
@@ -136,10 +136,27 @@ The runnable foundation now lives alongside the docs:
   endpoint + editor AI panel (per-task Accept/Edit/Reject, provenance-linked).
 - Real AI provider access is a documented **pending gate** (`docs/19` §11).
 
+## Automated Research Discovery (Milestone 7)
+
+- `docs/25-RESEARCH-DISCOVERY.md` + `ADR-017`: discovery is **candidate-generation
+  only** (`discover → normalize → deduplicate → import_candidate → human review →
+  createDraft`); never auto-publish/classify/AI; no scheduler.
+- `packages/discovery/` — `ResearchDiscoveryConnector` (discover + normalize),
+  `MockDiscoveryConnector` (deterministic, CI default) + `CrossrefDiscoveryConnector`
+  (host-pinned works API, bounded, injected fetch); DOI reuse of `normalizeDoi`.
+- `packages/database/src/discovery.ts` — import job/candidate service, DOI dedup
+  (flags, never deletes/merges), approve→`createDraft` (IMPORTED/DRAFT, not
+  published); migrations `0015` (REJECTED state) + `0016` (job counts, candidate
+  review/provenance fields, reviewer-or-admin write RLS).
+- `apps/web/src/server/discovery.ts` orchestrator (network outside tx) +
+  `/admin/imports` review UI + run/review API routes.
+- 22 discovery tests (incl. critical no-auto-publish, duplicate-not-deleted, RLS).
+  Real Crossref network is a documented **pending gate** (`docs/19` §11).
+
 ## Next
 
-Milestone 7 — Automated Research Discovery (first structured source connector) —
-not started. See `docs/22-ROADMAP.md`. Earlier milestones below are delivered:
+Milestone 8 (additional sources / scheduler) — NOT started / NOT authorized. See
+`docs/22-ROADMAP.md`. Earlier milestones below are delivered:
 
 Milestone 2 — Database Foundation (Supabase migrations for the `docs/05`
 entities, indexes, RLS, seed + fixtures, database/data-access tests). See
