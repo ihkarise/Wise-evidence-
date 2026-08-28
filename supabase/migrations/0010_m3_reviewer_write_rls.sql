@@ -22,6 +22,15 @@
 -- and by the test shim in CI (never shipped in a migration).
 
 -- ---------------------------------------------------------------------------
+-- Human-authored summary (docs/26 §17). The M2 schema had no free-text summary
+-- field; M3 adds one on research_study so it is (a) editable by staff and
+-- (b) exposed to the public read path for PUBLISHED studies (the existing
+-- research_study SELECT policies already govern visibility). It is NOT a score
+-- and carries no classification meaning.
+-- ---------------------------------------------------------------------------
+alter table research_study add column if not exists human_summary text;
+
+-- ---------------------------------------------------------------------------
 -- Publication guard. SECURITY DEFINER helpers from 0008 (app.is_admin) resolve
 -- the acting app_user by auth.uid(). service_role (trusted server path) has no
 -- auth.uid(), so it is recognised by current_user instead — the service layer

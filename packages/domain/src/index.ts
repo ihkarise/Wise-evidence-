@@ -14,3 +14,5 @@ export {
   type DoiNormalizationFailure,
   type DoiNormalizationErrorReason,
 } from "./doi/normalizeDoi.js";
+
+export { normalizeTitle } from "./text/normalizeTitle.js";

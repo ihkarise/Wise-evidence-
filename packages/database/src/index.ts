@@ -25,4 +25,21 @@ export {
  * Re-export the shared DOI canonicaliser so database callers use the exact same
  * normalization as import and search, without this package owning a second copy.
  */
-export { normalizeDoi, toCanonicalDoi, isValidDoi } from "@wise-evidence/domain";
+export { normalizeDoi, toCanonicalDoi, isValidDoi, normalizeTitle } from "@wise-evidence/domain";
+
+/**
+ * Milestone 3 service / data-access layer (docs/26). All research-workflow
+ * business rules and SQL live here, on the framework-independent SqlExecutor
+ * boundary shared by the tests and the Astro server.
+ */
+export {
+  type SqlExecutor,
+  type Actor,
+  type ServiceErrorReason,
+  ServiceError,
+  requireStaff,
+  requireAdmin,
+} from "./executor.js";
+
+export * from "./service/research.js";
+export * from "./service/read.js";
