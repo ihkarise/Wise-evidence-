@@ -1,0 +1,133 @@
+---
+export const prerender = false;
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getImportJob, listCandidates, type ImportJobRow, type CandidateView } from '@wise-evidence/database';
+import type { NormalizedDiscoveryRecord } from '@wise-evidence/discovery';
+import { withActor } from '../../../server/db.ts';
+
+const staff = Astro.locals.staff!;
+const { id } = Astro.params;
+
+let job: ImportJobRow | null = null;
+let candidates: CandidateView[] = [];
+let pending = false;
+try {
+  const loaded = await withActor({ role: 'authenticated', sub: staff.sub }, async (exec) => {
+    const j = id ? await getImportJob(exec, id) : null;
+    const c = j ? await listCandidates(exec, j.id) : [];
+    return { j, c };
+  });
+  job = loaded.j;
+  candidates = loaded.c;
+} catch {
+  pending = true;
+}
+
+const norm = (c: CandidateView): NormalizedDiscoveryRecord => (c.normalized_payload ?? {}) as NormalizedDiscoveryRecord;
+const STATE_BADGE: Record<string, string> = {
+  REVIEW_REQUIRED: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
+  DUPLICATE_CANDIDATE: 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-200',
+  IMPORTED: 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200',
+  REJECTED: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+};
+const isOpen = (s: string) => s === 'REVIEW_REQUIRED' || s === 'DUPLICATE_CANDIDATE' || s === 'NORMALIZED';
+---
+
+<BaseLayout title="Import job — WiseEvidence admin">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Import job</h1>
+    <a class="text-sm underline" href="/admin/imports">← All jobs</a>
+  </div>
+
+  {pending && <p class="mt-6 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">Database not configured (Supabase pending gate — docs/19 §11).</p>}
+  {!pending && !job && <p class="mt-6">Job not found. <a class="underline" href="/admin/imports">Back</a>.</p>}
+
+  {job && (
+    <div data-job-id={job.id}>
+      <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+        Source <strong>{job.source_name}</strong> · state {job.state} · discovered {job.discovered_count} ·
+        candidates {job.candidate_count} · duplicates {job.duplicate_count} · imported {job.imported_count} · errors {job.error_count}
+      </p>
+      <p class="mt-2 rounded-md bg-slate-100 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+        Approving a candidate creates a <strong>draft</strong> (IMPORTED, not published) and opens it in the normal editor.
+        Discovery never publishes and never sets a classification.
+      </p>
+
+      <ul class="mt-6 space-y-3">
+        {candidates.map((c) => {
+          const n = norm(c);
+          return (
+            <li class="rounded-md border border-slate-200 p-3 text-sm dark:border-slate-800" data-candidate-id={c.id}>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="font-medium">{n.title ?? '(no title)'}</span>
+                <span class={`rounded px-2 py-0.5 text-xs font-medium ${STATE_BADGE[c.state] ?? 'bg-slate-100 text-slate-700'}`}>{c.state}</span>
+              </div>
+              <dl class="mt-1 grid grid-cols-[7rem_1fr] gap-x-3 text-xs text-slate-600 dark:text-slate-300">
+                <dt>DOI</dt><dd>{n.doi ?? <span class="text-slate-400">none</span>}</dd>
+                <dt>Authors</dt><dd>{n.authors && n.authors.length ? n.authors.join(', ') : <span class="text-slate-400">—</span>}</dd>
+                <dt>Journal</dt><dd>{n.journal ?? '—'}</dd>
+                <dt>Date</dt><dd>{n.publicationDate ?? '—'}</dd>
+                <dt>Source id</dt><dd>{c.source_record_id ?? '—'}</dd>
+              </dl>
+              {c.duplicate_of_study_id && (
+                <p class="mt-1 text-xs text-orange-700 dark:text-orange-300">
+                  ⚠ Possible duplicate of an existing study{c.duplicate_of_title ? `: “${c.duplicate_of_title}”` : ''}.
+                  <a class="underline" href={`/admin/research/${c.duplicate_of_study_id}`}>Open existing</a>
+                </p>
+              )}
+              {c.state === 'IMPORTED' && c.imported_study_id && (
+                <p class="mt-1 text-xs text-green-700 dark:text-green-300">Imported as a draft. <a class="underline" href={`/admin/research/${c.imported_study_id}`}>Open draft</a></p>
+              )}
+              {c.review_reason && <p class="mt-1 text-xs text-slate-500">Reason: {c.review_reason}</p>}
+              {isOpen(c.state) && (
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button type="button" data-action="approve" class="rounded border border-green-600 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400">Approve → draft</button>
+                  <button type="button" data-action="duplicate" class="rounded border border-orange-500 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">Mark duplicate</button>
+                  <button type="button" data-action="reject" class="rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600">Reject</button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p id="msg" class="mt-3 text-sm" aria-live="polite"></p>
+    </div>
+  )}
+
+  <script>
+    const root = document.querySelector('[data-job-id]') as HTMLElement | null;
+    const msg = document.getElementById('msg');
+    if (root) {
+      const jobId = root.dataset.jobId!;
+      root.querySelectorAll('[data-candidate-id]').forEach((li) => {
+        const candidateId = (li as HTMLElement).dataset.candidateId!;
+        li.querySelectorAll('[data-action]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const action = (btn as HTMLElement).dataset.action!;
+            let reason: string | undefined;
+            if (action === 'reject' || action === 'duplicate') {
+              reason = window.prompt(`Reason for ${action}?`) ?? undefined;
+              if (reason === undefined) return; // cancelled
+            }
+            if (msg) msg.textContent = 'Working…';
+            const res = await fetch(`/api/admin/imports/${jobId}/review`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ candidateId, action, reason }),
+            });
+            const data = await res.json();
+            if (!data.ok) {
+              if (msg) msg.textContent = `Error: ${data.error}`;
+              return;
+            }
+            if (action === 'approve' && data.studyId) {
+              window.location.href = `/admin/research/${data.studyId}`;
+              return;
+            }
+            window.location.reload();
+          });
+        });
+      });
+    }
+  </script>
+</BaseLayout>
