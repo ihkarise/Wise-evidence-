@@ -43,11 +43,14 @@ Architecture specifications (`docs/`):
 - `21-COST-CONTROL.md`
 - `22-ROADMAP.md`
 - `23-AI-AGENT-INSTRUCTIONS.md`
+- `24-MULTI-SOURCE-INGESTION.md` — Milestone 8 Design Checkpoint (design-only;
+  implementation blocked on Phases 1–7)
 
 Architecture Decision Records (`docs/adr/`):
 
 - `README.md` (index + template)
 - `ADR-001-modular-monolith.md` … `ADR-011-licensing.md`
+- `ADR-012-multi-source-ingestion.md` (Milestone 8 design)
 
 Milestone 0 reports (`docs/reports/`):
 

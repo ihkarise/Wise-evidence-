@@ -24,7 +24,8 @@ application code yet — but the full architecture doc set is now complete
 ├── MANIFEST.md                   # index of all docs
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
-    ├── adr/     ADR-001 … ADR-011 (+ index/template)
+    ├── 24-MULTI-SOURCE-INGESTION.md  # M8 design checkpoint (design-only)
+    ├── adr/     ADR-001 … ADR-012 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
@@ -55,6 +56,11 @@ architecture that contradicts them — when a decision changes, update the relev
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
 The next step is **Milestone 1 — Repository Foundation** (`docs/22-ROADMAP.md`),
 still no premature features.
+
+Forward design may be documented ahead of build order without changing that
+order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved
+**Milestone 8** ingestion design, but they are **design-only** — M8
+implementation is blocked on Phases 1–7 and must not be coded before them.
 
 ---
 
