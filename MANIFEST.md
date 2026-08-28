@@ -1,7 +1,7 @@
 # WiseEvidence Architecture Manifest
 
-**Status:** Milestone 0 (Architecture Completion) and Milestone 1 (Repository
-Foundation) complete.
+**Status:** Milestone 0 (Architecture Completion), Milestone 1 (Repository
+Foundation), and Milestone 2 (Database Foundation) complete.
 **Updated:** 2026-08-28
 
 The architecture package was originally distributed as
@@ -46,12 +46,15 @@ Architecture specifications (`docs/`):
 - `23-AI-AGENT-INSTRUCTIONS.md`
 - `24-MULTI-SOURCE-INGESTION.md` — Milestone 8 Design Checkpoint (design-only;
   implementation blocked on Phases 1–7)
+- `25-DATABASE-FOUNDATION.md` — Milestone 2 Database Foundation design checkpoint
+  (implemented: schema, enums, RLS, seed, tests)
 
 Architecture Decision Records (`docs/adr/`):
 
 - `README.md` (index + template)
 - `ADR-001-modular-monolith.md` … `ADR-011-licensing.md`
 - `ADR-012-multi-source-ingestion.md` (Milestone 8 design)
+- `ADR-013-database-foundation-schema-and-testing.md` (Milestone 2)
 
 Milestone 0 reports (`docs/reports/`):
 
@@ -64,13 +67,24 @@ Milestone 0 reports (`docs/reports/`):
 - `apps/web/` — Astro app (static-first) with React island + Tailwind; landing
   and methodology pages; Supabase connection strategy (no schema).
 - `packages/domain/` — portable domain logic; `normalizeDoi()` + Vitest suite.
-- `supabase/README.md` — migrations-first strategy; schema deferred to M2.
 - Root tooling — pnpm workspace, strict TypeScript, ESLint, Prettier, Vitest.
 - `.github/workflows/ci.yml` — CI (lint · typecheck · test · build; no secrets).
 - Governance — `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, PR + issue templates.
 
+## Database foundation (Milestone 2)
+
+- `supabase/migrations/` — ordered SQL (`0001`–`0009`): schema, enums, indexes,
+  RLS, and canonical `taxonomy-v1` reference data.
+- `supabase/seed/demo_fixtures.sql` — clearly-labelled DEMO fixtures
+  (`is_demo`, `[DEMO]` titles, reserved `10.0000/` DOIs) — never real research.
+- `packages/database/` — framework-independent data-access boundary (enum
+  vocabularies, migration/seed loaders, PGlite test harness + Supabase shim);
+  reuses `@wise-evidence/domain` for DOI normalization.
+- Deterministic database tests (migrations, constraints, RLS, fixtures) run
+  offline via PGlite. Real-Supabase verification PENDING.
+
 ## Next
 
-Milestone 2 — Database Foundation (migrations, core entities, RLS, seed data,
-database tests). See `docs/22-ROADMAP.md`.
+Milestone 3 — Manual Research MVP (admin auth, research entry, DOI metadata,
+review queue, publish workflow, public detail page). See `docs/22-ROADMAP.md`.
