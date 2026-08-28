@@ -65,6 +65,13 @@ review-queue integration, scheduled job. Not all sources at once (master prompt
 Add connectors incrementally, each with tests, fixtures, normalization, and
 provenance (master prompt §86).
 
+**Design checkpoint:** `docs/24-MULTI-SOURCE-INGESTION.md` (+ `ADR-012`) is the
+approved M8 design — source registry, incremental/idempotent checkpointing,
+conservative cross-source dedup, source health, admin controls, RLS, cost/security
+posture, and the deferred-scheduler boundary. It is **design-only**:
+implementation is blocked on Phases 1–7 (repo foundation, database, manual MVP,
+first connector), which do not yet exist. Build in order; do not jump ahead.
+
 # 11. Phase 9 — Community
 
 Submit research, report error, suggest correction, classification disagreement,

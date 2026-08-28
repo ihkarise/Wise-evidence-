@@ -19,6 +19,7 @@ ADR (master prompt §38).
 | [ADR-009](ADR-009-postgresql-search-first.md) | PostgreSQL Search First | Accepted |
 | [ADR-010](ADR-010-cost-first-infrastructure.md) | Cost-First Infrastructure | Accepted |
 | [ADR-011](ADR-011-licensing.md) | Licensing: Apache-2.0 (code) + CC-BY-4.0 (data) | Accepted |
+| [ADR-012](ADR-012-multi-source-ingestion.md) | Multi-Source Ingestion: Source Registry, Idempotent Checkpointing, Deferred Scheduler | Accepted (design) |
 
 ## Template
 
@@ -39,6 +40,8 @@ The decision, stated plainly.
 Positive and negative outcomes; what this commits us to; what it rules out.
 ```
 
-All ADRs here are dated `2026-08-21` (Milestone 0, architecture completion) and
+ADRs 001–011 are dated `2026-08-21` (Milestone 0, architecture completion) and
 derive from the drafted architecture (`docs/00`–`04`) and
-`CLAUDE-CODE-MASTER-PROMPT.md`.
+`CLAUDE-CODE-MASTER-PROMPT.md`. ADR-012 (`2026-08-28`) records the Milestone 8
+multi-source ingestion design (`docs/24-MULTI-SOURCE-INGESTION.md`) and is design-
+only: its implementation is blocked on Phases 1–7, which do not yet exist.
