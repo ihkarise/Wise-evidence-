@@ -48,6 +48,9 @@ Architecture specifications (`docs/`):
   implementation blocked on Phases 1–7)
 - `25-DATABASE-FOUNDATION.md` — Milestone 2 Database Foundation design checkpoint
   (implemented: schema, enums, RLS, seed, tests)
+- `26-MANUAL-RESEARCH-MVP.md` — Milestone 3 Manual Research MVP design checkpoint
+  (implemented: auth, metadata provider, workflow, editor, public detail; live
+  Supabase verification PENDING)
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -55,6 +58,7 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-001-modular-monolith.md` … `ADR-011-licensing.md`
 - `ADR-012-multi-source-ingestion.md` (Milestone 8 design)
 - `ADR-013-database-foundation-schema-and-testing.md` (Milestone 2)
+- `ADR-014-manual-research-mvp-ssr-auth-metadata.md` (Milestone 3)
 
 Milestone 0 reports (`docs/reports/`):
 
@@ -84,7 +88,25 @@ Milestone 0 reports (`docs/reports/`):
 - Deterministic database tests (migrations, constraints, RLS, fixtures) run
   offline via PGlite. Real-Supabase verification PENDING.
 
+## Manual Research MVP (Milestone 3)
+
+- `supabase/migrations/0010_m3_reviewer_write_rls.sql` — reviewer/admin write
+  RLS, the fail-closed publication guard (admin/service + non-demo +
+  PENDING_REVIEW → PUBLISHED), and the `human_summary` column.
+- `packages/metadata/` — provider-independent metadata lookup: `MetadataProvider`
+  interface, host-pinned/bounded/sanitized `CrossrefMetadataProvider`, and a
+  deterministic `MockMetadataProvider`. Reuses `@wise-evidence/domain`.
+- `packages/database/src/service/` + `executor.ts` — the workflow service layer
+  on the `SqlExecutor` boundary (draft creation + dedup, editor updates,
+  independent classifications, criticism, transitions, fail-closed publish,
+  audit) with reads for the editor, admin queue, and anon public detail.
+- `apps/web/` — hybrid SSR (`@astrojs/node`): Supabase-SSR auth, middleware
+  route protection, admin editor/review/publish UI, API routes, and the public
+  `/research/[id]` detail page (anon RLS path).
+- Deterministic workflow, security, and metadata tests (114 total). Live
+  Supabase (browser/auth/DB) verification PENDING a provisioned project.
+
 ## Next
 
-Milestone 3 — Manual Research MVP (admin auth, research entry, DOI metadata,
-review queue, publish workflow, public detail page). See `docs/22-ROADMAP.md`.
+Milestone 4 — Public Research Explorer (search, filters, sorting, evidence
+browsing). See `docs/22-ROADMAP.md`. Not started.

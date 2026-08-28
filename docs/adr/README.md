@@ -21,6 +21,7 @@ ADR (master prompt §38).
 | [ADR-011](ADR-011-licensing.md) | Licensing: Apache-2.0 (code) + CC-BY-4.0 (data) | Accepted |
 | [ADR-012](ADR-012-multi-source-ingestion.md) | Multi-Source Ingestion: Source Registry, Idempotent Checkpointing, Deferred Scheduler | Accepted (design) |
 | [ADR-013](ADR-013-database-foundation-schema-and-testing.md) | Database Foundation: Enum/Table Taxonomy Split and PGlite Deterministic Testing | Accepted |
+| [ADR-014](ADR-014-manual-research-mvp-ssr-auth-metadata.md) | Manual Research MVP: Hybrid SSR, Supabase-SSR Auth, Reviewer RLS, and a Metadata Provider Package | Accepted |
 
 ## Template
 
@@ -46,3 +47,6 @@ derive from the drafted architecture (`docs/00`–`04`) and
 `CLAUDE-CODE-MASTER-PROMPT.md`. ADR-012 (`2026-08-28`) records the Milestone 8
 multi-source ingestion design (`docs/24-MULTI-SOURCE-INGESTION.md`) and is design-
 only: its implementation is blocked on Phases 1–7, which do not yet exist.
+ADR-013 records the Milestone 2 database foundation. ADR-014 records the
+Milestone 3 Manual Research MVP (`docs/26-MANUAL-RESEARCH-MVP.md`) — implemented,
+with live Supabase verification marked PENDING until a real project is supplied.

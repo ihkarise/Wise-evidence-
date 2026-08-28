@@ -13,29 +13,38 @@ state of the research; it is **not** a claim that a treatment works.
 
 ## Project status
 
-**Milestone 1 — Repository Foundation.** This repository is an early-stage
-scaffold. It contains:
+**Milestones 0–3 complete — through the Manual Research MVP.** This repository
+contains:
 
-- the complete architecture documentation (`docs/`), and
-- the project foundation: a pnpm workspace, an Astro web app with a React
-  island, a framework-independent domain package with the DOI normalizer, and
-  the CI, tooling, and governance to build on.
+- the complete architecture documentation (`docs/`);
+- the project foundation: a pnpm workspace, an Astro app with a React island,
+  framework-independent `domain`/`database`/`metadata` packages, CI, tooling,
+  and governance;
+- the canonical database: ordered Supabase/PostgreSQL migrations, enums,
+  indexes, Row-Level Security, `taxonomy-v1` reference seed, and clearly-labelled
+  DEMO fixtures; and
+- the Manual Research MVP: Supabase-SSR admin authentication, a DOI-driven
+  Crossref/mock metadata lookup, a structured research editor, the review and
+  fail-closed publish workflow, an append-only audit trail, and a public
+  `/research/[id]` detail page.
 
-It does **not** yet contain a research catalogue, search, database schema,
-authentication, admin tools, or an AI pipeline. Those arrive in later milestones
-(`docs/22-ROADMAP.md`). Nothing on the site should be read as a complete research
-database.
+It does **not** yet contain public search/explorer, evidence visualization, or
+an AI pipeline. Those arrive in later milestones (`docs/22-ROADMAP.md`). Nothing
+on the site should be read as a complete research database. Live Supabase
+(browser/auth/DB) verification is PENDING a provisioned project.
 
 ## Repository layout
 
 ```text
 .
 ├── apps/
-│   └── web/                # Astro app (static-first) with React islands + Tailwind
+│   └── web/                # Astro hybrid SSR + React islands + Tailwind; admin workflow + public detail
 ├── packages/
-│   └── domain/             # portable domain logic (no framework/SDK imports) — normalizeDoi()
-├── supabase/               # DB strategy only in M1; migrations arrive in M2
-├── docs/                   # architecture specs 00–23, ADRs, and reports
+│   ├── domain/             # portable domain logic — normalizeDoi(), normalizeTitle()
+│   ├── database/           # data-access boundary + workflow service layer + PGlite tests
+│   └── metadata/           # provider-independent Crossref/mock metadata lookup
+├── supabase/               # ordered migrations (0001–0010), RLS, taxonomy seed, DEMO fixtures
+├── docs/                   # architecture specs 00–26, ADRs, and reports
 ├── .github/workflows/      # CI (lint · typecheck · test · build; no secrets)
 └── CLAUDE.md               # guidance for AI assistants working in this repo
 ```
