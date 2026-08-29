@@ -109,9 +109,13 @@ Milestone 5 (Evidence Visualization) is complete; the next step is **Milestone
 6 — AI Enrichment** (`docs/22-ROADMAP.md`), still no premature features.
 
 Forward design may be documented ahead of build order without changing that
-order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved
-**Milestone 8** ingestion design, but they are **design-only** — M8
-implementation is blocked on Phases 1–7 and must not be coded before them.
+order: `docs/29-AI-ENRICHMENT.md` and `ADR-017` are the approved **Milestone 6**
+AI-enrichment design (a suggestion-only pipeline with provider independence and
+the canonical/publication/M5 firewalls), and `docs/24-MULTI-SOURCE-INGESTION.md`
+and `ADR-012` are the approved **Milestone 8** ingestion design — but both are
+**design-only**. M6 implementation is blocked pending explicit authorization; M8
+implementation is blocked on Phases 1–7. Neither may be coded before it is
+authorized.
 
 ---
 

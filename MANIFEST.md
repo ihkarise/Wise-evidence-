@@ -62,6 +62,13 @@ Architecture specifications (`docs/`):
   UNCLASSIFIED handling, separate outcome/quality/criticism distributions on the
   anon RLS path, `/evidence` + `/statistics` pages, and no combined score; live
   Supabase verification PENDING
+- `29-AI-ENRICHMENT.md` — Milestone 6 AI Enrichment design checkpoint (design-only;
+  implementation blocked pending explicit authorization): suggestion-only pipeline
+  (AI never becomes canonical, never publishes, never enters M5),
+  provider-independent `packages/ai` with an offline mock default and an
+  OpenAI-compatible real provider, the six documented tasks with versioned prompts,
+  untrusted-in/untrusted-out validation, cache identity, and the
+  canonical/publication/M5 firewalls
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -72,6 +79,7 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-014-manual-research-mvp-ssr-auth-metadata.md` (Milestone 3)
 - `ADR-015-public-research-explorer.md` (Milestone 4)
 - `ADR-016-evidence-visualization-methodology.md` (Milestone 5 design)
+- `ADR-017-ai-enrichment.md` (Milestone 6 design)
 
 Milestone 0 reports (`docs/reports/`):
 

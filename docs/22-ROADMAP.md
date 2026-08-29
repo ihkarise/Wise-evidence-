@@ -151,6 +151,18 @@ AI abstraction, provider config, cheap-model strategy, prompt system + versionin
 cache, summaries, classification suggestions, human approval, AI provenance
 (master prompt §84, `10`).
 
+**Design checkpoint:** `docs/29-AI-ENRICHMENT.md` (+ `ADR-017`) is the approved M6
+design — a suggestion-only pipeline (AI never becomes canonical, never publishes,
+never enters M5), a provider-independent `packages/ai` with an offline mock default
+and an OpenAI-compatible real provider (injected `fetch`, no live network in CI),
+the six documented tasks with versioned `prompts/<task>/vN.md`, untrusted-in/
+untrusted-out validation, the M2 cache identity, server-only credentials, and the
+canonical/publication/M5 firewalls. It is **design-only**: implementation —
+including a minimal additive migration `0011` for token usage/diagnostics — is
+blocked pending explicit authorization, and the M6.1 model benchmark is NOT run
+during normal M6 work (it happens later in a secure server-side environment). Build
+in order; do not jump ahead.
+
 # 9. Phase 7 — Automated Discovery
 
 First structured source connector: discovery, fetch, normalize, deduplicate,
