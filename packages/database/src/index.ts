@@ -50,3 +50,11 @@ export * from "./service/read.js";
  * + canonical filter options. No AI, embeddings, popularity, or efficacy score.
  */
 export * from "./service/search.js";
+
+/**
+ * Milestone 5 evidence visualization (docs/28, ADR-016). Descriptive, published-
+ * only, distinct-study COUNTS for the evidence pyramid and the outcome / quality
+ * / criticism distributions. Separate axes only — no cross-tab and no combined /
+ * efficacy / balance / weighted score of any kind.
+ */
+export * from "./stats.js";
