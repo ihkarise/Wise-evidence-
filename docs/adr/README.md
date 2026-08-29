@@ -25,6 +25,8 @@ ADR (master prompt §38).
 | [ADR-015](ADR-015-public-research-explorer.md) | Public Research Explorer: PostgreSQL Query Layer, Published-Only via RLS, Canonical-URL SEO | Accepted |
 | [ADR-016](ADR-016-evidence-visualization-methodology.md) | Evidence Visualization: Pyramid as Navigation-not-Truth, Study-Based Counting, Valence-Neutral Encoding, No Combined Score | Accepted |
 | [ADR-017](ADR-017-ai-enrichment.md) | AI Enrichment: Suggestion-Only Pipeline, Provider Independence, and the Canonical/Publication/M5 Firewalls | Accepted (implemented) |
+| [ADR-018](ADR-018-grant-hardening-and-pages-base-path.md) | `anon` Grant Hardening and Environment-Driven GitHub Pages Base Path | Accepted (implemented) |
+| [ADR-019](ADR-019-provider-agnostic-ai-architecture.md) | Provider-Agnostic AI Architecture: Registry, Configuration, Capabilities, and Secret Handling | Accepted (implemented) |
 
 ## Template
 

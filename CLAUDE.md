@@ -58,9 +58,15 @@ and an editor AI panel with Accept/Edit/Reject. **AI is a suggestion engine, nev
 an authority**: it never writes canonical data, never publishes, never changes
 lifecycle/publication state, and never enters the M5 statistics — all firewalls are
 test-covered, CI is offline and keyless (see `docs/29-AI-ENRICHMENT.md`, `ADR-017`).
-There is still **no scraping and no automated discovery** — those belong to
-Milestone 7+. Live provider + Supabase (browser/auth/DB) verification is PENDING a
-provisioned project.
+A pre-M7 **provider-agnostic hardening** pass (ADR-019) then made the AI subsystem
+switchable by configuration only — an `AIProviderRegistry`, separate provider/model
+configuration, thin presets (openrouter · ollama · lmstudio · vllm ·
+openai-compatible · mock), capability negotiation, base-URL SSRF policy, and
+secret-by-reference (`secretRef`, server-only) handling — with the Mock provider
+still the CI/default, every M6 safety guarantee unchanged, and **no migration**
+(see `docs/29` §27, `ADR-019`). There is still **no scraping and no automated
+discovery** — those belong to Milestone 7+. Live provider + Supabase
+(browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
 .
@@ -76,7 +82,8 @@ provisioned project.
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
 ├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
-├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + registry + validation
+├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
+│                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
@@ -90,7 +97,7 @@ provisioned project.
     ├── 27-PUBLIC-RESEARCH-EXPLORER.md # M4 design checkpoint (implemented)
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
-    ├── adr/     ADR-001 … ADR-017 (+ index/template)
+    ├── adr/     ADR-001 … ADR-019 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION
 ```
 
@@ -135,7 +142,7 @@ any coding agent.
 
 ### Architecture is complete; keep it consistent
 
-Specs `05`–`23` and ADRs `001`–`017` now exist. Do **not** silently invent new
+Specs `05`–`23` and ADRs `001`–`019` now exist. Do **not** silently invent new
 architecture that contradicts them — when a decision changes, update the relevant
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
 Milestone 6 (AI Enrichment) is complete; the next step is **Milestone 6.1** (a

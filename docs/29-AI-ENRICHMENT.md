@@ -587,3 +587,45 @@ COMPLETE (live BLOCKED)**; M7 is **NOT STARTED**.
 Milestone 6 is complete. **M6.1** (the OpenRouter model benchmark) is **NOT
 STARTED** and runs later only in a secure server-side environment. **M7** is
 **NOT STARTED**.
+
+# 27. Provider-agnostic hardening (as built — ADR-019)
+
+A pre-M7 architecture-hardening pass made the AI subsystem provider-agnostic so the
+operator can switch AI providers/models **by configuration only** — no change to the
+research workflow, schema, canonical/AI models, human review, public pages,
+statistics, or explorer. It preserves every M6 guarantee (suggestion-only; no
+canonical write/publish/lifecycle/RLS bypass; AI results immutable; provenance
+preserved) and adds **no migration**.
+
+- **Stable boundary.** `AIProvider` remains the only application-facing contract
+  (`id`, `modelId`, optional `capabilities`, `complete`). The orchestrator, web
+  coordinator, and benchmark depend on it alone; no vendor SDK is imported.
+- **Provider registry** (`packages/ai/src/provider-registry.ts`). `AIProviderRegistry`
+  maps a provider **type** to an adapter factory; `createDefaultRegistry()` registers
+  `MOCK`, `OPENAI_COMPATIBLE`, and `LOCAL`. `resolveProviderFromEnv()` is the single
+  env→provider path used by both the web coordinator (`apps/web/src/lib/ai.ts`) and
+  the benchmark (`benchProvider`). Resolution does no network I/O.
+- **Provider types + presets** (`config.ts`). `OPENAI_COMPATIBLE | DIRECT_API |
+  LOCAL | MOCK`; presets `mock | openrouter | ollama | lmstudio | vllm |
+  openai-compatible`. Base URL is configuration, never an application constant.
+- **Model vs provider + capability negotiation** (`capabilities.ts`). `ModelConfig`
+  is separate from `ProviderConfig`; `AICapabilities` (structuredOutput, jsonSchema,
+  toolCalling, vision, nullable context/output limits) is checked against each task's
+  requirements before a call — a shortfall fails as `unsupported-capability`, never a
+  silent downgrade. Application-level validation stays mandatory.
+- **Secrets by reference.** Config carries a `secretRef` (env-var *name*), resolved
+  server-side; no raw key is `PUBLIC_*`, sent to the browser, stored in Supabase,
+  logged, or placed in an error message. Local servers may run keyless (no
+  Authorization header sent).
+- **SSRF policy** (`validateBaseUrl`): http/https only, no embedded credentials,
+  `http:`/private/loopback blocked unless the provider opts in for local dev. An
+  anonymous user can never select a provider, model, or endpoint.
+- **Local & future direct providers.** Ollama/LM Studio/vLLM run through the existing
+  adapter (no bundled weights, not a CI/production dependency). A future `DIRECT_API`
+  Gemini/Anthropic adapter implements the same interface and registers a factory —
+  addable without changing the orchestrator; until then it fails clearly.
+- **Benchmark** generalized: `benchProvider` resolves through the registry, sweeps
+  model ids per call, defaults to the `openrouter` preset, and is no longer OpenRouter-
+  hard-coded.
+
+See `ADR-019` for the full decision, rejected alternatives, and consequences.

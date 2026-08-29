@@ -182,6 +182,15 @@ policy + no server-side key), so no live model/token/cost/ranking value exists y
 see `docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`. Live provider + live Supabase
 verification are PENDING.
 
+**Provider-agnostic hardening (pre-M7, ADR-019).** A hardening pass made the AI
+subsystem provider-agnostic so the operator can switch AI providers/models by
+configuration only: an `AIProviderRegistry`, separate provider/model configuration,
+thin presets (openrouter · ollama · lmstudio · vllm · openai-compatible · mock),
+capability negotiation, base-URL SSRF policy, and secret-by-reference handling. The
+Mock provider stays the CI/default; all M6 safety guarantees are unchanged; no
+migration was added. See `docs/29` §27 and `ADR-019`. This is architecture only —
+**M7 remains NOT STARTED and unauthorized.**
+
 # 9. Phase 7 — Automated Discovery
 
 First structured source connector: discovery, fetch, normalize, deduplicate,
