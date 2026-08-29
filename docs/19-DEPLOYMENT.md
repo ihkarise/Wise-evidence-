@@ -79,3 +79,54 @@ master prompt §7). Errors are surfaced, not swallowed (`16` §12).
 
 Deployments must preserve the guarantees in `04` §46 / `11` §11: AI, import, and
 automation failures do not break research browsing or the core application.
+
+# 11. Static Preview (GitHub Pages) — PREVIEW ONLY, not production
+
+The workflow `.github/workflows/preview.yml` publishes a **static visual preview**
+of the public marketing pages so the UI can be inspected in a browser. It is **not
+the production deployment** and does not host the application.
+
+**Why it is preview-only.** WiseEvidence is a **hybrid SSR** app (ADR-004,
+ADR-014): `output: "static"` + the Astro **Node adapter**. Only `/` and
+`/methodology` are prerendered; `/research`, `/research/[id]`, `/evidence`,
+`/statistics`, `/admin/*`, and `/api/*` are on-demand server-rendered
+(`prerender = false`). **GitHub Pages is static hosting and cannot run those SSR
+routes.** We do **not** convert the app back to static or remove SSR to fit Pages
+(that would break auth, RLS-guarded reads, admin, and the API). Instead the
+workflow deploys **only** the prerendered client output (`apps/web/dist/client`),
+and ships a `404.html` that states the SSR routes are unavailable in the preview —
+no dead ends, no false "production" claim.
+
+**Safety.** The preview build runs with **no secrets**: no AI/OpenRouter key, no
+Supabase URL or service-role key, no production credentials. The two prerendered
+pages are pure static (no database, no `import.meta.env`). The SSR **server** bundle
+(`apps/web/dist/server`) is **never** published; admin routes do not exist as static
+files, so they cannot be exposed. Any live catalogue/data is DEMO/mock only.
+
+**Enablement.** The workflow deploys only after the repo owner sets **Settings →
+Pages → Source = "GitHub Actions"**; then it runs on `workflow_dispatch` or a push
+to `main`. Until enabled it is inert. The resulting URL is a **STATIC VISUAL
+PREVIEW ONLY** and must be documented as such — never as the production host.
+
+# 12. Production Hosting Architecture (documented target — NOT provisioned)
+
+The hybrid-SSR app needs a server runtime; the source repository stays independent
+of the host. The documented target (not built in this milestone):
+
+```text
+Source + CI/CD  →  GitHub (or GitLab CI) — code, review, pipelines
+Application     →  a free/low-cost SSR-capable host running the Astro Node
+                   standalone server (or, if later chosen, a Cloudflare-Workers-
+                   compatible Astro adapter). Static-only hosts (GitHub Pages,
+                   GitLab Pages) can serve docs / the static preview, but CANNOT
+                   be the application runtime while SSR remains.
+Database        →  Supabase / PostgreSQL (RLS; migrations only)
+AI              →  OpenRouter (OpenAI-compatible), server-only credentials, opt-in
+Domain          →  a custom domain in front of the SSR host
+```
+
+Cost posture is unchanged (ADR-010, `21`): free-first, no paid AI-on-every-paper,
+no premature infrastructure. **Not provisioned now**: no production domain,
+database, AI calls, or public admin; Supabase and production AI verification remain
+PENDING (`29` §25). The production migration is a separate, explicitly-authorized
+step — do not overbuild it here.

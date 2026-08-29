@@ -101,6 +101,9 @@ Reports (`docs/reports/`):
 - `packages/domain/` — portable domain logic; `normalizeDoi()` + Vitest suite.
 - Root tooling — pnpm workspace, strict TypeScript, ESLint, Prettier, Vitest.
 - `.github/workflows/ci.yml` — CI (lint · typecheck · test · build; no secrets).
+- `.github/workflows/preview.yml` — STATIC VISUAL PREVIEW ONLY: publishes the
+  prerendered public pages (`/`, `/methodology`) to GitHub Pages, keyless; SSR routes
+  are not served there (hybrid SSR stays intact). See `docs/19-DEPLOYMENT.md` §11–§12.
 - Governance — `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, PR + issue templates.
 
