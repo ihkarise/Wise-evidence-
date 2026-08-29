@@ -12,6 +12,7 @@
  * yields a typed, safe result (no secret leakage). The caller records it and
  * leaves the study untouched.
  */
+import { assertCapabilities, type AICapabilities } from "./capabilities.js";
 import { deriveCost, type AIPricing } from "./cost.js";
 import { canonicalize, sha256Hex } from "./hash.js";
 import type { LoadedPrompt } from "./registry.js";
@@ -108,6 +109,28 @@ export async function runTask(
     promptVersion: prompt.version,
     promptContentHash: prompt.contentHash,
   } as const;
+
+  // Capability negotiation (ADR-019): if the provider declares its capabilities,
+  // require the task's capabilities before any network call. A shortfall fails
+  // clearly — it is NEVER silently downgraded. A provider that declares nothing
+  // (a minimal test double) skips the check for backward compatibility.
+  if (provider.capabilities !== undefined) {
+    try {
+      assertCapabilities(prompt.task, provider.capabilities as AICapabilities);
+    } catch (error) {
+      const reason: AIProviderErrorReason =
+        error instanceof AIProviderError ? error.reason : "unsupported-capability";
+      const detail = error instanceof AIProviderError ? error.message : "unsupported capability";
+      return {
+        ...base,
+        kind: "provider-error",
+        reason,
+        errorDetail: detail,
+        usage: UNKNOWN_USAGE,
+        attempts: 0,
+      };
+    }
+  }
 
   let attempts = 0;
   let lastResult: Extract<AIExecution, { kind: "result" }> | null = null;

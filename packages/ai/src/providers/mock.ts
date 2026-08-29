@@ -14,6 +14,7 @@
  * alarming or destructive suggestion.
  */
 import { sha256Hex } from "../hash.js";
+import { MOCK_CAPABILITIES, type AICapabilities } from "../capabilities.js";
 import {
   UNKNOWN_USAGE,
   type AICompletionRequest,
@@ -35,6 +36,7 @@ export interface MockProviderOptions {
 export class MockAIProvider implements AIProvider {
   readonly id = "mock";
   readonly modelId: string;
+  readonly capabilities: AICapabilities = MOCK_CAPABILITIES;
   readonly #model: string;
   readonly #reportUsage: boolean;
 
