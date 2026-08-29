@@ -36,6 +36,51 @@ export {
 } from "./providers/openai.js";
 
 export {
+  TASK_CAPABILITY_REQUIREMENTS,
+  OPENAI_COMPATIBLE_CAPABILITIES,
+  LOCAL_MODEL_CAPABILITIES,
+  MOCK_CAPABILITIES,
+  missingCapabilities,
+  assertCapabilities,
+  type AICapabilities,
+  type RequiredCapabilities,
+} from "./capabilities.js";
+
+export {
+  PROVIDER_PRESETS,
+  getPreset,
+  defaultCapabilitiesForType,
+  makeModelConfig,
+  envSecretResolver,
+  validateBaseUrl,
+  isPrivateHost,
+  type AIProviderType,
+  type ProviderConfig,
+  type ModelConfig,
+  type SecretResolver,
+} from "./config.js";
+
+export {
+  AIProviderRegistry,
+  createDefaultRegistry,
+  resolveProviderFromEnv,
+  mockFactory,
+  openAICompatibleFactory,
+  type ProviderFactory,
+  type ProviderFactoryContext,
+  type ResolveSpec,
+  type ResolvedProvider,
+} from "./provider-registry.js";
+
+export {
+  healthStatusFromReason,
+  healthy,
+  type ProviderHealth,
+  type ProviderHealthStatus,
+  type FallbackRecord,
+} from "./health.js";
+
+export {
   DEFAULT_PROMPT_VERSIONS,
   loadPrompt,
   loadRegistryManifest,

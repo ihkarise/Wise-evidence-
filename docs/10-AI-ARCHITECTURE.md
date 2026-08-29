@@ -63,6 +63,18 @@ AIProvider (swappable implementations, selected below the interface)
 - The domain (`Research`, `Classification`) contains **no** provider-specific
   code (`04` §17).
 
+> **As built (ADR-019):** an `AIProviderRegistry` turns configuration into a
+> provider instance; provider and model are separate concepts (`ProviderConfig`
+> vs `ModelConfig`); thin presets (`openrouter`, `ollama`, `lmstudio`, `vllm`,
+> `openai-compatible`, `mock`) let one OpenAI-compatible adapter drive many
+> backends — hosted, self-hosted, or local — with the base URL as configuration.
+> Provider types are `OPENAI_COMPATIBLE | DIRECT_API | LOCAL | MOCK`; a future
+> native `DIRECT_API` adapter implements this same `AIProvider` interface without
+> changing the orchestrator. Model **capabilities** are declared and negotiated
+> per task (a shortfall fails, never a silent downgrade), and secrets are carried
+> by server-side **reference** (`secretRef`), never as raw values in config, the
+> browser, the database, or logs. See `docs/29` §27 and `ADR-019`.
+
 # 4. Job & Result Model
 
 ```text

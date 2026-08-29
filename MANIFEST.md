@@ -82,6 +82,8 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-017-ai-enrichment.md` (Milestone 6 design)
 - `ADR-018-grant-hardening-and-pages-base-path.md` (Production Readiness — `anon`
   grant hardening + env-driven GitHub Pages base path)
+- `ADR-019-provider-agnostic-ai-architecture.md` (pre-M7 hardening — provider
+  registry, provider/model config, capability negotiation, secret references)
 
 Reports (`docs/reports/`):
 

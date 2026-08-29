@@ -20,14 +20,16 @@ interface ImportMetaEnv {
   // only. When absent, data surfaces degrade to a "not configured" notice.
   readonly SUPABASE_DB_URL?: string;
 
-  // ---- AI (Milestone 6) — SERVER-ONLY, never PUBLIC_*, never in the browser ----
-  // The provider abstraction (docs/29 §4). When AI_PROVIDER is unset or "mock",
-  // the offline deterministic MockAIProvider is used and NO key is required.
-  // A real provider is opt-in and its key never reaches client/island code.
-  readonly AI_PROVIDER?: string; // "mock" (default) | "openai-compatible"
-  readonly AI_BASE_URL?: string; // OpenAI-compatible base URL (real provider only)
-  readonly AI_API_KEY?: string; // provider secret (real provider only)
-  readonly AI_MODEL?: string; // model id (real provider only)
+  // ---- AI (Milestone 6 / ADR-019) — SERVER-ONLY, never PUBLIC_*, never in the browser ----
+  // The provider-agnostic abstraction (docs/29 §4, ADR-019). When AI_PROVIDER is
+  // unset or "mock", the offline deterministic MockAIProvider is used and NO key
+  // is required. Any real provider is opt-in and its key never reaches
+  // client/island code. Provider and model are separate concepts; switching
+  // providers is a configuration change only.
+  readonly AI_PROVIDER?: string; // preset: mock (default) | openrouter | ollama | lmstudio | vllm | openai-compatible
+  readonly AI_BASE_URL?: string; // overrides the preset base URL (required for presets with none)
+  readonly AI_API_KEY?: string; // provider secret (hosted providers; local servers may omit it)
+  readonly AI_MODEL?: string; // model id (required for every non-mock provider)
   readonly AI_REQUEST_TIMEOUT_MS?: string;
   readonly AI_MAX_OUTPUT_TOKENS?: string;
   // Operator-supplied pricing (per 1,000,000 tokens) for cost derivation. Absent

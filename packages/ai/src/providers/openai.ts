@@ -14,6 +14,7 @@
  *   - the model output is UNTRUSTED and is validated by the caller before it is
  *     ever persisted as VALID.
  */
+import { OPENAI_COMPATIBLE_CAPABILITIES, type AICapabilities } from "../capabilities.js";
 import {
   AIProviderError,
   UNKNOWN_USAGE,
@@ -45,8 +46,13 @@ export interface OpenAICompatibleOptions {
   readonly fetch: FetchLike;
   /** OpenAI-compatible base URL, e.g. https://openrouter.ai/api/v1. Server-only. */
   readonly baseUrl: string;
-  /** API key. Server-only; never exposed to the browser or persisted. */
-  readonly apiKey: string;
+  /**
+   * API key. Server-only; never exposed to the browser or persisted. OPTIONAL:
+   * local/self-hosted OpenAI-compatible servers (Ollama, LM Studio, a private
+   * vLLM) often need no key — when absent, no Authorization header is sent
+   * (ADR-019 "Ollama"). Hosted providers must supply one via configuration.
+   */
+  readonly apiKey?: string;
   /** Model id, e.g. a cheap hosted model. */
   readonly model: string;
   /** Request timeout in ms (default 30000). */
@@ -55,6 +61,8 @@ export interface OpenAICompatibleOptions {
   readonly maxBytes?: number;
   /** Stable provider id for provenance. Default "openai-compatible". */
   readonly providerId?: string;
+  /** Declared model capabilities (ADR-019). Default: OpenAI-compatible defaults. */
+  readonly capabilities?: AICapabilities;
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -63,22 +71,26 @@ const DEFAULT_MAX_BYTES = 256 * 1024;
 export class OpenAICompatibleProvider implements AIProvider {
   readonly id: string;
   readonly modelId: string;
+  readonly capabilities: AICapabilities;
   readonly #fetch: FetchLike;
   readonly #baseUrl: string;
-  readonly #apiKey: string;
+  readonly #apiKey: string | undefined;
   readonly #model: string;
   readonly #timeoutMs: number;
   readonly #maxBytes: number;
 
   constructor(options: OpenAICompatibleOptions) {
-    if (!options.baseUrl || !options.apiKey || !options.model) {
-      throw new AIProviderError("not-configured", "baseUrl, apiKey, and model are required");
+    // baseUrl + model are always required; the API key is OPTIONAL so the same
+    // adapter can drive a keyless local server (ADR-019).
+    if (!options.baseUrl || !options.model) {
+      throw new AIProviderError("not-configured", "baseUrl and model are required");
     }
     this.id = options.providerId ?? "openai-compatible";
     this.modelId = options.model;
+    this.capabilities = options.capabilities ?? OPENAI_COMPATIBLE_CAPABILITIES;
     this.#fetch = options.fetch;
     this.#baseUrl = options.baseUrl.replace(/\/+$/, "");
-    this.#apiKey = options.apiKey;
+    this.#apiKey = options.apiKey && options.apiKey.length > 0 ? options.apiKey : undefined;
     this.#model = options.model;
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.#maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
@@ -100,15 +112,20 @@ export class OpenAICompatibleProvider implements AIProvider {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.#timeoutMs);
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    // Only send Authorization when a key is configured (keyless local servers).
+    if (this.#apiKey !== undefined) {
+      headers.Authorization = `Bearer ${this.#apiKey}`;
+    }
+
     let response: FetchLikeResponse;
     try {
       response = await this.#fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${this.#apiKey}`,
-        },
+        headers,
         body,
         signal: controller.signal,
         redirect: "error",

@@ -12,15 +12,13 @@
  * pipeline with no key and no network.
  */
 import {
-  MockAIProvider,
-  OpenAICompatibleProvider,
   loadPrompt,
   runTask,
   hashInput,
-  parsePricing,
   isAiTask,
-  AIProviderError,
+  resolveProviderFromEnv,
   type AIProvider,
+  type AIPricing,
   type AITaskId,
   type FetchLike,
 } from "@wise-evidence/ai";
@@ -37,8 +35,25 @@ import { asService } from "./db.js";
 
 const env = import.meta.env;
 
-/** Whether a real (non-mock) AI provider is configured. */
+/** Configured provider preset id (server-side; default "mock"). */
 export const aiProviderId = (env.AI_PROVIDER ?? "mock").trim() || "mock";
+
+/**
+ * The server-only AI configuration, as a plain record for the provider-agnostic
+ * resolver. Only these keys are read; the API key lives here and is NEVER exposed
+ * to the browser (never `PUBLIC_*`, never sent in island props or responses).
+ */
+function aiEnv(): Record<string, string | undefined> {
+  return {
+    AI_PROVIDER: env.AI_PROVIDER,
+    AI_BASE_URL: env.AI_BASE_URL,
+    AI_MODEL: env.AI_MODEL,
+    AI_API_KEY: env.AI_API_KEY,
+    AI_REQUEST_TIMEOUT_MS: env.AI_REQUEST_TIMEOUT_MS,
+    AI_PRICE_INPUT_PER_MTOK: env.AI_PRICE_INPUT_PER_MTOK,
+    AI_PRICE_OUTPUT_PER_MTOK: env.AI_PRICE_OUTPUT_PER_MTOK,
+  };
+}
 
 function timeoutMs(): number {
   const n = Number(env.AI_REQUEST_TIMEOUT_MS);
@@ -49,25 +64,17 @@ function maxOutputTokens(): number {
   return Number.isFinite(n) && n > 0 ? n : 1024;
 }
 
-/** Build the configured provider. Throws a safe error if a real one is misconfigured. */
+/** Resolve the configured provider + its model config/pricing via the registry. */
+function resolveAi(): { provider: AIProvider; pricing: AIPricing | null } {
+  const resolved = resolveProviderFromEnv(aiEnv(), {
+    fetch: globalThis.fetch as unknown as FetchLike,
+  });
+  return { provider: resolved.provider, pricing: resolved.pricing };
+}
+
+/** Build the configured provider. Throws a safe error if it is misconfigured. */
 export function getAiProvider(): AIProvider {
-  if (aiProviderId === "openai-compatible") {
-    if (!env.AI_BASE_URL || !env.AI_API_KEY || !env.AI_MODEL) {
-      throw new AIProviderError(
-        "not-configured",
-        "AI_BASE_URL, AI_API_KEY, and AI_MODEL are required for the openai-compatible provider",
-      );
-    }
-    return new OpenAICompatibleProvider({
-      fetch: globalThis.fetch as unknown as FetchLike,
-      baseUrl: env.AI_BASE_URL,
-      apiKey: env.AI_API_KEY,
-      model: env.AI_MODEL,
-      timeoutMs: timeoutMs(),
-    });
-  }
-  // Default: offline, deterministic, no key, no network.
-  return new MockAIProvider();
+  return resolveAi().provider;
 }
 
 export interface EnrichmentOutcome {
@@ -93,14 +100,14 @@ export async function runEnrichment(
   }
 
   let provider: AIProvider;
+  let pricing: AIPricing | null;
   try {
-    provider = getAiProvider();
+    ({ provider, pricing } = resolveAi());
   } catch {
     return { ok: false, cached: false, task, message: "AI provider is not configured." };
   }
 
   const prompt = await loadPrompt(task);
-  const pricing = parsePricing(env.AI_PRICE_INPUT_PER_MTOK, env.AI_PRICE_OUTPUT_PER_MTOK);
 
   return asService(async (db: SqlExecutor) => {
     const input = await getEnrichmentInput(db, studyId, task);
