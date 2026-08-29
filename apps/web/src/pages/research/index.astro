@@ -1,0 +1,419 @@
+---
+/**
+ * Public Research Explorer (docs/27, docs/14, docs/15 — Milestone 4).
+ *
+ * SSR on the ANON database path, so production RLS is the authoritative gate:
+ * only PUBLISHED research is ever queried, and drafts / pending / rejected /
+ * archived / AI / audit / review / import records can never leak. The page
+ * works WITHOUT JavaScript — it is a plain GET `<form>`; search, filters, sort
+ * and pagination are all query parameters, so every result view is bookmarkable
+ * and shareable.
+ *
+ * Honesty: reported outcome, evidence quality, confidence and evidence level are
+ * shown as SEPARATE signals on each card and are never merged into a single
+ * score. Sorts are neutral (relevance / newest / oldest / title) — never
+ * "most effective", popularity or votes.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ResearchCard from "../../components/ResearchCard.astro";
+import {
+  parseSearchParams,
+  searchPublishedResearch,
+  getFilterOptions,
+  SEARCH_SORTS,
+  type SearchResult,
+  type FilterOptions,
+} from "@wise-evidence/database";
+import { asAnon, isDatabaseConfigured } from "../../lib/db.js";
+import { outcomeLabel, humanize } from "../../lib/labels.js";
+
+export const prerender = false;
+
+// --- validated query (untrusted input in, clamped SearchQuery out) ---
+const raw = Object.fromEntries(Astro.url.searchParams.entries());
+const query = parseSearchParams(raw);
+
+// A canonical URL that never multiplies into thin per-filter SEO pages (docs/27
+// §8): it is always the bare /research. Filtered/searched/paged views are
+// marked noindex so search engines index only the clean entry point.
+const canonical = new URL("/research", Astro.site ?? Astro.url).toString();
+const hasParams = Astro.url.search.length > 0;
+
+// --- data (published-only, via RLS) with graceful pending/error states ---
+let result: SearchResult | null = null;
+let options: FilterOptions | null = null;
+let loadError = false;
+if (isDatabaseConfigured) {
+  try {
+    [result, options] = await asAnon(async (db) => [
+      await searchPublishedResearch(db, query),
+      await getFilterOptions(db),
+    ]);
+  } catch {
+    // Never surface database internals to the client (docs/27 §12).
+    loadError = true;
+  }
+}
+
+const sortLabels: Record<string, string> = {
+  relevance: "Relevance",
+  newest: "Newest first",
+  oldest: "Oldest first",
+  title: "Title A–Z",
+};
+
+/** Build a /research URL preserving the current query but overriding some keys. */
+function urlWith(overrides: Record<string, string | number | undefined>): string {
+  const p = new URLSearchParams();
+  const base: Record<string, string | undefined> = {
+    q: query.q || undefined,
+    studyType: query.filters.studyType,
+    evidenceLevel: query.filters.evidenceLevel,
+    outcome: query.filters.outcome,
+    quality: query.filters.quality,
+    condition: query.filters.condition,
+    intervention: query.filters.intervention,
+    year: query.filters.year !== undefined ? String(query.filters.year) : undefined,
+    sort: query.sort,
+    page: String(query.page),
+    pageSize: query.pageSize !== 20 ? String(query.pageSize) : undefined,
+    ...overrides,
+  };
+  for (const [k, v] of Object.entries(base)) {
+    if (v !== undefined && v !== "" && v !== null) p.set(k, String(v));
+  }
+  const qs = p.toString();
+  return qs ? `/research?${qs}` : "/research";
+}
+
+const from = result && result.total > 0 ? (result.page - 1) * result.pageSize + 1 : 0;
+const to = result ? Math.min(result.page * result.pageSize, result.total) : 0;
+const hasActiveFilters =
+  query.q.length > 0 || Object.values(query.filters).some((v) => v !== undefined && v !== "");
+
+const description =
+  "Search and browse published homeopathy research. Reported outcome, evidence quality, confidence and criticism are kept as separate dimensions — never a single efficacy score.";
+---
+
+<BaseLayout
+  title="Research Explorer"
+  description={description}
+  canonical={canonical}
+  noindex={hasParams}
+>
+  <div class="max-w-4xl">
+    <p class="text-sm font-medium uppercase tracking-wide text-brand">Explore</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">Research Explorer</h1>
+    <p class="mt-3 max-w-2xl text-ink-muted">
+      Search published research by title, abstract, author, journal, DOI, condition or intervention.
+      Reported <strong>outcome</strong>, evidence <strong>quality</strong>,
+      <strong>confidence</strong> and <strong>criticism</strong> are kept as separate dimensions and never
+      combined into a single score.
+    </p>
+
+    <!-- Filter + search form. Plain GET so it works with no JavaScript. -->
+    <form
+      method="get"
+      action="/research"
+      class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-5"
+      role="search"
+      aria-label="Search and filter research"
+    >
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <div class="flex-1">
+          <label for="q" class="block text-sm font-medium text-ink">Search</label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            value={query.q}
+            placeholder="Title, author, journal, DOI, condition…"
+            class="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
+        <div class="sm:w-52">
+          <label for="sort" class="block text-sm font-medium text-ink">Sort</label>
+          <select
+            id="sort"
+            name="sort"
+            class="mt-1 w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            {
+              SEARCH_SORTS.map((s) => (
+                <option value={s} selected={query.sort === s}>
+                  {sortLabels[s]}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+      </div>
+
+      <fieldset class="mt-4">
+        <legend class="text-sm font-medium text-ink">Filters</legend>
+        <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label for="studyType" class="block text-xs font-medium text-slate-500"
+              >Study type</label
+            >
+            <select
+              id="studyType"
+              name="studyType"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.studyTypes.map((o) => (
+                  <option value={o.value} selected={query.filters.studyType === o.value}>
+                    {o.label}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="evidenceLevel" class="block text-xs font-medium text-slate-500"
+              >Evidence level</label
+            >
+            <select
+              id="evidenceLevel"
+              name="evidenceLevel"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.evidenceLevels.map((o) => (
+                  <option value={o.value} selected={query.filters.evidenceLevel === o.value}>
+                    {o.label}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="outcome" class="block text-xs font-medium text-slate-500"
+              >Reported outcome</label
+            >
+            <select
+              id="outcome"
+              name="outcome"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.outcomes.map((o) => (
+                  <option value={o.value} selected={query.filters.outcome === o.value}>
+                    {outcomeLabel(o.value)}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="quality" class="block text-xs font-medium text-slate-500"
+              >Evidence quality</label
+            >
+            <select
+              id="quality"
+              name="quality"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.qualities.map((o) => (
+                  <option value={o.value} selected={query.filters.quality === o.value}>
+                    {humanize(o.label)}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="condition" class="block text-xs font-medium text-slate-500">Condition</label
+            >
+            <select
+              id="condition"
+              name="condition"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.conditions.map((o) => (
+                  <option value={o.value} selected={query.filters.condition === o.value}>
+                    {o.label}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="intervention" class="block text-xs font-medium text-slate-500"
+              >Intervention</label
+            >
+            <select
+              id="intervention"
+              name="intervention"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.interventions.map((o) => (
+                  <option value={o.value} selected={query.filters.intervention === o.value}>
+                    {o.label}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="year" class="block text-xs font-medium text-slate-500"
+              >Publication year</label
+            >
+            <select
+              id="year"
+              name="year"
+              class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {
+                options?.years.map((y) => (
+                  <option value={String(y)} selected={query.filters.year === y}>
+                    {y}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="mt-4 flex items-center gap-3">
+        <button
+          type="submit"
+          class="rounded bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1"
+        >
+          Apply
+        </button>
+        {
+          hasActiveFilters && (
+            <a href="/research" class="text-sm text-brand underline underline-offset-2">
+              Clear all
+            </a>
+          )
+        }
+      </div>
+    </form>
+
+    <!-- Results region: announced to assistive tech when it updates. -->
+    <section class="mt-8" aria-live="polite">
+      {
+        !isDatabaseConfigured ? (
+          <div
+            class="rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"
+            role="note"
+          >
+            <strong class="font-semibold">Catalogue not connected.</strong> This deployment has no
+            database configured yet, so there is no research to explore. The explorer, filters and
+            search all work — they are waiting on a provisioned Supabase project.
+          </div>
+        ) : loadError ? (
+          <div
+            class="rounded-lg border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-900"
+            role="alert"
+          >
+            Something went wrong loading research. Please try again.
+          </div>
+        ) : result && result.total > 0 ? (
+          <>
+            <p class="text-sm text-ink-muted">
+              Showing{" "}
+              <strong>
+                {from}–{to}
+              </strong>{" "}
+              of <strong>{result.total}</strong> {result.total === 1 ? "result" : "results"}
+              {query.q && <span> for “{query.q}”</span>}
+            </p>
+            <ol class="mt-4 space-y-4" role="list">
+              {result.items.map((card) => (
+                <li>
+                  <ResearchCard card={card} />
+                </li>
+              ))}
+            </ol>
+
+            {result.totalPages > 1 && (
+              <nav
+                class="mt-8 flex items-center justify-between gap-4 border-t border-slate-200 pt-4"
+                aria-label="Pagination"
+              >
+                {result.page > 1 ? (
+                  <a
+                    href={urlWith({ page: result.page - 1 })}
+                    rel="prev"
+                    class="rounded border border-slate-300 px-3 py-1.5 text-sm text-brand hover:border-brand"
+                  >
+                    ← Previous
+                  </a>
+                ) : (
+                  <span
+                    class="rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-300"
+                    aria-disabled="true"
+                  >
+                    ← Previous
+                  </span>
+                )}
+
+                <span class="text-sm text-ink-muted">
+                  Page {result.page} of {result.totalPages}
+                </span>
+
+                {result.page < result.totalPages ? (
+                  <a
+                    href={urlWith({ page: result.page + 1 })}
+                    rel="next"
+                    class="rounded border border-slate-300 px-3 py-1.5 text-sm text-brand hover:border-brand"
+                  >
+                    Next →
+                  </a>
+                ) : (
+                  <span
+                    class="rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-300"
+                    aria-disabled="true"
+                  >
+                    Next →
+                  </span>
+                )}
+              </nav>
+            )}
+          </>
+        ) : (
+          <div
+            class="rounded-lg border border-slate-200 bg-white px-5 py-8 text-center"
+            role="note"
+          >
+            <p class="text-sm font-medium text-ink">No research matches your search.</p>
+            <p class="mt-1 text-sm text-ink-muted">
+              {hasActiveFilters
+                ? "Try removing a filter or broadening your search terms."
+                : "The published catalogue is empty in this environment."}
+            </p>
+            {hasActiveFilters && (
+              <a
+                href="/research"
+                class="mt-3 inline-block text-sm text-brand underline underline-offset-2"
+              >
+                Clear all filters
+              </a>
+            )}
+          </div>
+        )
+      }
+    </section>
+  </div>
+</BaseLayout>

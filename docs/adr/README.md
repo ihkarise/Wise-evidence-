@@ -22,6 +22,7 @@ ADR (master prompt §38).
 | [ADR-012](ADR-012-multi-source-ingestion.md) | Multi-Source Ingestion: Source Registry, Idempotent Checkpointing, Deferred Scheduler | Accepted (design) |
 | [ADR-013](ADR-013-database-foundation-schema-and-testing.md) | Database Foundation: Enum/Table Taxonomy Split and PGlite Deterministic Testing | Accepted |
 | [ADR-014](ADR-014-manual-research-mvp-ssr-auth-metadata.md) | Manual Research MVP: Hybrid SSR, Supabase-SSR Auth, Reviewer RLS, and a Metadata Provider Package | Accepted |
+| [ADR-015](ADR-015-public-research-explorer.md) | Public Research Explorer: PostgreSQL Query Layer, Published-Only via RLS, Canonical-URL SEO | Accepted |
 
 ## Template
 
@@ -50,3 +51,7 @@ only: its implementation is blocked on Phases 1–7, which do not yet exist.
 ADR-013 records the Milestone 2 database foundation. ADR-014 records the
 Milestone 3 Manual Research MVP (`docs/26-MANUAL-RESEARCH-MVP.md`) — implemented,
 with live Supabase verification marked PENDING until a real project is supplied.
+ADR-015 (`2026-08-29`) records the Milestone 4 Public Research Explorer
+(`docs/27-PUBLIC-RESEARCH-EXPLORER.md`) — implemented: a PostgreSQL-only,
+published-only search/browse query layer with canonical-URL SEO; live Supabase
+verification likewise PENDING.

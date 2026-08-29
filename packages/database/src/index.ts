@@ -43,3 +43,10 @@ export {
 
 export * from "./service/research.js";
 export * from "./service/read.js";
+
+/**
+ * Milestone 4 public research explorer (docs/27). A PostgreSQL-only,
+ * published-only search/browse query layer + validated query-parameter parsing
+ * + canonical filter options. No AI, embeddings, popularity, or efficacy score.
+ */
+export * from "./service/search.js";

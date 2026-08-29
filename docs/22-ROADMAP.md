@@ -85,11 +85,33 @@ efficacy/combined score. Deterministic workflow + security + metadata tests
 `ADR-014`. Real-Supabase (live browser/auth/DB) verification is PENDING a
 provisioned project (`docs/26` §25).
 
-# 6. Phase 4 — Public Research Explorer
+# 6. Phase 4 — Public Research Explorer  ✅ complete
 
 Homepage, search, research list, filters, sorting, research detail, DOI copy,
 source links, conditions, interventions, research cards (master prompt §82, `14`,
 `15`).
+
+**Delivered:** a public `/research` explorer built strictly on the M2/M3
+architecture. A new PostgreSQL-only query layer in `packages/database`
+(`service/search.ts`, on the shared `SqlExecutor` boundary): `parseSearchParams()`
+(untrusted-input validation/clamping), `searchPublishedResearch()` (published-only
+via RLS **and** an explicit `publication_state='PUBLISHED'` predicate), and
+`getFilterOptions()` (filters sourced from canonical reference data, not hardcoded).
+PostgreSQL FTS (`websearch_to_tsquery`/`ts_rank` over the stored
+`publication.search_vector`) plus parameterized author/journal/condition/
+intervention metadata matching; exact canonical-DOI priority reusing
+`@wise-evidence/domain`. Neutral sorts only (relevance/newest/oldest/title) — no
+efficacy/popularity/vote ranking, no combined score. Server-side clamped
+pagination; one card per study (`is_primary` join, so multi-publication studies
+never duplicate). Cards keep outcome/quality/evidence-level/study-type as separate
+labelled dimensions. Accessible, JS-free GET form (fieldset/legend/labels,
+`aria-live` results, accessible pagination); canonical-URL SEO (`noindex` on
+parameterized views) so filter permutations are not thin duplicate pages;
+empty/error/pending states. All input is bound parameters; SQL-injection-style
+tests included. No new migration/index required. The M3 `/research/[id]` detail
+page is reused unchanged. Design checkpoint `docs/27-PUBLIC-RESEARCH-EXPLORER.md`;
+decisions in `ADR-015`. No AI, embeddings, vector DB, scraping, or visualization.
+Real-Supabase (live browser/DB) verification is PENDING a provisioned project.
 
 # 7. Phase 5 — Evidence Visualization
 
