@@ -1,0 +1,64 @@
+# WiseEvidence — SSR host blueprint (Render) — INERT until the owner connects
+# this repo to Render. See docs/19-DEPLOYMENT.md §12. ADR-018 / ADR-004.
+#
+# WHY RENDER: the app uses the existing @astrojs/node adapter in `standalone`
+# mode, which builds a plain Node HTTP server (`apps/web/dist/server/entry.mjs`
+# that honours HOST/PORT). Render's free web service runs that Node process
+# directly — Git-based deploy, HTTPS, env vars, custom domain later, no Docker,
+# no adapter or framework change. This is the smallest host consistent with the
+# existing architecture (free-first, ADR-010); it is a documented default the
+# owner can swap for any other Node-capable host without code changes.
+#
+# SECURITY: every secret is declared `sync: false`, so Render PROMPTS for the
+# value in its dashboard and it is NEVER stored in this repo. No secret, DB URL,
+# service-role key, or AI key appears here or in git. PORT is injected by Render
+# automatically — do not set it. GitHub Pages stays a separate STATIC preview
+# (preview.yml); this blueprint is the ACTUAL application runtime.
+services:
+  - type: web
+    name: wise-evidence-web
+    runtime: node
+    plan: free
+    # Monorepo build from the repo root (pnpm workspace; packageManager is pinned
+    # in the root package.json so corepack selects the right pnpm).
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @wise-evidence/web build
+    startCommand: node apps/web/dist/server/entry.mjs
+    healthCheckPath: /
+    autoDeploy: false
+    envVars:
+      # Bind to all interfaces so Render's proxy can reach the process. PORT is
+      # supplied by Render; the Node adapter reads both HOST and PORT.
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_VERSION
+        value: "22"
+      # --- PUBLIC (safe to reach the browser) ------------------------------
+      - key: PUBLIC_SUPABASE_URL
+        sync: false
+      - key: PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      # --- SERVER-ONLY (never exposed to the client) -----------------------
+      # Same URL/anon pair without the PUBLIC_ prefix, read by the SSR auth
+      # client so they are not bundled into client code (see .env.example).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Service-role key (bypasses RLS) + direct DB URL — privileged server
+      # writes only. Set ONLY in the Render dashboard; never commit.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      # --- AI (server-only, optional) --------------------------------------
+      # Unset ⇒ the offline mock provider (free-first default). A real provider
+      # is opt-in: set AI_PROVIDER=openai-compatible + the three AI_* values in
+      # the dashboard when authorized. Never PUBLIC_, never committed.
+      - key: AI_PROVIDER
+        value: mock
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        sync: false
