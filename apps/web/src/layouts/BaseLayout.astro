@@ -5,13 +5,20 @@ interface Props {
   title: string;
   description?: string;
   canonical?: string;
+  /**
+   * When true, emit `noindex, follow`. Used by filtered/searched/paged views of
+   * the explorer so search engines index only the clean canonical entry point
+   * and thin per-filter permutations are not indexed (docs/27 §8).
+   */
+  noindex?: boolean;
 }
 
-const { title, description, canonical } = Astro.props;
+const { title, description, canonical, noindex } = Astro.props;
 const fullTitle = title === "WiseEvidence" ? title : `${title} · WiseEvidence`;
 
 const navLinks = [
   { href: "/", label: "Home" },
+  { href: "/research", label: "Research" },
   { href: "/methodology", label: "Methodology" },
 ];
 ---
@@ -26,6 +33,7 @@ const navLinks = [
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
     {canonical && <link rel="canonical" href={canonical} />}
+    {noindex && <meta name="robots" content="noindex, follow" />}
   </head>
   <body class="flex min-h-full flex-col bg-white text-ink antialiased">
     <a
@@ -65,8 +73,8 @@ const navLinks = [
     <footer class="border-t border-slate-200 text-sm text-ink-muted">
       <div class="mx-auto flex max-w-4xl flex-col gap-2 px-6 py-8">
         <p>
-          WiseEvidence is an open-source, early-stage platform. It does not yet contain a research
-          catalogue.
+          WiseEvidence is an open-source, early-stage platform. The research catalogue is populated
+          only when a database is connected; on this deployment it may be empty.
         </p>
         <p>
           Code is licensed Apache-2.0; curated data (when it exists) will be CC-BY-4.0. See the

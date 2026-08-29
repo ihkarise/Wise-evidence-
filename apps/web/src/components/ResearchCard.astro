@@ -1,0 +1,127 @@
+---
+/**
+ * A single research result card (docs/27 §7, docs/03 §6). Carries only public,
+ * published information and gives a reader enough to decide whether to open the
+ * detail page: title, authors, year, journal, study type, evidence level,
+ * reported outcome, quality, conditions, interventions, DOI, and the
+ * human-authored summary.
+ *
+ * The independent dimensions — reported outcome, evidence quality, study type /
+ * evidence level — are shown as SEPARATE, distinctly labelled chips. They are
+ * NEVER visually merged into an overall/efficacy score (docs/00 §4, docs/15 §6).
+ */
+import type { ResearchCard } from "@wise-evidence/database";
+import { outcomeLabel, humanize } from "../lib/labels.js";
+
+interface Props {
+  card: ResearchCard;
+}
+const { card } = Astro.props;
+const authorLine =
+  card.authors.length > 3
+    ? `${card.authors.slice(0, 3).join(", ")} +${card.authors.length - 3} more`
+    : card.authors.join(", ");
+---
+
+<article
+  class="rounded-lg border border-slate-200 bg-white p-5 transition-colors focus-within:border-brand hover:border-brand"
+>
+  <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+    <h3 class="text-lg font-semibold tracking-tight text-ink">
+      <a href={`/research/${card.id}`} class="hover:underline focus:underline">{card.title}</a>
+    </h3>
+    {
+      card.isDemo && (
+        <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
+          DEMO
+        </span>
+      )
+    }
+  </div>
+
+  {
+    (card.authors.length > 0 || card.journalTitle || card.year) && (
+      <p class="mt-1 text-sm text-ink-muted">
+        {authorLine}
+        {card.journalTitle && <span> · {card.journalTitle}</span>}
+        {card.year && <span> · {card.year}</span>}
+      </p>
+    )
+  }
+
+  {card.humanSummary && <p class="mt-3 line-clamp-3 text-sm text-ink-muted">{card.humanSummary}</p>}
+
+  <!-- Separate, distinctly labelled dimensions — never a single merged score. -->
+  <dl class="mt-4 flex flex-wrap gap-2 text-xs">
+    {
+      card.studyTypeLabel && (
+        <div class="rounded border border-slate-200 px-2 py-1">
+          <dt class="inline font-medium text-slate-500">Study type: </dt>
+          <dd class="inline text-ink">{card.studyTypeLabel}</dd>
+        </div>
+      )
+    }
+    {
+      card.evidenceLevelLabel && (
+        <div class="rounded border border-slate-200 px-2 py-1">
+          <dt class="inline font-medium text-slate-500">Evidence level: </dt>
+          <dd class="inline text-ink">{card.evidenceLevelLabel}</dd>
+        </div>
+      )
+    }
+    {
+      card.outcome && (
+        <div class="rounded border border-slate-200 px-2 py-1">
+          <dt class="inline font-medium text-slate-500">Reported outcome: </dt>
+          <dd class="inline text-ink">{outcomeLabel(card.outcome)}</dd>
+        </div>
+      )
+    }
+    {
+      card.qualitySummary && (
+        <div class="rounded border border-slate-200 px-2 py-1">
+          <dt class="inline font-medium text-slate-500">Quality: </dt>
+          <dd class="inline text-ink">{humanize(card.qualitySummary)}</dd>
+        </div>
+      )
+    }
+  </dl>
+
+  {
+    (card.conditions.length > 0 || card.interventions.length > 0) && (
+      <p class="mt-3 text-xs text-slate-500">
+        {card.conditions.length > 0 && (
+          <span>
+            <span class="font-medium">Conditions:</span> {card.conditions.join(", ")}
+          </span>
+        )}
+        {card.conditions.length > 0 && card.interventions.length > 0 && <span> · </span>}
+        {card.interventions.length > 0 && (
+          <span>
+            <span class="font-medium">Interventions:</span> {card.interventions.join(", ")}
+          </span>
+        )}
+      </p>
+    )
+  }
+
+  <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+    <a href={`/research/${card.id}`} class="font-medium text-brand hover:underline">
+      View research →
+    </a>
+    {
+      card.doi && (
+        <span class="text-ink-muted">
+          DOI: <span class="font-mono text-xs">{card.doi}</span>
+          <a
+            href={`https://doi.org/${card.doi}`}
+            rel="nofollow noopener"
+            class="ml-1 text-brand underline"
+          >
+            open ↗
+          </a>
+        </span>
+      )
+    }
+  </div>
+</article>
