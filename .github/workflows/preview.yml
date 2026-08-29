@@ -1,0 +1,102 @@
+name: Static Preview
+
+# STATIC VISUAL PREVIEW ONLY — not the production deployment.
+#
+# WiseEvidence is a HYBRID SSR application (Astro `output: "static"` + the Node
+# adapter, ADR-004/ADR-014): the marketing pages `/` and `/methodology` are
+# prerendered, while `/research`, `/research/[id]`, `/evidence`, `/statistics`,
+# `/admin/*`, and `/api/*` are on-demand server-rendered (`prerender = false`).
+# GitHub Pages is STATIC hosting and therefore CANNOT run the SSR routes — so this
+# workflow publishes ONLY the prerendered public pages, purely so the public UI can
+# be inspected in a browser. It is NOT a production host and does NOT make the SSR
+# routes functional (see docs/19-DEPLOYMENT.md §Preview).
+#
+# This build runs with NO secrets: no AI key, no OpenRouter, no Supabase URL or
+# service-role key, no production credentials. The two prerendered pages are pure
+# static (no database, no `import.meta.env`), and only `apps/web/dist/client` is
+# published — the SSR server bundle in `apps/web/dist/server` is never deployed.
+# To activate: repo Settings → Pages → Source = "GitHub Actions", then run this
+# workflow (or merge to main). Until then it simply does not deploy.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - ".github/workflows/preview.yml"
+
+# Least privilege + the tokens GitHub Pages deployment needs. No repo write.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: preview-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build static public pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Offline, keyless build. Astro prerenders `/` and `/methodology` into
+      # apps/web/dist/client; the SSR pages compile to dist/server (NOT published).
+      - name: Build web (static + SSR compile)
+        run: pnpm --filter @wise-evidence/web build
+
+      # Publish only the prerendered client output, and make the static preview
+      # honest: an .nojekyll so assets serve verbatim, and a 404 page that says the
+      # SSR routes are not available here (no dead-end, no false "production" claim).
+      - name: Prepare preview artifact (client only)
+        run: |
+          set -euo pipefail
+          touch apps/web/dist/client/.nojekyll
+          cat > apps/web/dist/client/404.html <<'HTML'
+          <!doctype html><html lang="en"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>WiseEvidence — static preview</title>
+          <style>body{font:16px/1.6 system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1rem;color:#1f2937}</style>
+          </head><body>
+          <h1>Not in the static preview</h1>
+          <p>This is a <strong>static visual preview</strong> of WiseEvidence's public
+          marketing pages only — <a href="/">Home</a> and <a href="/methodology/">Methodology</a>.</p>
+          <p>The research explorer, evidence, statistics, admin, and API routes are
+          <strong>server-rendered (SSR)</strong> and are not available on static hosting.
+          They run only against a live SSR host + database, which this preview does not provide.</p>
+          </body></html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist/client
+
+  deploy:
+    name: Deploy static preview to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
