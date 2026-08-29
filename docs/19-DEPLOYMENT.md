@@ -108,6 +108,22 @@ Pages → Source = "GitHub Actions"**; then it runs on `workflow_dispatch` or a 
 to `main`. Until enabled it is inert. The resulting URL is a **STATIC VISUAL
 PREVIEW ONLY** and must be documented as such — never as the production host.
 
+**Base path (ADR-018).** GitHub Pages serves this repo from the project subpath
+`https://ihkarise.github.io/Wise-evidence-/`, so the preview build **must** carry
+that base or every asset (CSS/JS/favicon) and in-app link resolves against the
+domain root and 404s. `astro.config.mjs` reads `base`/`site` from the `SITE_BASE` /
+`SITE_URL` env vars; the preview workflow sets `SITE_BASE=/Wise-evidence-/` (and
+`SITE_URL=https://ihkarise.github.io`) on the build step. **Production SSR sets
+neither**, so `base` stays `/` and the SSR output is unchanged — the same source
+serves both deployments without divergence. Author-written links use the
+`withBase()` helper (`apps/web/src/lib/base.ts`), since Astro auto-prefixes only
+the asset URLs it generates itself, not hand-written `href`/`src`/`action` values.
+Verified locally (build with `SITE_BASE`, serve under `/Wise-evidence-/`, headless
+Chromium): CSS/JS/favicon 200, Copy DOI island hydrates + normalises, nav works,
+zero console errors. The **live** Pages URL cannot be opened from the build/CI
+egress sandbox, so live-browser confirmation of the deployed URL stays PENDING the
+owner enabling Pages + a `main` deploy.
+
 # 12. Production Hosting Architecture (documented target — NOT provisioned)
 
 The hybrid-SSR app needs a server runtime; the source repository stays independent
