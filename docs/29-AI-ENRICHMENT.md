@@ -560,8 +560,20 @@ order; do not jump ahead (master prompt §34).
 
 Live provider and live Supabase verification are **PENDING** a secure environment
 and a provisioned project, consistent with M3–M5. No provider results, pricing,
-token counts, latency, or live Supabase results are fabricated anywhere. M6.1 is
-**NOT STARTED**; M7 is **NOT STARTED**.
+token counts, latency, or live Supabase results are fabricated anywhere.
+
+**M6.1 update (benchmark readiness).** The Milestone 6.1 benchmark harness now
+exists as `packages/benchmark` — it _drives the existing_ `OpenAICompatibleProvider`
++ orchestrator (no new provider, no parallel AI path) to compare candidate models on
+the DEMO study under identical conditions (FULL/ESSENTIAL workloads, token/latency/
+retry/validity/cost capture, catalogue + pricing verification, cache-identity
+isolation). All of it is verified **offline** with the mock provider and an injected
+fake fetch; the live OpenRouter run is `describe.runIf`-gated and stays skipped
+without a server-side key. The **live gate is currently BLOCKED** (OpenRouter egress
+denied by organization policy + no key configured), so no live model, token, latency,
+cost, or ranking value exists yet — see
+`docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`. M6.1 is therefore **PARTIALLY
+COMPLETE (live BLOCKED)**; M7 is **NOT STARTED**.
 
 # 26. Implementation order (as built)
 
