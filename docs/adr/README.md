@@ -24,6 +24,7 @@ ADR (master prompt §38).
 | [ADR-014](ADR-014-manual-research-mvp-ssr-auth-metadata.md) | Manual Research MVP: Hybrid SSR, Supabase-SSR Auth, Reviewer RLS, and a Metadata Provider Package | Accepted |
 | [ADR-015](ADR-015-public-research-explorer.md) | Public Research Explorer: PostgreSQL Query Layer, Published-Only via RLS, Canonical-URL SEO | Accepted |
 | [ADR-016](ADR-016-evidence-visualization-methodology.md) | Evidence Visualization: Pyramid as Navigation-not-Truth, Study-Based Counting, Valence-Neutral Encoding, No Combined Score | Accepted |
+| [ADR-017](ADR-017-ai-enrichment.md) | AI Enrichment: Suggestion-Only Pipeline, Provider Independence, and the Canonical/Publication/M5 Firewalls | Accepted (implemented) |
 
 ## Template
 
@@ -61,4 +62,16 @@ Evidence Visualization methodology (`docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.
 unit, valence-neutral encoding, explicit UNCLASSIFIED handling, and no combined
 score of any kind — and is now **implemented** (`packages/database/stats.ts`, the
 `/evidence` and `/statistics` pages, and a reusable `DistributionChart`); live
-Supabase verification likewise PENDING.
+Supabase verification likewise PENDING. ADR-017 (`2026-08-29`) records the
+Milestone 6 AI-enrichment design (`docs/29-AI-ENRICHMENT.md`) — a suggestion-only
+pipeline (AI never becomes canonical, never publishes, never enters M5),
+provider-independent `packages/ai` with an offline mock default and an
+OpenAI-compatible real provider, the six documented tasks with versioned prompts,
+untrusted-in/untrusted-out validation, and the canonical/publication/M5 firewalls
+— and is now **implemented** (Milestone 6): `packages/ai` (provider abstraction +
+offline `MockAIProvider` + injected-fetch `OpenAICompatibleProvider` + versioned
+prompt registry + the six task validators + hashing + cost + orchestrator),
+migration `0011` (additive, nullable usage/diagnostics), `packages/database`
+`service/ai.ts` with `ai_result_id` provenance, the staff-only enrichment endpoint
+and editor AI panel, and 70 new deterministic offline tests (246 total). Live
+provider + live Supabase verification remain PENDING; M6.1 and M7 are NOT STARTED.

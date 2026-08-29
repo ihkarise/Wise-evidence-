@@ -62,6 +62,13 @@ Architecture specifications (`docs/`):
   UNCLASSIFIED handling, separate outcome/quality/criticism distributions on the
   anon RLS path, `/evidence` + `/statistics` pages, and no combined score; live
   Supabase verification PENDING
+- `29-AI-ENRICHMENT.md` — Milestone 6 AI Enrichment design + as-built record
+  (**implemented**): suggestion-only pipeline (AI never becomes canonical, never
+  publishes, never enters M5), provider-independent `packages/ai` with an offline
+  mock default and an OpenAI-compatible real provider, the six documented tasks with
+  versioned prompts, untrusted-in/untrusted-out validation, cache identity, and the
+  canonical/publication/M5 firewalls; verification in
+  `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -72,12 +79,16 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-014-manual-research-mvp-ssr-auth-metadata.md` (Milestone 3)
 - `ADR-015-public-research-explorer.md` (Milestone 4)
 - `ADR-016-evidence-visualization-methodology.md` (Milestone 5 design)
+- `ADR-017-ai-enrichment.md` (Milestone 6 design)
 
-Milestone 0 reports (`docs/reports/`):
+Reports (`docs/reports/`):
 
-- `ARCHITECTURE-CROSSCHECK.md` — contradiction/consistency report
-- `MVP-SCOPE.md` — finalized MVP scope
-- `TECH-STACK-DECISION.md` — confirmed technology stack
+- `ARCHITECTURE-CROSSCHECK.md` — contradiction/consistency report (Milestone 0)
+- `MVP-SCOPE.md` — finalized MVP scope (Milestone 0)
+- `TECH-STACK-DECISION.md` — confirmed technology stack (Milestone 0)
+- `M6-IMPLEMENTATION-VERIFICATION.md` — Milestone 6 verification results
+  (test/typecheck/lint/format/build/secret-scan; firewalls; live-verification
+  PENDING)
 
 ## Application foundation (Milestone 1)
 
@@ -123,11 +134,42 @@ Milestone 0 reports (`docs/reports/`):
   bound parameters only.
 - `apps/web/src/pages/research/index.astro` + `components/ResearchCard.astro`
   (Milestone 4) — the SSR `/research` explorer (anon path) and research card.
-- Deterministic workflow, security, metadata, and search tests (155 total). Live
-  Supabase (browser/auth/DB) verification PENDING a provisioned project.
+- `packages/database/src/stats.ts` + `apps/web/src/pages/evidence` +
+  `statistics` + `components/DistributionChart.astro` (Milestone 5) — the public,
+  PostgreSQL-only, published-only evidence-visualization layer (distinct-study
+  counts; pyramid as navigation-not-truth; separate outcome/quality/criticism
+  distributions; no combined score).
+
+## AI Enrichment (Milestone 6)
+
+- `packages/ai/` — the provider-independent AI subsystem: the `AIProvider`
+  boundary, a deterministic offline `MockAIProvider` (dev/CI default), an
+  `OpenAICompatibleProvider` (injected `fetch`, unit-tested with fake responses),
+  a versioned prompt registry loader with content-hash pinning, the six task
+  output validators, SHA-256 input hashing (cache identity), cost derivation
+  (real-usage-and-pricing-or-NULL), and the pure `runTask` orchestrator. No Astro,
+  React, Supabase, or provider-SDK imports; no network in CI.
+- `prompts/<task>/v1.md` + `prompts/registry.json` — the six versioned prompts
+  (research-summary, outcome-classification, evidence-quality, criticism-extraction,
+  metadata-extraction, duplicate-detection) with injection-resistant, structured-
+  output instructions, pinned by content hash.
+- `supabase/migrations/0011_ai_enrichment.sql` — additive, nullable token
+  usage/timings/diagnostics on `ai_job` and validation diagnostics on `ai_result`
+  (no new tables, no RLS change; AI writes stay on the service_role path).
+- `packages/database/src/service/ai.ts` — AI job/result persistence, the cache
+  identity resolver, minimised task input, suggestion listing, and the append-only
+  human Accept/Edit/Reject decision; `ai_result_id` provenance threaded through the
+  existing canonical ops.
+- `apps/web/src/lib/ai.ts` (server-only coordinator) + the staff-only enrichment
+  op and Accept/Edit/Reject ops in `pages/api/admin/research/[id].ts` + the editor
+  AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
+  non-canonical.
+- Deterministic workflow/security/metadata/search/stats/AI tests (246 total). Live
+  provider + live Supabase verification PENDING a provisioned project.
 
 ## Next
 
-Milestone 5 — Evidence Visualization (evidence pyramid, outcome distribution,
-quality/criticism display, explore pages), honesty rules per `docs/15` §6. See
-`docs/22-ROADMAP.md`. Not started.
+Milestone 6.1 — a one-off OpenRouter model benchmark, run later ONLY in a secure
+server-side environment (not part of M6, not run in CI). Then Milestone 7 —
+Automated Research Discovery (first structured source connector). See
+`docs/22-ROADMAP.md`. Both NOT STARTED.

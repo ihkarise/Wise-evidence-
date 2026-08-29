@@ -58,3 +58,13 @@ export * from "./service/search.js";
  * efficacy / balance / weighted score of any kind.
  */
 export * from "./stats.js";
+
+/**
+ * Milestone 6 AI enrichment persistence + cache + human-decision layer
+ * (docs/29, ADR-017). Records AI jobs and immutable AI results, resolves the
+ * cache identity, builds minimised task input, lists suggestions, and records the
+ * human Accept/Edit/Reject decision (append-only). Holds NO AI logic — the
+ * provider/registry/validation live in @wise-evidence/ai, which this package does
+ * not import. AI never writes canonical data, never publishes, never enters M5.
+ */
+export * from "./service/ai.js";

@@ -416,7 +416,16 @@ async function setHumanSummary(
 
 // --- classification (independent dimensions) ---------------------------------
 
-/** Set the human final OUTCOME + its confidence (docs/26 §15). */
+/**
+ * Set the human final OUTCOME + its confidence (docs/26 §15).
+ *
+ * `aiResultId` is OPTIONAL provenance (docs/29 §19): when a human accepts or
+ * edits an AI suggestion, the originating ai_result id is recorded on the
+ * canonical row. It is ALWAYS the human running this operation who writes the
+ * canonical value — the AI never does. The AI's numeric confidence is NOT copied
+ * here: `confidence` is the independent evidence-confidence dimension the human
+ * sets, kept distinct from AI confidence (docs/29 §confidence separation).
+ */
 export async function setOutcome(
   db: SqlExecutor,
   actor: Actor,
@@ -424,6 +433,7 @@ export async function setOutcome(
   outcome: OutcomeValue,
   confidence: ConfidenceLevel | null,
   explanation: string | null,
+  aiResultId: string | null = null,
 ): Promise<void> {
   requireStaff(actor);
   if (!(await getStudyStates(db, studyId))) throw new ServiceError("not-found", "study not found");
@@ -433,14 +443,15 @@ export async function setOutcome(
     [studyId],
   );
   await db.query(
-    `insert into classification (study_id, dimension, final_value, final_actor, confidence, explanation)
-     values ($1, 'OUTCOME', $2, $3, $4::confidence_level, $5)
+    `insert into classification (study_id, dimension, final_value, final_actor, confidence, explanation, ai_result_id)
+     values ($1, 'OUTCOME', $2, $3, $4::confidence_level, $5, $6)
      on conflict (study_id, dimension) do update set
        final_value = excluded.final_value,
        final_actor = excluded.final_actor,
        confidence = excluded.confidence,
-       explanation = excluded.explanation`,
-    [studyId, outcome, actor.id, confidence, explanation],
+       explanation = excluded.explanation,
+       ai_result_id = excluded.ai_result_id`,
+    [studyId, outcome, actor.id, confidence, explanation, aiResultId],
   );
   await writeAudit(
     db,
@@ -449,7 +460,7 @@ export async function setOutcome(
     "classification",
     studyId,
     before?.final_value ?? null,
-    outcome,
+    aiResultId ? { outcome, ai_result_id: aiResultId } : outcome,
     explanation,
   );
 }
@@ -461,19 +472,30 @@ export async function setQualitySummary(
   studyId: string,
   quality: "HIGH" | "MODERATE" | "LOW" | "UNCLEAR",
   explanation: string | null,
+  aiResultId: string | null = null,
 ): Promise<void> {
   requireStaff(actor);
   if (!(await getStudyStates(db, studyId))) throw new ServiceError("not-found", "study not found");
   await db.query(
-    `insert into classification (study_id, dimension, final_value, final_actor, explanation)
-     values ($1, 'QUALITY', $2, $3, $4)
+    `insert into classification (study_id, dimension, final_value, final_actor, explanation, ai_result_id)
+     values ($1, 'QUALITY', $2, $3, $4, $5)
      on conflict (study_id, dimension) do update set
        final_value = excluded.final_value,
        final_actor = excluded.final_actor,
-       explanation = excluded.explanation`,
-    [studyId, quality, actor.id, explanation],
+       explanation = excluded.explanation,
+       ai_result_id = excluded.ai_result_id`,
+    [studyId, quality, actor.id, explanation, aiResultId],
   );
-  await writeAudit(db, actor, "set_quality", "classification", studyId, null, quality, explanation);
+  await writeAudit(
+    db,
+    actor,
+    "set_quality",
+    "classification",
+    studyId,
+    null,
+    aiResultId ? { quality, ai_result_id: aiResultId } : quality,
+    explanation,
+  );
 }
 
 // --- criticism (a separate object) -------------------------------------------
@@ -484,6 +506,8 @@ export interface CriticismInput {
   readonly text: string;
   readonly sourceReference?: string | null;
   readonly sourceUrl?: string | null;
+  /** Optional AI-suggestion provenance when a human accepts an AI criticism. */
+  readonly aiResultId?: string | null;
 }
 
 /** Add a criticism row. Never mutates any outcome value (docs/26 §16). */
@@ -499,8 +523,8 @@ export async function addCriticism(
   if (text.length === 0) throw new ServiceError("invalid-input", "criticism text is required");
   const row = await one<{ id: string }>(
     db,
-    `insert into criticism (study_id, category, origin, text, source_reference, source_url, actor, status)
-     values ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE') returning id`,
+    `insert into criticism (study_id, category, origin, text, source_reference, source_url, actor, ai_result_id, status)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE') returning id`,
     [
       studyId,
       input.category,
@@ -509,6 +533,7 @@ export async function addCriticism(
       input.sourceReference ?? null,
       input.sourceUrl ?? null,
       actor.id,
+      input.aiResultId ?? null,
     ],
   );
   if (!row) throw new ServiceError("invalid-input", "failed to add criticism");

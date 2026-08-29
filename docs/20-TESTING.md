@@ -14,6 +14,15 @@
 Define the testing strategy. Tests protect the credibility-critical logic and let
 contributors work without paying for AI (`04` §47, `10` §14).
 
+> **Milestone 6 status.** The AI subsystem is fully covered by deterministic,
+> OFFLINE tests (246 total). `packages/ai` unit tests exercise the mock provider,
+> the OpenAI-compatible provider via an injected fake `fetch` (success + every
+> mapped failure), the prompt registry + version pinning, hashing, structured-
+> output validation, and cost derivation. `packages/database` tests exercise AI
+> job/result persistence, the cache identity (hit/miss/isolation), immutability,
+> RLS, permissions, the human Accept/Edit/Reject flow with provenance, and the
+> canonical/publication/M5 firewalls. CI needs no AI key and no network.
+
 # 2. Test Layers
 
 - **Unit** — pure domain logic (`packages/domain`, `packages/validation`).

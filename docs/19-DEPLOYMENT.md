@@ -35,6 +35,11 @@ Astro site and Supabase's free/low tiers for the backend (`21`).
 - `.env.example` documents required variables (added Milestone 1).
 - Frontend receives only public config; privileged keys stay server-side
   (`16` §5).
+- **AI (Milestone 6) is server-only.** `AI_PROVIDER` (default `mock`), and — for a
+  real provider only — `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`, plus optional
+  timeouts and pricing, are read only in the server process. They are **never**
+  `PUBLIC_*` and never reach the browser bundle; the default mock provider needs no
+  key. See `docs/29-AI-ENRICHMENT.md` §4.
 
 # 5. CI (GitHub Actions)
 

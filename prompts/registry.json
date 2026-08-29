@@ -1,0 +1,8 @@
+{
+  "research-summary/v1": "f19f287493e04d79a5a2a2d44a854ed825180c28524c24a3dccf1a8f7c3640b5",
+  "outcome-classification/v1": "dd865fb40c549cba9e78efbeb3001f6509939b2261284db493fcef9579ce8991",
+  "evidence-quality/v1": "ac9f32683578eccc5878e7c30f0cba0096d51bf813a6c9e0ffc59cc70a01c2e9",
+  "criticism-extraction/v1": "71ecd9687089fecb3cab8b0c7be1114a52d1506e9f104cb16c027a39db71e68e",
+  "metadata-extraction/v1": "2ab05b82af16c594d40c50b859ad3596b4caec7816574ad89b7a5e1f29d881ed",
+  "duplicate-detection/v1": "50cc640ca8eaced46ff1794181b0e166df4e91339bb5ef40d6b5f41fcdfe2506"
+}

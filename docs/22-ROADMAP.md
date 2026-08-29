@@ -145,11 +145,38 @@ checkpoint `docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`; decisions in
 `ADR-016`. No AI, embeddings, vector DB, scraping, voting, or cross-tab. Real-
 Supabase (live browser/DB) verification is PENDING a provisioned project.
 
-# 8. Phase 6 — AI Enrichment
+# 8. Phase 6 — AI Enrichment  ✅ complete
 
 AI abstraction, provider config, cheap-model strategy, prompt system + versioning,
 cache, summaries, classification suggestions, human approval, AI provenance
 (master prompt §84, `10`).
+
+**Delivered:** a suggestion-only AI enrichment pipeline built strictly on the
+M2–M5 architecture. A new provider-independent `packages/ai` — the `AIProvider`
+boundary, a deterministic offline `MockAIProvider` (the dev/CI default, no key, no
+network), an `OpenAICompatibleProvider` (injected `fetch`, unit-tested with fake
+responses, OpenRouter-agnostic), a versioned prompt registry
+(`prompts/<task>/v1.md` + `prompts/registry.json` content-hash pinning), the six
+documented tasks with structured-output validation, SHA-256 input hashing, cost
+derivation (real usage + operator pricing, else NULL), and a pure `runTask`
+orchestrator with bounded retries. Migration `0011` (additive, nullable) records
+token usage/timings/diagnostics on `ai_job` and validation diagnostics on
+`ai_result`. `packages/database` `service/ai.ts` persists AI jobs and immutable
+results, resolves the M2 cache identity
+(`study + operation + input_hash + model + prompt_version`), builds minimised task
+input, lists suggestions, and records the append-only human Accept/Edit/Reject
+decision; `ai_result_id` provenance is threaded through the existing canonical ops
+(`setOutcome`/`setQualitySummary`/`addCriticism`). A staff-only enrichment endpoint
+and an editor AI panel present suggestions as clearly non-canonical, with
+Accept/Edit/Reject. All AI config is server-only (no `PUBLIC_AI_*`, no key in the
+browser bundle). The canonical/publication/**M5** firewalls are enforced and
+test-covered: AI never writes canonical data, never publishes, never changes state,
+and never enters the M5 statistics. 70 new deterministic offline tests (246 total).
+Design + as-built record in `docs/29-AI-ENRICHMENT.md`; decisions in `ADR-017`;
+verification in `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`. No scraping, no
+discovery, no vector DB, no efficacy/combined score. **M6.1** (the OpenRouter model
+benchmark) is **NOT STARTED** — it runs later only in a secure server-side
+environment. Live provider + live Supabase verification are PENDING.
 
 # 9. Phase 7 — Automated Discovery
 
