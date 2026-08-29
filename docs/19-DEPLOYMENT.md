@@ -146,3 +146,31 @@ no premature infrastructure. **Not provisioned now**: no production domain,
 database, AI calls, or public admin; Supabase and production AI verification remain
 PENDING (`29` §25). The production migration is a separate, explicitly-authorized
 step — do not overbuild it here.
+
+## 12.1 Chosen smallest default SSR host — Render (blueprint only, not deployed)
+
+The app is built with the `@astrojs/node` adapter in **`standalone`** mode, which
+produces a plain Node HTTP server (`apps/web/dist/server/entry.mjs`, honouring
+`HOST`/`PORT`; `pnpm --filter @wise-evidence/web start` runs it). The smallest host
+consistent with that — Node runtime, HTTPS, env vars, custom domain later, a free
+tier, **no Docker, no adapter or framework change** — is a **Render free web
+service**. A repo-root `render.yaml` blueprint captures the build/start commands
+and declares every secret as `sync: false` (Render prompts for the value in its
+dashboard; nothing secret is committed). `PORT` is injected by Render.
+
+This is a **documented default, not a lock-in**: any Node-capable host (Railway,
+Fly.io with a Dockerfile, a small VPS) runs the same `start` command with the same
+env vars. Switching to a serverless host later would mean swapping the Astro
+adapter (e.g. `@astrojs/vercel`) — a deliberate, separate decision, out of scope
+here.
+
+**Status.** The Node standalone server is **VERIFIED LOCAL**: built and run
+locally, every route responds — `/` `/methodology` `/research` `/evidence`
+`/statistics` return 200, `/admin` 302-redirects an unauthenticated request to
+`/admin/sign-in?next=/admin` (the middleware auth guard), and with no Supabase env
+the data routes degrade gracefully (empty catalogue / "not configured") with **no
+SQL error, stack trace, or secret in the HTML**. The **live Render deployment is
+PENDING** the owner connecting the repo to Render and setting the Supabase env vars
+in the dashboard; **live-browser verification against real Supabase stays BLOCKED**
+in this build/CI sandbox (egress-restricted, no credentials). Never mark the host
+live without opening its real URL.

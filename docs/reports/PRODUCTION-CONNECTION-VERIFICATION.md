@@ -44,10 +44,13 @@ external host cannot be executed here and is marked **BLOCKED**, never guessed.
 | 7 | M5/canonical/publication firewalls (AI never authoritative) | VERIFIED PGLITE | `ai.test.ts`, `ai-security.test.ts`, `workflow.test.ts`. |
 | 8 | Full offline regression | VERIFIED LOCAL | `test` 295 passed / 1 skipped; `typecheck` clean; `lint` clean; `format:check` clean; web build (default + preview) OK; secret scan of source + built assets clean. |
 | 9 | Real Supabase schema/RLS/auth (27 tables, 64 policies, 20 triggers, 8 fns, ADMIN bootstrap, demo guard, anon writes blocked) | VERIFIED REAL SUPABASE (reported) | Prior owner verification against `zqvcwywacjxvpidrvrwx`; recorded here as reported, **not** re-run this session. |
-| 10 | Live browser of deployed **GitHub Pages** URL | BLOCKED | `ihkarise.github.io` denied by egress proxy; cannot open the live URL. Redeploy also gated on owner enabling Pages + a `main` deploy. |
-| 11 | Live **SSR host** (production runtime) | PENDING | No SSR host provisioned; documented target only (`docs/19` §12). Requires owner to choose/provision a Node-capable host. |
-| 12 | Live browser of SSR routes against real Supabase (`/research`, `/research/[id]`, `/evidence`, `/statistics`, `/admin`) | BLOCKED | Needs a running SSR host + DB egress + credentials; none available here. |
-| 13 | Live OpenRouter benchmark (M6.1) | BLOCKED | `GET openrouter.ai/api/v1/models` → `HTTP 000` (egress denied); no server-side key. No results/pricing fabricated. |
+| 10 | GitHub Pages **deploy of the corrected build** | VERIFIED (CI) | Merge to `main` (`f701207`) ran `Static Preview`: both the **build** (with `SITE_BASE=/Wise-evidence-/`) and the **`actions/deploy-pages` deploy** jobs succeeded (run 33257664650). Deploy success means Pages is enabled and the base-corrected assets were published. |
+| 11 | Live **browser** of the deployed GitHub Pages URL | BLOCKED | `ihkarise.github.io` denied by egress proxy (`EGRESS_BLOCKED`); cannot open the live URL from this sandbox to eyeball the rendered result. |
+| 12 | Local **SSR runtime** (Node standalone server) | VERIFIED LOCAL | Built default output, ran `apps/web/dist/server/entry.mjs` (honours HOST/PORT). `/` `/methodology` `/research` `/evidence` `/statistics` → 200; `/research/<uuid>` → 404 (no record); `/admin` → 302 `/admin/sign-in?next=/admin` (middleware auth guard). No Supabase env ⇒ graceful empty/"not configured"; **no SQL error, stack trace, or secret in the SSR HTML**; explorer renders independent outcome/quality/… filters (no efficacy control). |
+| 13 | SSR host decision + blueprint (Render, free) | VERIFIED LOCAL (config) | Root `render.yaml` blueprint + `web` `start` script; secrets all `sync: false` (set in dashboard, never committed); consistent with the existing `@astrojs/node` standalone adapter. Not deployed. |
+| 14 | Live **SSR host** deployment (production runtime) | PENDING | Owner action: connect repo to Render (or any Node host) and set the Supabase env vars in the host dashboard. |
+| 15 | Live browser of SSR routes against **real Supabase** (`/research`, `/research/[id]`, `/evidence`, `/statistics`, `/admin`, admin workflow, audit) | BLOCKED | Needs a running SSR host + DB egress + credentials; none available here. Distinct from the LOCAL SSR run (row 12), which had no DB. |
+| 16 | Live OpenRouter benchmark (M6.1) | BLOCKED | `GET openrouter.ai/api/v1/models` → `HTTP 000` (egress denied, 2026-08-29T16:00:36Z); no server-side key. No results/pricing fabricated. |
 
 ## What is safe to state today
 

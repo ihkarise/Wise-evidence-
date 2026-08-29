@@ -110,6 +110,9 @@ Reports (`docs/reports/`):
 - `.github/workflows/preview.yml` — STATIC VISUAL PREVIEW ONLY: publishes the
   prerendered public pages (`/`, `/methodology`) to GitHub Pages, keyless; SSR routes
   are not served there (hybrid SSR stays intact). See `docs/19-DEPLOYMENT.md` §11–§12.
+- `render.yaml` — SSR host blueprint (Render free web service) for the ACTUAL
+  application runtime; inert until the owner connects the repo. Secrets are all
+  `sync: false` (dashboard-set, never committed). See `docs/19-DEPLOYMENT.md` §12.1.
 - Governance — `LICENSE` (Apache-2.0), `CONTRIBUTING.md`, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, PR + issue templates.
 
