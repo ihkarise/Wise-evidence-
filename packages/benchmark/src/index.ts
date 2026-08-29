@@ -19,6 +19,8 @@ export { DEMO_STUDY_ID, DEMO_STUDY_LABEL, demoInputForTask } from "./demo-study.
 
 export { DEFAULT_CANDIDATES, parseCandidates, type CandidateModel } from "./models.js";
 
+export { benchProvider, type BenchProviderOptions } from "./provider-config.js";
+
 export {
   fetchCatalogue,
   parseCatalogue,

@@ -24,7 +24,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { OpenAICompatibleProvider, parsePricing, type FetchLike } from "@wise-evidence/ai";
+import { parsePricing, type FetchLike } from "@wise-evidence/ai";
+import { benchProvider } from "./provider-config.js";
 import { fetchCatalogue, verifyCandidates, type CatalogueFetch } from "./catalogue.js";
 import { parseCandidates } from "./models.js";
 import { aggregate, runModelWorkload } from "./runner.js";
@@ -64,14 +65,12 @@ describe.runIf(LIVE)("LIVE OpenRouter benchmark", () => {
       const runs: WorkloadReport[] = [];
       for (const verification of verifications) {
         if (!verification.available) continue;
-        const provider = new OpenAICompatibleProvider({
-          fetch: fetchLike,
-          baseUrl,
-          apiKey,
-          model: verification.id,
-          providerId: "openrouter",
-        });
         const modelPricing = verification.livePricing ?? pricing;
+        const provider = benchProvider(env, verification.id, {
+          fetch: fetchLike,
+          pricing: modelPricing,
+          timeoutMs: 60_000,
+        });
         const full = await runModelWorkload(provider, FULL_TASKS, {
           pricing: modelPricing,
           maxOutputTokens: 1024,

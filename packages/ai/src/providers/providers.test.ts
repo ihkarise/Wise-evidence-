@@ -143,11 +143,44 @@ describe("OpenAICompatibleProvider (injected fetch)", () => {
     await expect(p.complete(req())).rejects.toMatchObject({ reason: "too-large" });
   });
 
-  it("refuses to construct without required configuration", () => {
+  it("refuses to construct without a base URL or model (key is optional)", () => {
+    expect(
+      () => new OpenAICompatibleProvider({ fetch: okFetch({}), baseUrl: "", model: "m" }),
+    ).toThrow(AIProviderError);
     expect(
       () =>
-        new OpenAICompatibleProvider({ fetch: okFetch({}), baseUrl: "", apiKey: "", model: "" }),
+        new OpenAICompatibleProvider({ fetch: okFetch({}), baseUrl: "https://x/v1", model: "" }),
     ).toThrow(AIProviderError);
+  });
+
+  it("omits the Authorization header when no key is configured (local servers)", async () => {
+    const seen: Record<string, string>[] = [];
+    const capture: FetchLike = (_url, init) => {
+      seen.push(init.headers);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content: "{}" } }] })),
+      } as FetchLikeResponse);
+    };
+    const keyless = new OpenAICompatibleProvider({
+      fetch: capture,
+      baseUrl: "http://localhost:11434/v1",
+      model: "qwen3",
+    });
+    await keyless.complete(req());
+    expect(seen[0]).not.toHaveProperty("Authorization");
+
+    seen.length = 0;
+    const keyed = new OpenAICompatibleProvider({ ...base, fetch: capture });
+    await keyed.complete(req());
+    expect(seen[0]?.Authorization).toBe(`Bearer ${SECRET}`);
+  });
+
+  it("advertises OpenAI-compatible capabilities by default", () => {
+    const p = new OpenAICompatibleProvider({ ...base, fetch: okFetch({}) });
+    expect(p.capabilities?.structuredOutput).toBe(true);
+    expect(p.capabilities?.jsonSchema).toBe(true);
   });
 
   it("never leaks the API key in an error message", async () => {
