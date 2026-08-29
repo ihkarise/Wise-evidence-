@@ -1,0 +1,24 @@
+{
+  "name": "@wise-evidence/ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Provider-independent AI subsystem for WiseEvidence (Milestone 6): AIProvider interface, deterministic offline MockAIProvider, an OpenAI-compatible provider (injected fetch), a versioned prompt registry, the six enrichment tasks with structured-output validation, SHA-256 input hashing, deterministic cache identity, and cost derivation. AI is a suggestion engine, never an authority. No Astro, React, Supabase, or provider SDK imports; no database imports.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wise-evidence/database": "workspace:*",
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  }
+}
