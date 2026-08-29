@@ -57,10 +57,11 @@ Architecture specifications (`docs/`):
   research cards, canonical-URL SEO; published-only via RLS; live Supabase
   verification PENDING)
 - `28-EVIDENCE-VISUALIZATION-METHODOLOGY.md` — Milestone 5 Evidence Visualization
-  design checkpoint (DESIGN ONLY, implementation not yet authorized): pyramid as a
-  navigation-not-truth device, ResearchStudy-based counting, valence-neutral
-  encoding, explicit UNCLASSIFIED handling, separate outcome/quality/criticism
-  distributions on the anon RLS path, and no combined score
+  design checkpoint (implemented): pyramid as a navigation-not-truth device,
+  ResearchStudy-based counting (`stats.ts`), valence-neutral encoding, explicit
+  UNCLASSIFIED handling, separate outcome/quality/criticism distributions on the
+  anon RLS path, `/evidence` + `/statistics` pages, and no combined score; live
+  Supabase verification PENDING
 
 Architecture Decision Records (`docs/adr/`):
 

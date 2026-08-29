@@ -23,7 +23,7 @@ ADR (master prompt §38).
 | [ADR-013](ADR-013-database-foundation-schema-and-testing.md) | Database Foundation: Enum/Table Taxonomy Split and PGlite Deterministic Testing | Accepted |
 | [ADR-014](ADR-014-manual-research-mvp-ssr-auth-metadata.md) | Manual Research MVP: Hybrid SSR, Supabase-SSR Auth, Reviewer RLS, and a Metadata Provider Package | Accepted |
 | [ADR-015](ADR-015-public-research-explorer.md) | Public Research Explorer: PostgreSQL Query Layer, Published-Only via RLS, Canonical-URL SEO | Accepted |
-| [ADR-016](ADR-016-evidence-visualization-methodology.md) | Evidence Visualization: Pyramid as Navigation-not-Truth, Study-Based Counting, Valence-Neutral Encoding, No Combined Score | Accepted (design) |
+| [ADR-016](ADR-016-evidence-visualization-methodology.md) | Evidence Visualization: Pyramid as Navigation-not-Truth, Study-Based Counting, Valence-Neutral Encoding, No Combined Score | Accepted |
 
 ## Template
 
@@ -59,4 +59,6 @@ verification likewise PENDING. ADR-016 (`2026-08-29`) records the Milestone 5
 Evidence Visualization methodology (`docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`)
 — the pyramid as a navigation-not-truth device, `ResearchStudy` as the counting
 unit, valence-neutral encoding, explicit UNCLASSIFIED handling, and no combined
-score of any kind. It is **design-only**: M5 implementation is not yet authorized.
+score of any kind — and is now **implemented** (`packages/database/stats.ts`, the
+`/evidence` and `/statistics` pages, and a reusable `DistributionChart`); live
+Supabase verification likewise PENDING.

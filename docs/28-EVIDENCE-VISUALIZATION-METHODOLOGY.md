@@ -4,7 +4,7 @@
 
 **Document:** `docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`
 **Version:** 0.1.0
-**Status:** Design checkpoint — DESIGN ONLY (implementation NOT authorized)
+**Status:** Implemented (M5)
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
 **Related:** `03-INFORMATION-ARCHITECTURE.md`, `06-EVIDENCE-TAXONOMY.md`,
 `07-OUTCOME-CLASSIFICATION.md`, `08-EVIDENCE-QUALITY.md`,
@@ -24,11 +24,14 @@ catalogue* — an evidence pyramid as navigation, and descriptive distributions 
 outcome, quality, and criticism — plus the `/evidence`, `/evidence/[slug]`, and
 `/statistics` routes from the information architecture (`03` §8, §16).
 
-**M5 is methodology-gated.** No application code is written under this document.
-This checkpoint defines the methodology, the exact counting rules, the data-access
-surface, the visual/accessibility contract, and the honesty safeguards. It exists
-so those decisions are reviewable *before* any pixel is drawn. Implementation
-begins only after this document (and `ADR-016`) is explicitly authorized.
+**M5 was methodology-gated.** This checkpoint defined the methodology, the exact
+counting rules, the data-access surface, the visual/accessibility contract, and
+the honesty safeguards so those decisions were reviewable *before* any pixel was
+drawn. It (and `ADR-016`) were explicitly authorized, and M5 is now **implemented
+exactly as specified here** — `packages/database/stats.ts` (+ tests), the
+`/evidence` and `/statistics` pages, and the reusable `DistributionChart` /
+`StatDisclaimer` components. The section numbering below is the normative contract
+the implementation follows.
 
 M5 introduces **no** new research model, **no** AI, **no** embeddings, **no**
 vector database, **no** scraping, **no** background ingestion, **no** new mutable

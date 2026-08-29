@@ -1,6 +1,6 @@
 # ADR-016: Evidence Visualization — Pyramid as Navigation-not-Truth, Study-Based Counting, Valence-Neutral Encoding, No Combined Score
 
-**Status:** Accepted (design) — implementation NOT yet authorized
+**Status:** Accepted — implemented (M5)
 **Date:** 2026-08-29
 **Related:** `docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`,
 `docs/06-EVIDENCE-TAXONOMY.md`, `docs/07-OUTCOME-CLASSIFICATION.md`,
@@ -102,5 +102,9 @@ the hard line on scores and cross-tabs.
   and rules out — for this milestone and as a standing constraint until a future
   ADR explicitly revisits it — any efficacy/combined score, cross-tab, AI verdict,
   popularity/voting/reputation, vector/semantic search, or advanced analytics.
-- **Gate:** this ADR is **design-only**. It authorizes no code; M5 implementation
-  begins only on explicit authorization referencing `docs/28` and this ADR.
+- **Status:** the design was authorized and M5 is now implemented exactly to this
+  decision — a PostgreSQL-only `stats.ts` aggregation layer, the `/evidence` and
+  `/statistics` pages, and a reusable valence-neutral `DistributionChart`, with 21
+  new deterministic tests (176 total) including a structural guard against any
+  forbidden score. Live Supabase verification remains PENDING a provisioned
+  project.
