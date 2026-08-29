@@ -13,8 +13,8 @@ state of the research; it is **not** a claim that a treatment works.
 
 ## Project status
 
-**Milestones 0–3 complete — through the Manual Research MVP.** This repository
-contains:
+**Milestones 0–4 complete — through the Public Research Explorer.** This
+repository contains:
 
 - the complete architecture documentation (`docs/`);
 - the project foundation: a pnpm workspace, an Astro app with a React island,
@@ -26,12 +26,17 @@ contains:
 - the Manual Research MVP: Supabase-SSR admin authentication, a DOI-driven
   Crossref/mock metadata lookup, a structured research editor, the review and
   fail-closed publish workflow, an append-only audit trail, and a public
-  `/research/[id]` detail page.
+  `/research/[id]` detail page; and
+- the Public Research Explorer: a PostgreSQL-only, published-only
+  search/filter/sort/paginate query layer in `packages/database` and a public
+  `/research` explorer with research cards — no AI, embeddings, vector DB,
+  popularity, votes, or efficacy score, with every query parameter bound and
+  canonical-URL SEO.
 
-It does **not** yet contain public search/explorer, evidence visualization, or
-an AI pipeline. Those arrive in later milestones (`docs/22-ROADMAP.md`). Nothing
-on the site should be read as a complete research database. Live Supabase
-(browser/auth/DB) verification is PENDING a provisioned project.
+It does **not** yet contain evidence visualization or an AI pipeline. Those
+arrive in later milestones (`docs/22-ROADMAP.md`). Nothing on the site should be
+read as a complete research database. Live Supabase (browser/auth/DB)
+verification is PENDING a provisioned project.
 
 ## Repository layout
 

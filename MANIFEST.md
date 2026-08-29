@@ -1,8 +1,9 @@
 # WiseEvidence Architecture Manifest
 
-**Status:** Milestone 0 (Architecture Completion), Milestone 1 (Repository
-Foundation), and Milestone 2 (Database Foundation) complete.
-**Updated:** 2026-08-28
+**Status:** Milestones 0 (Architecture Completion), 1 (Repository Foundation),
+2 (Database Foundation), 3 (Manual Research MVP), and 4 (Public Research
+Explorer) complete.
+**Updated:** 2026-08-29
 
 The architecture package was originally distributed as
 `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 the package was
@@ -51,6 +52,10 @@ Architecture specifications (`docs/`):
 - `26-MANUAL-RESEARCH-MVP.md` — Milestone 3 Manual Research MVP design checkpoint
   (implemented: auth, metadata provider, workflow, editor, public detail; live
   Supabase verification PENDING)
+- `27-PUBLIC-RESEARCH-EXPLORER.md` — Milestone 4 Public Research Explorer design
+  checkpoint (implemented: PostgreSQL search/filter/sort/paginate query layer,
+  research cards, canonical-URL SEO; published-only via RLS; live Supabase
+  verification PENDING)
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -59,6 +64,7 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-012-multi-source-ingestion.md` (Milestone 8 design)
 - `ADR-013-database-foundation-schema-and-testing.md` (Milestone 2)
 - `ADR-014-manual-research-mvp-ssr-auth-metadata.md` (Milestone 3)
+- `ADR-015-public-research-explorer.md` (Milestone 4)
 
 Milestone 0 reports (`docs/reports/`):
 
@@ -103,10 +109,18 @@ Milestone 0 reports (`docs/reports/`):
 - `apps/web/` — hybrid SSR (`@astrojs/node`): Supabase-SSR auth, middleware
   route protection, admin editor/review/publish UI, API routes, and the public
   `/research/[id]` detail page (anon RLS path).
-- Deterministic workflow, security, and metadata tests (114 total). Live
+- `packages/database/src/service/search.ts` (Milestone 4) — the public,
+  PostgreSQL-only explorer query layer: `parseSearchParams()`,
+  `searchPublishedResearch()`, `getFilterOptions()`. Published-only via RLS +
+  explicit predicate; FTS + DOI-priority; neutral sorts; clamped pagination;
+  bound parameters only.
+- `apps/web/src/pages/research/index.astro` + `components/ResearchCard.astro`
+  (Milestone 4) — the SSR `/research` explorer (anon path) and research card.
+- Deterministic workflow, security, metadata, and search tests (155 total). Live
   Supabase (browser/auth/DB) verification PENDING a provisioned project.
 
 ## Next
 
-Milestone 4 — Public Research Explorer (search, filters, sorting, evidence
-browsing). See `docs/22-ROADMAP.md`. Not started.
+Milestone 5 — Evidence Visualization (evidence pyramid, outcome distribution,
+quality/criticism display, explore pages), honesty rules per `docs/15` §6. See
+`docs/22-ROADMAP.md`. Not started.
