@@ -59,7 +59,16 @@ jobs:
 
       # Offline, keyless build. Astro prerenders `/` and `/methodology` into
       # apps/web/dist/client; the SSR pages compile to dist/server (NOT published).
+      #
+      # GitHub Pages serves this repo from the PROJECT SUBPATH
+      # https://ihkarise.github.io/Wise-evidence-/ , so the build MUST carry that
+      # base or every asset (CSS/JS/favicon) and in-app link resolves against the
+      # domain root and 404s. `SITE_BASE`/`SITE_URL` are read only by
+      # apps/web/astro.config.mjs; production SSR sets neither and stays at root.
       - name: Build web (static + SSR compile)
+        env:
+          SITE_BASE: /Wise-evidence-/
+          SITE_URL: https://ihkarise.github.io
         run: pnpm --filter @wise-evidence/web build
 
       # Publish only the prerendered client output, and make the static preview
@@ -77,7 +86,8 @@ jobs:
           </head><body>
           <h1>Not in the static preview</h1>
           <p>This is a <strong>static visual preview</strong> of WiseEvidence's public
-          marketing pages only — <a href="/">Home</a> and <a href="/methodology/">Methodology</a>.</p>
+          marketing pages only — <a href="/Wise-evidence-/">Home</a> and
+          <a href="/Wise-evidence-/methodology/">Methodology</a>.</p>
           <p>The research explorer, evidence, statistics, admin, and API routes are
           <strong>server-rendered (SSR)</strong> and are not available on static hosting.
           They run only against a live SSR host + database, which this preview does not provide.</p>

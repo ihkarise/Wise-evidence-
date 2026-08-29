@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { withBase } from "../lib/base";
 
 interface Props {
   title: string;
@@ -17,12 +18,12 @@ const { title, description, canonical, noindex } = Astro.props;
 const fullTitle = title === "WiseEvidence" ? title : `${title} · WiseEvidence`;
 
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/research", label: "Research" },
-  { href: "/evidence", label: "Evidence" },
-  { href: "/statistics", label: "Statistics" },
-  { href: "/methodology", label: "Methodology" },
-];
+  { path: "/", label: "Home" },
+  { path: "/research", label: "Research" },
+  { path: "/evidence", label: "Evidence" },
+  { path: "/statistics", label: "Statistics" },
+  { path: "/methodology", label: "Methodology" },
+].map((link) => ({ ...link, href: withBase(link.path) }));
 ---
 
 <!doctype html>
@@ -30,7 +31,7 @@ const navLinks = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
@@ -49,7 +50,9 @@ const navLinks = [
         class="mx-auto flex max-w-4xl items-center justify-between px-6 py-4"
         aria-label="Primary"
       >
-        <a href="/" class="text-lg font-semibold tracking-tight text-brand">WiseEvidence</a>
+        <a href={withBase("/")} class="text-lg font-semibold tracking-tight text-brand"
+          >WiseEvidence</a
+        >
         <ul class="flex gap-6 text-sm">
           {
             navLinks.map((link) => (

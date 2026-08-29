@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import CopyDoi from "../components/CopyDoi.tsx";
+import { withBase } from "../lib/base";
 
 const dimensions = [
   {
@@ -45,14 +46,14 @@ const dimensions = [
     role="note"
   >
     <strong class="font-semibold">Project status:</strong> the manual research workflow and the public
-    <a href="/research" class="underline underline-offset-2">Research Explorer</a> now exist. A live catalogue
-    appears once a Supabase project is connected; automated discovery and AI enrichment are still future
-    milestones.
+    <a href={withBase("/research")} class="underline underline-offset-2">Research Explorer</a> now exist.
+    A live catalogue appears once a Supabase project is connected; automated discovery and AI enrichment
+    are still future milestones.
   </aside>
 
   <div class="mt-6">
     <a
-      href="/research"
+      href={withBase("/research")}
       class="inline-block rounded bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1"
     >
       Explore research →
@@ -91,7 +92,8 @@ const dimensions = [
   <section class="mt-12">
     <h2 class="text-2xl font-semibold tracking-tight text-ink">Learn more</h2>
     <p class="mt-2 text-ink-muted">
-      Read the <a href="/methodology" class="text-brand underline underline-offset-2">methodology</a
+      Read the <a href={withBase("/methodology")} class="text-brand underline underline-offset-2"
+        >methodology</a
       > for how classification works — and, just as importantly, what it does not claim.
     </p>
   </section>

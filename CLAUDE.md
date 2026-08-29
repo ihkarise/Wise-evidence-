@@ -79,7 +79,7 @@ provisioned project.
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + registry + validation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
-├── supabase/migrations/          # canonical schema, RLS (0001–0011), taxonomy-v1 seed
+├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
@@ -103,6 +103,19 @@ OpenRouter run is gated on server-side egress + a key and has **not** run (see
 enable a production AI provider, or implement Milestone 7+ features
 (scraping/discovery, multi-source connectors, community voting, advanced analytics)
 without explicit authorization.
+
+A **Production Readiness** pass (2026-08-29, ADR-018) fixed the GitHub Pages
+base-path bug — `astro.config.mjs` now reads `base`/`site` from `SITE_BASE`/
+`SITE_URL` (production SSR unchanged at root; the preview workflow sets the
+`/Wise-evidence-/` subpath), with author links routed through
+`apps/web/src/lib/base.ts` `withBase()`. Verified locally in headless Chromium
+(assets/favicon/Copy-DOI/nav all correct under the subpath); the **live** Pages
+URL, a **live SSR host**, and the **live OpenRouter** run remain BLOCKED/PENDING
+because this environment's egress proxy denies those hosts — never claim any of
+them "live" without opening the real URL. The pass also prepared migration
+`0012_grant_hardening.sql` (+ `grants.test.ts`) making `anon`'s SQL grants match
+the documented least-privilege intent; it is **not** applied to production without
+explicit owner approval. See `docs/reports/PRODUCTION-CONNECTION-VERIFICATION.md`.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked

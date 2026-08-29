@@ -80,6 +80,8 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-015-public-research-explorer.md` (Milestone 4)
 - `ADR-016-evidence-visualization-methodology.md` (Milestone 5 design)
 - `ADR-017-ai-enrichment.md` (Milestone 6 design)
+- `ADR-018-grant-hardening-and-pages-base-path.md` (Production Readiness — `anon`
+  grant hardening + env-driven GitHub Pages base path)
 
 Reports (`docs/reports/`):
 
@@ -93,6 +95,10 @@ Reports (`docs/reports/`):
   OpenRouter benchmark readiness (harness built & verified offline; catalogue/
   pricing/token/latency/cost live gate BLOCKED — egress denied + no key; the exact
   rerun command; nothing fabricated)
+- `PRODUCTION-CONNECTION-VERIFICATION.md` — Production Readiness verification
+  matrix with honest provenance tiers (LOCAL / PGLITE / REAL SUPABASE reported /
+  LIVE BROWSER / PENDING / BLOCKED); Pages base-path fix verified locally; live
+  Pages/SSR/OpenRouter BLOCKED or PENDING (egress-sandboxed)
 
 ## Application foundation (Milestone 1)
 
@@ -163,6 +169,10 @@ Reports (`docs/reports/`):
 - `supabase/migrations/0011_ai_enrichment.sql` — additive, nullable token
   usage/timings/diagnostics on `ai_job` and validation diagnostics on `ai_result`
   (no new tables, no RLS change; AI writes stay on the service_role path).
+- `supabase/migrations/0012_grant_hardening.sql` — Production Readiness: least-
+  privilege `anon` grant hardening (defence in depth beneath RLS), resilient to
+  Supabase default privileges (ADR-018). Prepared + PGlite-tested; **not** applied
+  to production without explicit owner approval.
 - `packages/database/src/service/ai.ts` — AI job/result persistence, the cache
   identity resolver, minimised task input, suggestion listing, and the append-only
   human Accept/Edit/Reject decision; `ai_result_id` provenance threaded through the
