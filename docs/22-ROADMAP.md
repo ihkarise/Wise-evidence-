@@ -113,10 +113,37 @@ page is reused unchanged. Design checkpoint `docs/27-PUBLIC-RESEARCH-EXPLORER.md
 decisions in `ADR-015`. No AI, embeddings, vector DB, scraping, or visualization.
 Real-Supabase (live browser/DB) verification is PENDING a provisioned project.
 
-# 7. Phase 5 — Evidence Visualization
+# 7. Phase 5 — Evidence Visualization  ✅ complete
 
 Evidence pyramid, outcome distribution, quality display, criticism display,
 explore pages (master prompt §83, `15` §5). Honesty rules apply (`15` §6).
+
+**Delivered:** a public evidence-visualization layer built strictly on the M2–M4
+architecture. A new PostgreSQL-only aggregation layer in `packages/database`
+(`stats.ts`, on the shared `SqlExecutor` boundary): `getCatalogueOverview()`,
+`getEvidencePyramid()`, `getOutcomeDistribution()`, `getQualityDistribution()`,
+and `getCriticismDistribution()` — all PUBLISHED-only (anon RLS authoritative
+**plus** an explicit `publication_state='PUBLISHED'` predicate) and all counting
+distinct **studies** (`count(distinct research_study.id)`), so a multi-publication
+study counts once and publications never inflate a study count. The evidence
+pyramid is a **navigation/organization** device ordered by the versioned
+`pyramid_rank`; band position encodes nothing about outcome, quality, criticism,
+truth, or efficacy, and studies with no study type fall into an explicit
+UNCLASSIFIED band (never discarded). Outcome, quality, and criticism are three
+**separate** distributions — the full seven-category outcome spectrum (zero-filled)
+with an explicit UNCLASSIFIED bucket (missing is never mapped to Neutral), an
+independent quality distribution, and criticism counted by distinct study on two
+axes (category, origin) and never converted into a negative outcome. There is
+**no** cross-tab and **no** efficacy/evidence/balance/positive-minus-negative/
+weighted/combined score anywhere (a structural test guards this). New public pages
+`/evidence` and `/statistics` (SSR on the anon path), a reusable, valence-neutral,
+table-based `DistributionChart` (every value is text; neutral single-hue bars; no
+green/red; accessible by construction) and a shared `StatDisclaimer`; each band
+links into the existing M4 `/research?evidenceLevel=CODE` filter (no second
+filtering system). Deterministic PGlite tests (21 new, 176 total). Design
+checkpoint `docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`; decisions in
+`ADR-016`. No AI, embeddings, vector DB, scraping, voting, or cross-tab. Real-
+Supabase (live browser/DB) verification is PENDING a provisioned project.
 
 # 8. Phase 6 — AI Enrichment
 

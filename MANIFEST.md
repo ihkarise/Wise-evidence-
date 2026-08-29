@@ -56,6 +56,12 @@ Architecture specifications (`docs/`):
   checkpoint (implemented: PostgreSQL search/filter/sort/paginate query layer,
   research cards, canonical-URL SEO; published-only via RLS; live Supabase
   verification PENDING)
+- `28-EVIDENCE-VISUALIZATION-METHODOLOGY.md` — Milestone 5 Evidence Visualization
+  design checkpoint (implemented): pyramid as a navigation-not-truth device,
+  ResearchStudy-based counting (`stats.ts`), valence-neutral encoding, explicit
+  UNCLASSIFIED handling, separate outcome/quality/criticism distributions on the
+  anon RLS path, `/evidence` + `/statistics` pages, and no combined score; live
+  Supabase verification PENDING
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -65,6 +71,7 @@ Architecture Decision Records (`docs/adr/`):
 - `ADR-013-database-foundation-schema-and-testing.md` (Milestone 2)
 - `ADR-014-manual-research-mvp-ssr-auth-metadata.md` (Milestone 3)
 - `ADR-015-public-research-explorer.md` (Milestone 4)
+- `ADR-016-evidence-visualization-methodology.md` (Milestone 5 design)
 
 Milestone 0 reports (`docs/reports/`):
 

@@ -1,0 +1,105 @@
+---
+/**
+ * DistributionChart — a reusable, accessible, valence-neutral distribution
+ * (docs/28 §1.12–1.13, ADR-016). Milestone 5.
+ *
+ * Accessibility & honesty by construction:
+ *   - The PRIMARY representation is a semantic <table>: each category is a row
+ *     header, with the study count and catalogue share as real text cells. The
+ *     bar is a purely decorative, aria-hidden element sized from the same number,
+ *     so NO information lives only in geometry, colour, position, or animation
+ *     (task §10–11). The table IS the "view as table" equivalent.
+ *   - Valence-neutral styling: a single neutral hue for every bar — never
+ *     green-for-good / red-for-bad. "Missing" buckets (Unclassified / Unassessed)
+ *     are set apart with a muted, hatched fill, not a judgemental colour. Meaning
+ *     comes from the text label, never the colour (docs/28 §1.12).
+ *   - Counts and shares are described as a share OF THE PUBLISHED CATALOGUE, with
+ *     the denominator shown, never as proof/efficacy (docs/28 §1.14).
+ *   - No count-up animation; reduced-motion users lose nothing.
+ */
+interface Row {
+  /** Human display label (already localized/humanized by the caller). */
+  readonly label: string;
+  /** Distinct-study count for this category. */
+  readonly count: number;
+  /** True for an explicit Unclassified / Unassessed bucket — styled apart. */
+  readonly muted?: boolean;
+}
+
+interface Props {
+  /** Accessible section heading, e.g. "Reported outcome". */
+  readonly heading: string;
+  /** Heading level so the page keeps a correct outline (default 2). */
+  readonly level?: 2 | 3;
+  /** A short descriptive caption placed under the heading. */
+  readonly caption: string;
+  readonly rows: readonly Row[];
+  /** Denominator: total published studies. Shares are count/total. */
+  readonly total: number;
+  /** Unit noun for the count column, default "studies". */
+  readonly unit?: string;
+}
+
+const { heading, level = 2, caption, rows, total, unit = "studies" } = Astro.props;
+const Heading = `h${level}` as "h2" | "h3";
+const pct = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
+---
+
+<section class="mt-8">
+  <Heading class="text-xl font-semibold tracking-tight text-ink">{heading}</Heading>
+  <p class="mt-1 max-w-2xl text-sm text-ink-muted">{caption}</p>
+
+  <table class="mt-4 w-full border-collapse text-sm">
+    <caption class="sr-only">
+      {heading}: distinct {unit} per category, out of {total} published {unit}.
+    </caption>
+    <thead>
+      <tr
+        class="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500"
+      >
+        <th scope="col" class="py-2 pr-3 font-medium">Category</th>
+        <th scope="col" class="py-2 pr-3 text-right font-medium"
+          >{unit === "studies" ? "Studies" : unit}</th
+        >
+        <th scope="col" class="py-2 pr-3 text-right font-medium">Share</th>
+        <th scope="col" class="w-1/2 py-2 font-medium" aria-hidden="true"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((r) => (
+          <tr class="border-b border-slate-100">
+            <th scope="row" class="py-2 pr-3 font-normal text-ink">
+              {r.label}
+            </th>
+            <td class="py-2 pr-3 text-right font-medium tabular-nums text-ink">{r.count}</td>
+            <td class="py-2 pr-3 text-right tabular-nums text-ink-muted">{pct(r.count)}%</td>
+            <td class="py-2">
+              <div class="h-3 w-full rounded bg-slate-100" aria-hidden="true">
+                <div
+                  class={`h-3 rounded ${r.muted ? "distribution-bar--muted" : "bg-slate-400"}`}
+                  style={`width: ${pct(r.count)}%`}
+                />
+              </div>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</section>
+
+<style>
+  /* Muted, hatched fill for "Unclassified / Unassessed" buckets — visually set
+     apart WITHOUT a valence colour (no red/green). */
+  .distribution-bar--muted {
+    background-color: #cbd5e1; /* slate-300 */
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.6) 0,
+      rgba(255, 255, 255, 0.6) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+</style>

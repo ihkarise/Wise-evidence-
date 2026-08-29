@@ -13,7 +13,7 @@ state of the research; it is **not** a claim that a treatment works.
 
 ## Project status
 
-**Milestones 0–4 complete — through the Public Research Explorer.** This
+**Milestones 0–5 complete — through Evidence Visualization.** This
 repository contains:
 
 - the complete architecture documentation (`docs/`);
@@ -31,12 +31,20 @@ repository contains:
   search/filter/sort/paginate query layer in `packages/database` and a public
   `/research` explorer with research cards — no AI, embeddings, vector DB,
   popularity, votes, or efficacy score, with every query parameter bound and
-  canonical-URL SEO.
+  canonical-URL SEO; and
+- Evidence Visualization: a PostgreSQL-only, published-only aggregation layer
+  (`packages/database/stats.ts`) that counts distinct **studies** for the evidence
+  pyramid and the separate outcome/quality/criticism distributions, plus the
+  public `/evidence` and `/statistics` pages and a reusable, valence-neutral,
+  accessible `DistributionChart`. The pyramid is a navigation device only; missing
+  data is explicit UNCLASSIFIED; the dimensions stay separate with no cross-tab and
+  no efficacy/balance/combined score of any kind.
 
-It does **not** yet contain evidence visualization or an AI pipeline. Those
-arrive in later milestones (`docs/22-ROADMAP.md`). Nothing on the site should be
-read as a complete research database. Live Supabase (browser/auth/DB)
-verification is PENDING a provisioned project.
+It does **not** yet contain an AI pipeline or scraping. Those arrive in later
+milestones (`docs/22-ROADMAP.md`). Nothing on the site should be read as a
+complete research database, and the statistics describe only the published
+catalogue — never a scientific conclusion about whether homeopathy works. Live
+Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 
 ## Repository layout
 
@@ -49,7 +57,7 @@ verification is PENDING a provisioned project.
 │   ├── database/           # data-access boundary + workflow service layer + PGlite tests
 │   └── metadata/           # provider-independent Crossref/mock metadata lookup
 ├── supabase/               # ordered migrations (0001–0010), RLS, taxonomy seed, DEMO fixtures
-├── docs/                   # architecture specs 00–26, ADRs, and reports
+├── docs/                   # architecture specs 00–28, ADRs, and reports
 ├── .github/workflows/      # CI (lint · typecheck · test · build; no secrets)
 └── CLAUDE.md               # guidance for AI assistants working in this repo
 ```
