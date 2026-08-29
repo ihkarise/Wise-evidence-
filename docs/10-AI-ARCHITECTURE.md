@@ -5,9 +5,19 @@
 **Version:** 0.1.0
 **Status:** Draft
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
-**Related:** `04-SYSTEM-ARCHITECTURE.md`, `05-DATABASE-ARCHITECTURE.md`, `16-SECURITY.md`, `21-COST-CONTROL.md`
+**Related:** `04-SYSTEM-ARCHITECTURE.md`, `05-DATABASE-ARCHITECTURE.md`, `16-SECURITY.md`, `21-COST-CONTROL.md`, `29-AI-ENRICHMENT.md`
 
 ---
+
+> **Implemented (Milestone 6).** This architecture is realised by `packages/ai`
+> (provider abstraction + offline `MockAIProvider` + injected-fetch
+> `OpenAICompatibleProvider` + versioned `prompts/` registry + the six task
+> validators + hashing + cost + orchestrator), migration `0011`, and
+> `packages/database` `service/ai.ts` (jobs, cache, minimised input, append-only
+> human decisions, `ai_result_id` provenance). The as-built record, firewalls, and
+> test matrix are in `docs/29-AI-ENRICHMENT.md` (+ `ADR-017`). AI remains a
+> suggestion engine: it never becomes canonical, never publishes, and never enters
+> the M5 statistics.
 
 # 1. Purpose
 

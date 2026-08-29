@@ -1,7 +1,7 @@
 # ADR-017: AI Enrichment — Suggestion-Only Pipeline, Provider Independence, and the Canonical/Publication/M5 Firewalls
 
-**Status:** Accepted (design)
-**Date:** 2026-08-29
+**Status:** Accepted — IMPLEMENTED (Milestone 6)
+**Date:** 2026-08-29 (design); implemented 2026-08-29
 **Related:** `docs/29-AI-ENRICHMENT.md`, `docs/10-AI-ARCHITECTURE.md`, `docs/16-SECURITY.md`,
 `docs/21-COST-CONTROL.md`, `docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`, `ADR-005`, `ADR-006`, `ADR-010`
 
@@ -49,9 +49,12 @@ written.
    only PUBLISHED + human `final_value`; AI suggestions are private and structurally
    invisible to it, and no AI weighting/score/cross-tab is introduced.
 
-This ADR is **design-only** (like ADR-012): implementation is authorized
-separately. A minimal additive, nullable migration (`0011`) for token
-usage/diagnostics is defined but not written here.
+This ADR is now **implemented** (Milestone 6): `packages/ai`, the versioned
+`prompts/` registry, migration `0011` (additive, nullable usage/diagnostics),
+`packages/database` `service/ai.ts` with `ai_result_id` provenance threaded
+through the existing canonical ops, the staff-only enrichment endpoint, the editor
+AI panel, and 70 new deterministic offline tests (246 total). No M6.1 benchmark
+and no live provider call are part of it.
 
 ## Consequences
 

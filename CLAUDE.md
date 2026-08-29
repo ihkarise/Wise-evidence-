@@ -13,8 +13,8 @@ reviewable — while keeping study outcome, evidence quality, criticism, confide
 and provenance as _separate_ dimensions.
 
 **Milestones 0 (Architecture), 1 (Repository Foundation), 2 (Database
-Foundation), 3 (Manual Research MVP), 4 (Public Research Explorer), and 5
-(Evidence Visualization) are complete.** The full architecture doc set exists, and so does
+Foundation), 3 (Manual Research MVP), 4 (Public Research Explorer), 5
+(Evidence Visualization), and 6 (AI Enrichment) are complete.** The full architecture doc set exists, and so does
 the project foundation: a pnpm workspace, an Astro web app with a React island, a
 framework-independent `packages/domain` (with `normalizeDoi()`), CI, tooling, and
 governance. Milestone 2 added the canonical database: ordered Supabase/PostgreSQL
@@ -46,10 +46,21 @@ the evidence pyramid and the separate outcome/quality/criticism distributions; t
 implies nothing about outcome, truth, or efficacy); missing data is explicit
 UNCLASSIFIED (never mapped to Neutral); the three dimensions stay separate with **no
 cross-tab and no efficacy/balance/combined score** of any kind (see
-`docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`, `ADR-016`). There is still **no AI
-pipeline and no scraping** — those belong to Milestone 6+. The AI and import
-_tables_ exist, but no AI or scraping _logic_ does. Live Supabase
-(browser/auth/DB) verification is PENDING a provisioned project.
+`docs/28-EVIDENCE-VISUALIZATION-METHODOLOGY.md`, `ADR-016`). Milestone 6 added the
+**AI enrichment** subsystem: a provider-independent `packages/ai` (the `AIProvider`
+boundary, an offline deterministic `MockAIProvider` default, an injected-fetch
+`OpenAICompatibleProvider`, a versioned `prompts/` registry, the six task
+validators, SHA-256 input hashing, cost derivation, and a pure orchestrator),
+migration `0011` (additive usage/diagnostics), `packages/database` `service/ai.ts`
+(jobs, cache, minimised input, append-only human decisions, `ai_result_id`
+provenance through the existing canonical ops), a staff-only enrichment endpoint,
+and an editor AI panel with Accept/Edit/Reject. **AI is a suggestion engine, never
+an authority**: it never writes canonical data, never publishes, never changes
+lifecycle/publication state, and never enters the M5 statistics — all firewalls are
+test-covered, CI is offline and keyless (see `docs/29-AI-ENRICHMENT.md`, `ADR-017`).
+There is still **no scraping and no automated discovery** — those belong to
+Milestone 7+. Live provider + Supabase (browser/auth/DB) verification is PENDING a
+provisioned project.
 
 ```text
 .
@@ -63,9 +74,11 @@ _tables_ exist, but no AI or scraping _logic_ does. Live Supabase
 │                                 #   M4 /research explorer + ResearchCard;
 │                                 #   M5 /evidence + /statistics + DistributionChart
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
-├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + PGlite tests
+├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
-├── supabase/migrations/          # canonical schema, RLS (0001–0010), taxonomy-v1 seed
+├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + registry + validation
+├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
+├── supabase/migrations/          # canonical schema, RLS (0001–0011), taxonomy-v1 seed
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
@@ -75,14 +88,16 @@ _tables_ exist, but no AI or scraping _logic_ does. Live Supabase
     ├── 26-MANUAL-RESEARCH-MVP.md     # M3 design checkpoint (implemented)
     ├── 27-PUBLIC-RESEARCH-EXPLORER.md # M4 design checkpoint (implemented)
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
-    ├── adr/     ADR-001 … ADR-016 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
+    ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
+    ├── adr/     ADR-001 … ADR-017 (+ index/template)
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,
-read files) before acting. Milestones 0–5 are complete; do **not** implement
-Milestone 6+ features (AI enrichment, scraping/discovery, multi-source
-connectors, community voting, advanced analytics) without explicit authorization.
+read files) before acting. Milestones 0–6 are complete; do **not** implement
+Milestone 6.1 (the OpenRouter benchmark) or Milestone 7+ features
+(scraping/discovery, multi-source connectors, community voting, advanced
+analytics) without explicit authorization.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
@@ -102,20 +117,18 @@ any coding agent.
 
 ### Architecture is complete; keep it consistent
 
-Specs `05`–`23` and ADRs `001`–`016` now exist. Do **not** silently invent new
+Specs `05`–`23` and ADRs `001`–`017` now exist. Do **not** silently invent new
 architecture that contradicts them — when a decision changes, update the relevant
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
-Milestone 5 (Evidence Visualization) is complete; the next step is **Milestone
-6 — AI Enrichment** (`docs/22-ROADMAP.md`), still no premature features.
+Milestone 6 (AI Enrichment) is complete; the next step is **Milestone 6.1** (a
+one-off OpenRouter benchmark, run only in a secure server-side environment) and
+then **Milestone 7 — Automated Research Discovery** (`docs/22-ROADMAP.md`), still
+no premature features.
 
 Forward design may be documented ahead of build order without changing that
-order: `docs/29-AI-ENRICHMENT.md` and `ADR-017` are the approved **Milestone 6**
-AI-enrichment design (a suggestion-only pipeline with provider independence and
-the canonical/publication/M5 firewalls), and `docs/24-MULTI-SOURCE-INGESTION.md`
-and `ADR-012` are the approved **Milestone 8** ingestion design — but both are
-**design-only**. M6 implementation is blocked pending explicit authorization; M8
-implementation is blocked on Phases 1–7. Neither may be coded before it is
-authorized.
+order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved
+**Milestone 8** ingestion design — but it is **design-only**. M8 implementation is
+blocked on the earlier phases and must not be coded before it is authorized.
 
 ---
 

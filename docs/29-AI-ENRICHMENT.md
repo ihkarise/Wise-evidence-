@@ -2,8 +2,8 @@
 ## AI-Assisted Evidence Enrichment — Milestone 6 Design Checkpoint
 
 **Document:** `docs/29-AI-ENRICHMENT.md`
-**Version:** 0.1.0
-**Status:** Design checkpoint (DESIGN-ONLY — implementation blocked pending explicit authorization)
+**Version:** 0.2.0
+**Status:** IMPLEMENTED (Milestone 6). Live provider + live Supabase verification PENDING. M6.1 NOT STARTED.
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
 **Related:** `10-AI-ARCHITECTURE.md`, `04-SYSTEM-ARCHITECTURE.md`, `05-DATABASE-ARCHITECTURE.md`,
 `16-SECURITY.md`, `21-COST-CONTROL.md`, `26-MANUAL-RESEARCH-MVP.md`,
@@ -13,13 +13,21 @@
 
 # 0. Status and scope of this document
 
-This is the **Milestone 6 design checkpoint**. It is the counterpart, for AI
-enrichment, of `docs/25`–`28` for M2–M5. Like `docs/24` (the M8 ingestion design),
-it is **design-only**: it defines contracts, data flow, firewalls, and the test
-matrix so that implementation can proceed safely — but **no M6 code, migration,
-prompt, provider, or UI is written until explicit authorization** (master prompt
-§34, §77; CLAUDE.md §1). M6 is methodology- and security-gated; this document is
-that gate.
+This began as the **Milestone 6 design checkpoint** and is now the **as-built
+record**: Milestone 6 is implemented exactly to this design. The counterpart, for
+AI enrichment, of `docs/25`–`28` for M2–M5. The verification results are in
+`docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`.
+
+**As built:** `packages/ai` (provider abstraction + `MockAIProvider` +
+`OpenAICompatibleProvider` + versioned prompt registry + the six task validators +
+hashing + cost + orchestrator); `prompts/<task>/v1.md` + `prompts/registry.json`;
+migration `0011` (additive, nullable usage/diagnostics); `packages/database`
+`service/ai.ts` (jobs, cache, minimised input, suggestions, append-only decisions)
+with `ai_result_id` provenance threaded through the existing canonical ops; the
+staff-only enrichment endpoint and the editor AI panel (Accept/Edit/Reject); and
+70 new deterministic tests (246 total), all offline and keyless. **No M6.1
+benchmark, no OpenRouter live call, no scraping/discovery** — those remain out of
+scope.
 
 Nothing here changes M0–M5. The M2 database already ships the AI *tables*
 (`ai_job`, `ai_result`) and the AI-suggestion provenance columns
@@ -283,8 +291,12 @@ migration — **written only at implementation time, after authorization**:
   the column only if the editor UX needs it — decided at implementation.
 
 No existing column changes type or meaning; the additions are backward-compatible
-and demo fixtures keep working. The migration is **not** created in this design
-step.
+and demo fixtures keep working. **As built** in migration `0011`: on `ai_job`
+`input_tokens`/`output_tokens`/`total_tokens` (nullable, non-negative),
+`started_at`/`finished_at`, `error_detail`, `prompt_content_hash`; on `ai_result`
+`validation_error` and `raw_output_sha256`. The `final_origin` marker was **not**
+added — the accept/edit distinction is derived (a decision is recorded in the
+append-only audit log; provenance is `classification.ai_result_id`).
 
 # 9. Input contracts (per task)
 
@@ -551,14 +563,15 @@ and a provisioned project, consistent with M3–M5. No provider results, pricing
 token counts, latency, or live Supabase results are fabricated anywhere. M6.1 is
 **NOT STARTED**; M7 is **NOT STARTED**.
 
-# 26. Implementation order (when authorized)
+# 26. Implementation order (as built)
 
-1. `feat(ai): provider abstraction + MockAIProvider + OpenAICompatibleProvider (injected fetch)`
-2. `feat(ai): prompt registry + versioned prompts/<task>/v1.md + per-task output schemas + validation`
-3. `feat(database): migration 0011 (nullable usage/diagnostics) + service/ai.ts (jobs, cache, accept/edit/reject provenance)`
-4. `feat(web): staff-only enrichment endpoint + editor AI panel (Accept/Edit/Reject)`
-5. `test(ai): the full deterministic matrix of §21`
-6. `docs(ai): finalize this checkpoint + ADR-017 + M6-IMPLEMENTATION-VERIFICATION report`
+1. `feat(ai): provider abstraction + MockAIProvider + OpenAICompatibleProvider (injected fetch)` ✅
+2. `feat(ai): prompt registry + versioned prompts/<task>/v1.md + per-task output schemas + validation` ✅
+3. `feat(database): migration 0011 (nullable usage/diagnostics) + service/ai.ts (jobs, cache, accept/edit/reject provenance)` ✅
+4. `feat(web): staff-only enrichment endpoint + editor AI panel (Accept/Edit/Reject)` ✅
+5. `test(ai): the full deterministic matrix of §21` ✅ (70 new tests, 246 total)
+6. `docs(ai): finalize this checkpoint + ADR-017 + M6-IMPLEMENTATION-VERIFICATION report` ✅
 
-**STOP:** none of the above is built until explicit authorization. This document
-is the design gate only.
+Milestone 6 is complete. **M6.1** (the OpenRouter model benchmark) is **NOT
+STARTED** and runs later only in a secure server-side environment. **M7** is
+**NOT STARTED**.

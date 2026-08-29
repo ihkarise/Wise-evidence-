@@ -14,6 +14,14 @@
 Make the cost philosophy operational: **Free first. Cheap second. Paid only when
 justified.** (`00` §14, master prompt §7.)
 
+> **Milestone 6 (AI enrichment) is free-first.** The default and CI provider is the
+> offline `MockAIProvider` — no key, no network, no paid call. A real provider is
+> opt-in via server-only config; every real call is cache-guarded by the M2 cache
+> identity (`study + operation + input_hash + model + prompt_version`). Cost is
+> derived ONLY from real provider-reported usage and operator-supplied pricing; if
+> either is unavailable the cost is NULL — never a guessed `$0`. No paid queue, no
+> vector DB, no scraping. See `docs/29-AI-ENRICHMENT.md` §16, §23.
+
 # 2. Cost Principles
 
 - Every external paid dependency must have a documented reason (master prompt
