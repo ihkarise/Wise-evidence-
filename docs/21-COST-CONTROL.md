@@ -49,6 +49,13 @@ justified.** (`00` §14, master prompt §7.)
   (`10` §14, `20` §4).
 - Track per-job cost where the provider exposes it (`10` §15); surface AI cost as
   a success metric (`02` §14).
+- **Model choice + real cost are decided by the Milestone 6.1 benchmark**
+  (`packages/benchmark`, `docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`): it
+  compares candidate models on the DEMO study, verifies live catalogue + pricing,
+  and produces per-study cost and 100/1k/10k/100k projections from _real_ usage.
+  Until that live gate runs (currently BLOCKED — egress denied + no key), no model
+  is named primary and no live cost is quoted; projection method and honest-NULL
+  rule are fixed, values are PENDING.
 
 # 5. Data & Storage Limits
 

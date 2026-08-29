@@ -77,6 +77,7 @@ provisioned project.
 ├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + registry + validation
+├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011), taxonomy-v1 seed
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
@@ -90,14 +91,18 @@ provisioned project.
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
     ├── adr/     ADR-001 … ADR-017 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,
-read files) before acting. Milestones 0–6 are complete; do **not** implement
-Milestone 6.1 (the OpenRouter benchmark) or Milestone 7+ features
-(scraping/discovery, multi-source connectors, community voting, advanced
-analytics) without explicit authorization.
+read files) before acting. Milestones 0–6 are complete. **Milestone 6.1** (the
+OpenRouter benchmark) is **PARTIALLY COMPLETE (live BLOCKED)**: the reproducible
+benchmark harness (`packages/benchmark`) is built and verified offline, but the live
+OpenRouter run is gated on server-side egress + a key and has **not** run (see
+`docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`). Do **not** run live model calls,
+enable a production AI provider, or implement Milestone 7+ features
+(scraping/discovery, multi-source connectors, community voting, advanced analytics)
+without explicit authorization.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked

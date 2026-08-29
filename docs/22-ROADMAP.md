@@ -175,8 +175,12 @@ and never enters the M5 statistics. 70 new deterministic offline tests (246 tota
 Design + as-built record in `docs/29-AI-ENRICHMENT.md`; decisions in `ADR-017`;
 verification in `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`. No scraping, no
 discovery, no vector DB, no efficacy/combined score. **M6.1** (the OpenRouter model
-benchmark) is **NOT STARTED** — it runs later only in a secure server-side
-environment. Live provider + live Supabase verification are PENDING.
+benchmark) is **PARTIALLY COMPLETE (live BLOCKED)**: the reproducible benchmark
+harness (`packages/benchmark`) is built and verified offline, driving the existing
+provider + orchestrator, but the live run is BLOCKED (OpenRouter egress denied by
+policy + no server-side key), so no live model/token/cost/ranking value exists yet —
+see `docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`. Live provider + live Supabase
+verification are PENDING.
 
 # 9. Phase 7 — Automated Discovery
 

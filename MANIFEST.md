@@ -89,6 +89,10 @@ Reports (`docs/reports/`):
 - `M6-IMPLEMENTATION-VERIFICATION.md` — Milestone 6 verification results
   (test/typecheck/lint/format/build/secret-scan; firewalls; live-verification
   PENDING)
+- `M6.1-OPERATIONAL-VERIFICATION.md` — Milestone 6.1 operational verification +
+  OpenRouter benchmark readiness (harness built & verified offline; catalogue/
+  pricing/token/latency/cost live gate BLOCKED — egress denied + no key; the exact
+  rerun command; nothing fabricated)
 
 ## Application foundation (Milestone 1)
 
@@ -164,6 +168,20 @@ Reports (`docs/reports/`):
   op and Accept/Edit/Reject ops in `pages/api/admin/research/[id].ts` + the editor
   AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
   non-canonical.
+
+## AI benchmark harness (Milestone 6.1)
+
+- `packages/benchmark/` — the M6.1 operational benchmark harness. It _drives the
+  existing_ `@wise-evidence/ai` provider + orchestrator (no new provider, no
+  parallel AI path) to compare candidate OpenRouter models on the DEMO study with
+  MODEL as the only variable: FULL (six tasks) / ESSENTIAL (four tasks) workloads,
+  per-task token/latency/retry/validity/cost capture with honest NULLs, live
+  catalogue + pricing verification (injected fetch, never substitutes a model or
+  guesses a price), and cache-identity isolation. Every module is verified offline
+  with the mock provider and a fake fetch; the live OpenRouter run
+  (`src/benchmark.live.test.ts`) is `describe.runIf`-gated on a server-side key and
+  stays skipped in CI. Live gate currently BLOCKED — see
+  `docs/reports/M6.1-OPERATIONAL-VERIFICATION.md`.
 - Deterministic workflow/security/metadata/search/stats/AI tests (246 total). Live
   provider + live Supabase verification PENDING a provisioned project.
 
