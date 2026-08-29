@@ -1,0 +1,78 @@
+# WiseEvidence — Render Blueprint (M6.2, docs/19-DEPLOYMENT.md §12, ADR-018).
+#
+# This is a deployment DESCRIPTOR for the *existing* hybrid-SSR application. It
+# introduces NO new server architecture: it runs the Astro `@astrojs/node`
+# standalone server that `pnpm --filter web build` already produces at
+# `apps/web/dist/server/entry.mjs` (see apps/web/astro.config.mjs).
+#
+# SAFETY / COST POSTURE (unchanged):
+#   • No secret values live in this file. Every credential is declared with
+#     `sync: false`, meaning the operator sets it in the Render dashboard; it is
+#     never committed. Server-only secrets are NEVER given a PUBLIC_ prefix.
+#   • Production SSR is served at the domain ROOT, so SITE_BASE / SITE_URL are
+#     deliberately left UNSET (base stays "/"). The `/Wise-evidence-/` subpath is
+#     only for the GitHub Pages static preview (.github/workflows/preview.yml).
+#   • AI defaults to the offline deterministic Mock provider (AI_PROVIDER unset or
+#     "mock" → no key, no network). A real provider is opt-in via the commented
+#     AI_* vars below — free-first (docs/29 §4, ADR-019).
+#
+# NOTE: this Blueprint is PREPARED, not provisioned from CI. Deploying it is an
+# explicit owner action (connect the repo in Render, set the sync:false values).
+
+services:
+  - type: web
+    name: wise-evidence-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    # Node 22 (root package.json "engines": { "node": ">=22" }).
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter web build
+    # Astro node standalone entry; reads HOST/PORT from the environment.
+    startCommand: node apps/web/dist/server/entry.mjs
+    healthCheckPath: /
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: HOST
+        value: "0.0.0.0"
+      # Astro/@astrojs/node reads PORT; Render injects it automatically.
+
+      # --- PUBLIC (safe to expose to the browser; RLS-protected anon pair) ---
+      - key: PUBLIC_SUPABASE_URL
+        sync: false
+      - key: PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+
+      # --- SERVER-ONLY (never a PUBLIC_ prefix; never sent to the browser) ---
+      # Same URL/anon key read server-side by the SSR auth client (cookie
+      # sessions); duplicated without PUBLIC_ so they are not bundled into client
+      # code (see .env.example).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # Service-role key bypasses RLS — used ONLY by privileged server writes
+      # (publication, audit). Server-only.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Direct PostgreSQL connection string for the server data-access executor.
+      - key: SUPABASE_DB_URL
+        sync: false
+
+      # --- AI (server-only, opt-in). Leave unset → offline Mock provider. ---
+      # Uncomment and set in the dashboard to enable a real provider. Presets:
+      # mock | openai-compatible | openrouter | ollama | lmstudio | vllm.
+      # - key: AI_PROVIDER
+      #   value: mock
+      # - key: AI_BASE_URL
+      #   sync: false
+      # - key: AI_MODEL
+      #   sync: false
+      # - key: AI_API_KEY
+      #   sync: false
+      # - key: AI_PRICE_INPUT_PER_MTOK
+      #   sync: false
+      # - key: AI_PRICE_OUTPUT_PER_MTOK
+      #   sync: false
