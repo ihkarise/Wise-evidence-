@@ -1,0 +1,48 @@
+---
+/**
+ * StatDisclaimer — the mandatory public-interpretation safeguards for the M5
+ * visualization pages (docs/28 §1.14–1.15, ADR-016). Milestone 5.
+ *
+ * Keeps the honesty wording identical and prominent across /evidence and
+ * /statistics: these pages DESCRIBE the published catalogue; they are not a
+ * scientific conclusion about whether homeopathy works, and study counts are not
+ * a measure of scientific certainty. The `pyramid` variant adds the
+ * position-is-navigation-only rule.
+ */
+interface Props {
+  readonly variant?: "catalogue" | "pyramid";
+}
+const { variant = "catalogue" } = Astro.props;
+---
+
+<aside
+  class="rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"
+  role="note"
+  aria-label="How to read this page"
+>
+  <p>
+    <strong class="font-semibold">This is a descriptive summary of the published catalogue.</strong>
+    It describes what has been indexed and human-reviewed in WiseEvidence — it is
+    <strong>not</strong> a scientific conclusion about whether homeopathy works, and study counts are
+    <strong>not</strong> a measure of scientific certainty.
+  </p>
+  <p class="mt-2">
+    Reported <strong>outcome</strong>, evidence <strong>level</strong>, evidence
+    <strong>quality</strong> and <strong>criticism</strong> are separate dimensions, shown separately
+    and never combined into a single score.
+  </p>
+  {
+    variant === "pyramid" && (
+      <p class="mt-2">
+        The evidence pyramid is a <strong>navigation and organization</strong> device. A level's
+        position does <strong>not</strong> indicate positivity, negativity, truth, treatment
+        effectiveness, or scientific superiority — it only groups studies by design type.
+      </p>
+    )
+  }
+  <p class="mt-2">
+    Based on the <code class="rounded bg-amber-100 px-1">taxonomy-v1</code> classification. See the
+    <a href="/methodology" class="font-medium underline underline-offset-2">methodology</a> for how outcome,
+    quality and criticism are defined.
+  </p>
+</aside>

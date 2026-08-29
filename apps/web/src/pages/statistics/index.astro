@@ -1,0 +1,199 @@
+---
+/**
+ * Public Statistics — descriptive distributions of the published catalogue
+ * (docs/28 §9, docs/03 §16 — Milestone 5).
+ *
+ * SSR on the ANON database path (RLS authoritative; PUBLISHED-only). Three
+ * SEPARATE distributions — Reported Outcome, Evidence Quality, Criticism — each
+ * on its own axis. There is NO cross-tabulation and NO combined / efficacy /
+ * balance / positive-minus-negative score anywhere (docs/28 §1.6–1.11, §1.18).
+ * Outcome categories are shown across the full documented spectrum with an
+ * explicit UNCLASSIFIED bucket; missing data is never mapped to neutral.
+ *
+ * Language is deliberately catalogue-descriptive: these numbers describe what is
+ * currently published and human-reviewed — not whether homeopathy is or is not
+ * effective (docs/28 §1.14–1.15).
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import StatDisclaimer from "../../components/StatDisclaimer.astro";
+import DistributionChart from "../../components/DistributionChart.astro";
+import {
+  getOutcomeDistribution,
+  getQualityDistribution,
+  getCriticismDistribution,
+  getCatalogueOverview,
+  type DistributionResult,
+  type CriticismDistribution,
+} from "@wise-evidence/database";
+import { asAnon, isDatabaseConfigured } from "../../lib/db.js";
+import { outcomeLabel, humanize } from "../../lib/labels.js";
+
+export const prerender = false;
+
+const canonical = new URL("/statistics", Astro.site ?? Astro.url).toString();
+
+let outcome: DistributionResult | null = null;
+let quality: DistributionResult | null = null;
+let criticism: CriticismDistribution | null = null;
+let overview: { publishedStudies: number; publishedPublications: number } | null = null;
+let loadError = false;
+if (isDatabaseConfigured) {
+  try {
+    [outcome, quality, criticism, overview] = await asAnon(async (db) => [
+      await getOutcomeDistribution(db),
+      await getQualityDistribution(db),
+      await getCriticismDistribution(db),
+      await getCatalogueOverview(db),
+    ]);
+  } catch {
+    loadError = true; // never surface database internals (docs/28 §11)
+  }
+}
+
+const hasData = Boolean(overview && overview.publishedStudies > 0);
+
+// Map stored enum values to display labels (labels are a UI concern). The
+// explicit UNCLASSIFIED / UNASSESSED buckets are flagged `muted` so the chart
+// sets them apart without a valence colour.
+const outcomeRows = outcome?.buckets.map((b) => ({
+  label: outcomeLabel(b.value),
+  count: b.studyCount,
+  muted: b.value === "UNCLASSIFIED",
+}));
+const qualityRows = quality?.buckets.map((b) => ({
+  label: humanize(b.value),
+  count: b.studyCount,
+  muted: b.value === "UNASSESSED",
+}));
+const criticismCategoryRows = criticism?.byCategory.map((b) => ({
+  label: humanize(b.value),
+  count: b.studyCount,
+}));
+const criticismOriginRows = criticism?.byOrigin.map((b) => ({
+  label: humanize(b.value),
+  count: b.studyCount,
+}));
+
+const description =
+  "Descriptive statistics of the published WiseEvidence catalogue: reported outcome, evidence quality and criticism, each shown as a separate distribution. Not a scientific conclusion about whether homeopathy works.";
+---
+
+<BaseLayout title="Statistics" description={description} canonical={canonical}>
+  <div class="max-w-4xl">
+    <p class="text-sm font-medium uppercase tracking-wide text-brand">Statistics</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">Catalogue Statistics</h1>
+    <p class="mt-3 max-w-2xl text-ink-muted">
+      How the currently published research is distributed across reported outcome, evidence quality,
+      and criticism. Each is an <strong>independent</strong> distribution — they are never combined, netted,
+      or cross-tabulated into a single figure.
+    </p>
+
+    <div class="mt-6">
+      <StatDisclaimer variant="catalogue" />
+    </div>
+
+    {
+      !isDatabaseConfigured ? (
+        <div
+          class="mt-8 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"
+          role="note"
+        >
+          <strong class="font-semibold">Catalogue not connected.</strong> This deployment has no
+          database configured yet, so there are no statistics to summarise. The page is waiting on a
+          provisioned Supabase project.
+        </div>
+      ) : loadError ? (
+        <div
+          class="mt-8 rounded-lg border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-900"
+          role="alert"
+        >
+          Something went wrong loading the statistics. Please try again.
+        </div>
+      ) : hasData ? (
+        <>
+          <p class="mt-8 rounded-lg border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-ink">
+            <strong>{overview!.publishedStudies}</strong>{" "}
+            {overview!.publishedStudies === 1 ? "study" : "studies"} across{" "}
+            <strong>{overview!.publishedPublications}</strong>{" "}
+            {overview!.publishedPublications === 1 ? "publication" : "publications"}. A study
+            reported in several publications is counted <strong>once</strong>; the publication count
+            is shown for context only and is not an evidence metric.
+          </p>
+
+          {/* 1. Reported outcome — full spectrum + explicit Unclassified. */}
+          <DistributionChart
+            heading="Reported outcome"
+            level={2}
+            caption="What each study reported on its primary result. This is the reported outcome only — it is not a measure of evidence quality, and it is not proof of efficacy. Missing or not-yet-reviewed outcomes are shown as Unclassified, never as Neutral."
+            rows={outcomeRows!}
+            total={outcome!.total}
+          />
+
+          {/* 2. Evidence quality — independent of outcome. */}
+          <DistributionChart
+            heading="Evidence quality"
+            level={2}
+            caption="A study's methodological rigour, assessed independently of what it reported. A positive study is not automatically high quality, and a negative study is not automatically low quality. Studies without a reviewed quality summary are shown as Unassessed."
+            rows={qualityRows!}
+            total={quality!.total}
+          />
+
+          {/* 3. Criticism — two independent axes; never a negative outcome. */}
+          <section class="mt-10 border-t border-slate-200 pt-2">
+            <h2 class="mt-6 text-xl font-semibold tracking-tight text-ink">Criticism</h2>
+            <p class="mt-1 max-w-2xl text-sm text-ink-muted">
+              Methodological criticism recorded against studies, counted by distinct study (a study
+              with several criticisms is counted once).{" "}
+              <strong>Criticism is not the same as a negative reported outcome</strong> — a study
+              can report a positive outcome and still carry criticism. Criticism is never converted
+              into a negative result or a score.
+            </p>
+            <p class="mt-2 text-sm text-ink-muted">
+              Of <strong>{criticism!.total}</strong> published{" "}
+              {criticism!.total === 1 ? "study" : "studies"},{" "}
+              <strong>{criticism!.studiesWithCriticism}</strong> carry at least one active criticism
+              and <strong>{criticism!.studiesWithNoCriticism}</strong> carry none.
+            </p>
+
+            <DistributionChart
+              heading="Criticism by category"
+              level={3}
+              caption="Distinct studies carrying at least one active criticism in each category."
+              rows={criticismCategoryRows!}
+              total={criticism!.total}
+            />
+            <DistributionChart
+              heading="Criticism by origin"
+              level={3}
+              caption="Who raised the criticism — author-reported limitations, external publications, WiseEvidence reviewers, and AI suggestions are kept distinct and never merged."
+              rows={criticismOriginRows!}
+              total={criticism!.total}
+            />
+          </section>
+
+          <p class="mt-10 text-xs text-slate-500">
+            These distributions describe the currently published catalogue. They are descriptive
+            summaries, not scientific conclusions, and do not state whether homeopathy is or is not
+            effective. See the{" "}
+            <a href="/methodology" class="underline">
+              methodology
+            </a>{" "}
+            for definitions of each dimension.
+          </p>
+        </>
+      ) : (
+        <div
+          class="mt-8 rounded-lg border border-slate-200 bg-white px-5 py-8 text-center"
+          role="note"
+        >
+          <p class="text-sm font-medium text-ink">
+            No published research is currently available in this catalogue.
+          </p>
+          <p class="mt-1 text-sm text-ink-muted">
+            Statistics will populate as research is published.
+          </p>
+        </div>
+      )
+    }
+  </div>
+</BaseLayout>
