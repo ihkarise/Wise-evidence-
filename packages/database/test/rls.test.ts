@@ -118,10 +118,24 @@ describe("mutation is denied to unauthorized roles", () => {
     ).rejects.toThrow();
   });
 
-  it("even a reviewer has no direct table write in M2 (writes go via service_role)", async () => {
+  // M3 (docs/26 §10) authorizes the reviewer write workflow that M2 deferred:
+  // a reviewer may now create a non-demo DRAFT directly (RLS-enforced). The
+  // reviewer-cannot-publish / cannot-self-promote / admin-can-publish / demo-
+  // cannot-publish boundaries are proven in workflow-security.test.ts.
+  it("a reviewer CAN create a non-demo draft study (M3 write workflow)", async () => {
     await expect(
       db.asUser(REVIEWER_ID, (s) =>
-        s.query("insert into research_study (canonical_title) values ('reviewer direct write')"),
+        s.query("insert into research_study (canonical_title) values ('reviewer draft')"),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("a reviewer still cannot insert a study pre-set to PUBLISHED", async () => {
+    await expect(
+      db.asUser(REVIEWER_ID, (s) =>
+        s.query(
+          "insert into research_study (canonical_title, publication_state) values ('sneaky', 'PUBLISHED')",
+        ),
       ),
     ).rejects.toThrow();
   });

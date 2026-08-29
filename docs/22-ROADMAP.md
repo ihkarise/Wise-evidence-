@@ -55,11 +55,35 @@ Deterministic PGlite database tests. Full design checkpoint in
 `docs/25-DATABASE-FOUNDATION.md`; decisions in `ADR-013`. Real-Supabase
 verification is PENDING a provisioned project.
 
-# 5. Phase 3 — Manual Research MVP
+# 5. Phase 3 — Manual Research MVP  ✅ complete
 
 Admin authentication, research creation, DOI input, metadata retrieval, research
 editor, classification fields, review queue, publish workflow, public detail
 page, audit trail (master prompt §81, `11` §2, `12`).
+
+**Delivered:** hybrid Astro SSR (`@astrojs/node`; public pages still
+prerendered) with Supabase-SSR cookie-session authentication, middleware route
+protection, and server-side role resolution (`auth.uid()` → `app_user` → role,
+never a client claim). Migration `0010` adds the minimum reviewer/admin write
+RLS plus a fail-closed publication guard (admin-or-service only, non-demo,
+PENDING_REVIEW → PUBLISHED) and a `human_summary` column. New
+`packages/metadata`: a provider-independent `MetadataProvider` with a
+host-pinned, timeout/size-bounded, redirect-blocked, output-sanitized
+`CrossrefMetadataProvider` and a deterministic `MockMetadataProvider`. A
+framework-independent service/data-access layer in `packages/database`
+(SqlExecutor boundary shared by tests and the server): DOI-dedup draft creation,
+editor updates, independent outcome/quality/confidence classifications,
+criticism, taxonomy links, submit/reject/request-changes/archive, and
+`approveAndPublish()` (fail-closed, demo-protected, ADMIN-only) with append-only
+audit. Admin dashboard, listing, review queue, add-research, and a structured
+editor (no raw rows); the public `/research/[id]` detail page rendered on the
+anon RLS path with outcome, quality, confidence, and criticism kept visually
+and semantically separate and an explicit "structured interpretations, not proof
+of efficacy" note. No AI, no scraping, no search, no evidence visualization, no
+efficacy/combined score. Deterministic workflow + security + metadata tests
+(114 total). Design checkpoint `docs/26-MANUAL-RESEARCH-MVP.md`; decisions in
+`ADR-014`. Real-Supabase (live browser/auth/DB) verification is PENDING a
+provisioned project (`docs/26` §25).
 
 # 6. Phase 4 — Public Research Explorer
 

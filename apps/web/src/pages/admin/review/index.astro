@@ -1,0 +1,45 @@
+---
+/**
+ * Review queue (docs/26 §18). Staff-only. Lists PENDING_REVIEW studies awaiting
+ * a decision.
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { listStudies } from "@wise-evidence/database";
+import { asService, isDatabaseConfigured } from "../../../lib/db.js";
+
+export const prerender = false;
+
+const pending = isDatabaseConfigured
+  ? await asService((db) => listStudies(db, { publicationState: "PENDING_REVIEW" }))
+  : [];
+---
+
+<AdminLayout title="Review queue">
+  <p class="mb-4 text-sm text-ink-muted">
+    Studies submitted for review. Reviewers can edit, request changes, or reject; only an admin can
+    approve and publish.
+  </p>
+  {
+    pending.length === 0 ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        Nothing awaiting review.
+      </p>
+    ) : (
+      <ul class="space-y-2">
+        {pending.map((s) => (
+          <li class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <a href={`/admin/research/${s.id}`} class="text-brand hover:underline">
+              {s.title}
+            </a>
+            <a
+              href={`/admin/research/${s.id}`}
+              class="rounded-md bg-brand px-3 py-1 text-sm font-medium text-white hover:bg-brand-dark"
+            >
+              Review
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</AdminLayout>

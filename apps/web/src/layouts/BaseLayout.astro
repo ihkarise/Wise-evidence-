@@ -4,9 +4,10 @@ import "../styles/global.css";
 interface Props {
   title: string;
   description?: string;
+  canonical?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, canonical } = Astro.props;
 const fullTitle = title === "WiseEvidence" ? title : `${title} · WiseEvidence`;
 
 const navLinks = [
@@ -24,6 +25,7 @@ const navLinks = [
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
     {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
   </head>
   <body class="flex min-h-full flex-col bg-white text-ink antialiased">
     <a

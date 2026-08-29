@@ -12,8 +12,8 @@ homeopathy research discoverable, understandable, comparable, and critically
 reviewable — while keeping study outcome, evidence quality, criticism, confidence,
 and provenance as _separate_ dimensions.
 
-**Milestones 0 (Architecture), 1 (Repository Foundation), and 2 (Database
-Foundation) are complete.** The full architecture doc set exists, and so does
+**Milestones 0 (Architecture), 1 (Repository Foundation), 2 (Database
+Foundation), and 3 (Manual Research MVP) are complete.** The full architecture doc set exists, and so does
 the project foundation: a pnpm workspace, an Astro web app with a React island, a
 framework-independent `packages/domain` (with `normalizeDoi()`), CI, tooling, and
 governance. Milestone 2 added the canonical database: ordered Supabase/PostgreSQL
@@ -21,9 +21,19 @@ migrations (`supabase/migrations/`), enums, indexes, FTS preparation,
 Row-Level Security, `taxonomy-v1` reference seed, clearly-labelled DEMO fixtures
 (`supabase/seed/`), the framework-independent `packages/database`, and
 deterministic PGlite tests (see `docs/25-DATABASE-FOUNDATION.md`, `ADR-013`).
-There is still **no research catalogue UI, no authentication, and no AI
-pipeline** — those belong to Milestone 3+. The AI and import _tables_ exist, but
-no AI or scraping _logic_ does.
+Milestone 3 added the first complete human-controlled research lifecycle:
+hybrid Astro SSR with Supabase-SSR cookie auth and middleware route protection;
+reviewer/admin write RLS + a fail-closed, demo-protected, ADMIN-only publication
+guard (migration `0010`); a provider-independent, SSRF-hardened Crossref/mock
+metadata package (`packages/metadata`); a tested service/data-access layer
+(draft creation + DOI dedup, editor updates, independent classifications,
+criticism, review transitions, `approveAndPublish()`, append-only audit); an
+admin editor + review/publish UI; and the public `/research/[id]` detail page on
+the anon RLS path (see `docs/26-MANUAL-RESEARCH-MVP.md`, `ADR-014`). There is
+still **no public search/explorer, no evidence visualization, and no AI
+pipeline** — those belong to Milestone 4+. The AI and import _tables_ exist, but
+no AI or scraping _logic_ does. Live Supabase (browser/auth/DB) verification is
+PENDING a provisioned project.
 
 ```text
 .
@@ -32,23 +42,27 @@ no AI or scraping _logic_ does.
 ├── README.md
 ├── MANIFEST.md                   # index of all docs
 ├── package.json / pnpm-workspace.yaml / tsconfig.base.json  # M1 tooling
-├── apps/web/                     # Astro (static-first) + React island + Tailwind
-├── packages/domain/              # portable domain logic — normalizeDoi()
-├── packages/database/            # M2 data-access boundary + PGlite tests
-├── supabase/migrations/          # M2 canonical schema, RLS, taxonomy-v1 seed
-├── supabase/seed/                # M2 clearly-labelled DEMO fixtures
+├── apps/web/                     # Astro hybrid SSR + React island + Tailwind;
+│                                 #   M3 admin workflow UI + public /research/[id]
+├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
+├── packages/database/            # data-access boundary + M3 service layer + PGlite tests
+├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
+├── supabase/migrations/          # canonical schema, RLS (0001–0010), taxonomy-v1 seed
+├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
     ├── 24-MULTI-SOURCE-INGESTION.md  # M8 design checkpoint (design-only)
     ├── 25-DATABASE-FOUNDATION.md     # M2 design checkpoint (implemented)
-    ├── adr/     ADR-001 … ADR-013 (+ index/template)
+    ├── 26-MANUAL-RESEARCH-MVP.md     # M3 design checkpoint (implemented)
+    ├── adr/     ADR-001 … ADR-014 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION
 ```
 
-Do not assume anything beyond M1 exists — inspect first (`git status`, `ls`,
-read files) before acting. Do **not** implement Milestone 2+ features without
-explicit authorization.
+Do not assume the state of the repository — inspect first (`git status`, `ls`,
+read files) before acting. Milestones 0–3 are complete; do **not** implement
+Milestone 4+ features (public search/explorer, evidence visualization, AI,
+scraping/discovery) without explicit authorization.
 
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
@@ -68,11 +82,11 @@ any coding agent.
 
 ### Architecture is complete; keep it consistent
 
-Specs `05`–`23` and ADRs `001`–`011` now exist. Do **not** silently invent new
+Specs `05`–`23` and ADRs `001`–`014` now exist. Do **not** silently invent new
 architecture that contradicts them — when a decision changes, update the relevant
 doc, add an ADR if significant, and keep the set internally consistent (see §5).
-Milestone 2 (Database Foundation) is complete; the next step is **Milestone 3
-— Manual Research MVP** (`docs/22-ROADMAP.md`), still no premature features.
+Milestone 3 (Manual Research MVP) is complete; the next step is **Milestone 4
+— Public Research Explorer** (`docs/22-ROADMAP.md`), still no premature features.
 
 Forward design may be documented ahead of build order without changing that
 order: `docs/24-MULTI-SOURCE-INGESTION.md` and `ADR-012` are the approved

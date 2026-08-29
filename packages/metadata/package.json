@@ -1,0 +1,23 @@
+{
+  "name": "@wise-evidence/metadata",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Provider-independent bibliographic metadata lookup for WiseEvidence: MetadataProvider interface, host-pinned/bounded Crossref provider, and a deterministic mock. No Astro, React, Supabase, or AI imports; DOI canonicalisation is reused from @wise-evidence/domain.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  }
+}

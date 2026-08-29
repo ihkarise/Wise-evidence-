@@ -1,0 +1,80 @@
+---
+/**
+ * Research listing (docs/26 §14). Staff-only. Optional ?state= filter.
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { listStudies } from "@wise-evidence/database";
+import { asService, isDatabaseConfigured } from "../../../lib/db.js";
+import { humanize } from "../../../lib/labels.js";
+
+export const prerender = false;
+
+const state = Astro.url.searchParams.get("state") ?? undefined;
+const studies = isDatabaseConfigured
+  ? await asService((db) => listStudies(db, state ? { publicationState: state } : undefined))
+  : [];
+---
+
+<AdminLayout title="Research">
+  <div class="mb-4 flex flex-wrap gap-2 text-sm">
+    <a
+      href="/admin/research"
+      class={`rounded border px-3 py-1 ${!state ? "border-brand text-brand" : "border-slate-300 text-ink-muted"}`}
+      >All</a
+    >
+    {
+      ["DRAFT", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED"].map((s) => (
+        <a
+          href={`/admin/research?state=${s}`}
+          class={`rounded border px-3 py-1 ${state === s ? "border-brand text-brand" : "border-slate-300 text-ink-muted"}`}
+        >
+          {humanize(s)}
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    studies.length === 0 ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        No research records{state ? ` in ${humanize(state)}` : ""} yet.
+      </p>
+    ) : (
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-4 py-2">Title</th>
+              <th class="px-4 py-2">Publication</th>
+              <th class="px-4 py-2">Lifecycle</th>
+              <th class="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {studies.map((s) => (
+              <tr class="border-b border-slate-100 last:border-0">
+                <td class="px-4 py-2">
+                  <a href={`/admin/research/${s.id}`} class="text-brand hover:underline">
+                    {s.title}
+                  </a>
+                  {s.isDemo && (
+                    <span class="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                      DEMO
+                    </span>
+                  )}
+                </td>
+                <td class="px-4 py-2">{humanize(s.publicationState)}</td>
+                <td class="px-4 py-2 text-ink-muted">{humanize(s.lifecycleState)}</td>
+                <td class="px-4 py-2 text-right">
+                  <a href={`/admin/research/${s.id}`} class="text-brand hover:underline">
+                    Edit
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</AdminLayout>

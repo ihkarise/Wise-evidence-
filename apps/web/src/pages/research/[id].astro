@@ -1,0 +1,208 @@
+---
+/**
+ * Public research detail page (docs/26 §22-23). SSR via the ANON database path,
+ * so production RLS genuinely governs visibility — only PUBLISHED studies are
+ * reachable; anything else returns 404. Outcome, quality, confidence, and
+ * criticism are shown as visually and semantically SEPARATE dimensions, with an
+ * explicit note that these are structured interpretations, not proof of
+ * efficacy. No private field, AI-only suggestion, or audit data is exposed.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CopyDoi from "../../components/CopyDoi.tsx";
+import { getStudyDetail } from "@wise-evidence/database";
+import { asAnon, isDatabaseConfigured } from "../../lib/db.js";
+import { outcomeLabel, humanize } from "../../lib/labels.js";
+
+export const prerender = false;
+
+const id = Astro.params.id!;
+const detail = isDatabaseConfigured ? await asAnon((db) => getStudyDetail(db, id)) : null;
+
+// RLS returns nothing for non-published studies on the anon path → 404.
+if (!detail) {
+  return new Response("Not found", { status: 404 });
+}
+
+const description = `Structured, human-reviewed record: reported outcome ${outcomeLabel(
+  detail.outcome,
+)}, evidence quality ${humanize(detail.qualitySummary)} — kept separate. Not a claim of efficacy.`;
+const canonical = new URL(`/research/${detail.id}`, Astro.site ?? Astro.url).toString();
+---
+
+<BaseLayout title={detail.title} description={description} canonical={canonical}>
+  <article class="max-w-3xl">
+    <p class="text-sm font-medium uppercase tracking-wide text-brand">Research record</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">{detail.title}</h1>
+
+    <p class="mt-3 text-sm text-ink-muted">
+      {detail.authors.map((a) => a.displayName).join(", ")}
+      {detail.journalTitle && <span> · {detail.journalTitle}</span>}
+      {detail.publicationDate && <span> · {detail.publicationDate}</span>}
+    </p>
+
+    <aside
+      class="mt-6 rounded-lg border border-slate-300 bg-slate-50 px-5 py-4 text-sm text-ink-muted"
+      role="note"
+    >
+      These are <strong class="text-ink">structured interpretations</strong> by human reviewers, not proof
+      of efficacy. Reported <strong>outcome</strong>, methodological <strong>quality</strong>,
+      <strong>confidence</strong>, and <strong>criticism</strong> are deliberately kept as separate dimensions
+      and are never combined into a single score.
+    </aside>
+
+    <!-- The four independent dimensions, visually separated. -->
+    <section class="mt-8 grid gap-4 sm:grid-cols-2" aria-label="Assessment dimensions">
+      <div class="rounded-lg border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Reported outcome
+        </h2>
+        <p class="mt-1 text-lg font-semibold text-ink">{outcomeLabel(detail.outcome)}</p>
+        {
+          detail.outcomeExplanation && (
+            <p class="mt-1 text-sm text-ink-muted">{detail.outcomeExplanation}</p>
+          )
+        }
+        <p class="mt-2 text-xs text-slate-400">
+          What the study reported — not a quality judgement.
+        </p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Evidence quality
+        </h2>
+        <p class="mt-1 text-lg font-semibold text-ink">{humanize(detail.qualitySummary)}</p>
+        <p class="mt-2 text-xs text-slate-400">
+          Methodological rigor — independent of the outcome.
+        </p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Confidence</h2>
+        <p class="mt-1 text-lg font-semibold text-ink">{humanize(detail.outcomeConfidence)}</p>
+        <p class="mt-2 text-xs text-slate-400">Confidence in the classification.</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Study type</h2>
+        <p class="mt-1 text-lg font-semibold text-ink">{detail.studyTypeLabel ?? "—"}</p>
+        {
+          detail.evidenceLevelLabel && (
+            <p class="mt-1 text-sm text-ink-muted">Evidence level: {detail.evidenceLevelLabel}</p>
+          )
+        }
+        <p class="mt-2 text-xs text-slate-400">Navigation ordering — not certainty.</p>
+      </div>
+    </section>
+
+    {
+      detail.humanSummary && (
+        <section class="mt-8">
+          <h2 class="text-xl font-semibold tracking-tight text-ink">Summary</h2>
+          <p class="mt-2 text-ink-muted">{detail.humanSummary}</p>
+        </section>
+      )
+    }
+
+    {
+      detail.abstract && (
+        <section class="mt-8">
+          <h2 class="text-xl font-semibold tracking-tight text-ink">Abstract</h2>
+          <p class="mt-2 whitespace-pre-line text-ink-muted">{detail.abstract}</p>
+        </section>
+      )
+    }
+
+    {
+      (detail.conditions.length > 0 || detail.interventions.length > 0) && (
+        <section class="mt-8 grid gap-4 sm:grid-cols-2">
+          {detail.conditions.length > 0 && (
+            <div>
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Conditions
+              </h2>
+              <p class="mt-1 text-ink-muted">{detail.conditions.join(", ")}</p>
+            </div>
+          )}
+          {detail.interventions.length > 0 && (
+            <div>
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Interventions
+              </h2>
+              <p class="mt-1 text-ink-muted">{detail.interventions.join(", ")}</p>
+            </div>
+          )}
+        </section>
+      )
+    }
+
+    {
+      detail.criticism.length > 0 && (
+        <section class="mt-8">
+          <h2 class="text-xl font-semibold tracking-tight text-ink">Criticism</h2>
+          <p class="mt-1 text-sm text-slate-400">
+            Methodological critique — separate from the reported outcome.
+          </p>
+          <ul class="mt-3 space-y-3">
+            {detail.criticism.map((c) => (
+              <li class="rounded-lg border border-slate-200 p-4">
+                <p class="text-sm font-semibold text-ink">
+                  {humanize(c.category)}
+                  <span class="ml-2 text-xs font-normal text-slate-400">{humanize(c.origin)}</span>
+                </p>
+                <p class="mt-1 text-sm text-ink-muted">{c.text}</p>
+                {c.sourceUrl && (
+                  <a
+                    href={c.sourceUrl}
+                    rel="nofollow noopener"
+                    class="mt-1 inline-block text-xs text-brand underline"
+                  >
+                    Source
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="mt-8 border-t border-slate-200 pt-6">
+      <h2 class="text-xl font-semibold tracking-tight text-ink">Provenance</h2>
+      <dl class="mt-3 space-y-1 text-sm">
+        {
+          detail.doi && (
+            <div class="flex flex-wrap items-center gap-2">
+              <dt class="font-medium text-ink">DOI:</dt>
+              <dd class="font-mono text-ink-muted">{detail.doi}</dd>
+              <dd>
+                <a
+                  href={`https://doi.org/${detail.doi}`}
+                  rel="nofollow noopener"
+                  class="text-brand underline"
+                >
+                  doi.org ↗
+                </a>
+              </dd>
+            </div>
+          )
+        }
+        {
+          detail.sourceName && (
+            <div class="flex gap-2">
+              <dt class="font-medium text-ink">Source:</dt>
+              <dd class="text-ink-muted">{detail.sourceName}</dd>
+            </div>
+          )
+        }
+      </dl>
+      {
+        detail.doi && (
+          <div class="mt-4 max-w-xl">
+            <CopyDoi client:load initial={detail.doi} />
+          </div>
+        )
+      }
+      <p class="mt-4 text-xs text-slate-400">
+        Source inclusion is not endorsement of the source's claims.
+      </p>
+    </section>
+  </article>
+</BaseLayout>
