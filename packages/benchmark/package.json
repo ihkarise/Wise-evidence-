@@ -1,0 +1,23 @@
+{
+  "name": "@wise-evidence/benchmark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Milestone 6.1 operational benchmark harness for WiseEvidence. Drives the EXISTING @wise-evidence/ai provider + orchestrator (no new provider, no parallel AI architecture) to compare candidate OpenRouter models on the DEMO study under identical conditions: FULL (six tasks) and ESSENTIAL (four tasks) workloads, token usage, latency, retries, structured-output validity, and cost. Live inference is env-gated and never runs in CI; the offline tests exercise the whole harness deterministically with the mock provider and an injected fake fetch. No fabricated numbers: missing usage/pricing/latency is NULL, never zero.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wise-evidence/ai": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  }
+}
