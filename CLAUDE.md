@@ -124,6 +124,22 @@ them "live" without opening the real URL. The pass also prepared migration
 the documented least-privilege intent; it is **not** applied to production without
 explicit owner approval. See `docs/reports/PRODUCTION-CONNECTION-VERIFICATION.md`.
 
+A **Milestone 6.2 — Production Readiness** pass (2026-08-29) then re-ran and
+recorded every offline gate (331 tests + 1 skipped, typecheck/lint/format/build,
+secret scan — all clean) and **verified the compiled Astro Node standalone server
+starts** (`node apps/web/dist/server/entry.mjs`): public `/`, `/research`,
+`/evidence`, `/statistics` return 200 and `/admin` fail-closes to sign-in (302).
+It added the missing **`render.yaml`** — a Blueprint for the _existing_ Node
+standalone server (Node 22, existing build/start commands, all secrets
+`sync:false`, no new SSR architecture); the brief's premise that one existed was
+wrong, so it was created, not reused. Migrations are still exactly `0001`–`0012`.
+The AI subsystem is confirmed provider-agnostic (switch by config only). Live
+**Render provisioning**, **live Supabase** (auth/RLS/workflow), the **live
+OpenRouter** benchmark, and the **live Pages URL** remain PENDING/BLOCKED — this
+environment cannot reach those hosts and none was faked. Decision: **READY WITH
+DOCUMENTED BLOCKERS**; **M7 not started, not authorized**. See
+`docs/reports/PRODUCTION-READINESS-6.2.md`.
+
 > **History:** the architecture originally shipped as
 > `WiseEvidence_Architecture_Package_v0.1.zip`. In Milestone 0 it was unpacked
 > into tracked files and the zip retired; specs `05`–`23`, ADRs, and the three
