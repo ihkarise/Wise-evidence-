@@ -14,6 +14,7 @@
   "dependencies": {
     "@astrojs/node": "^9.4.4",
     "@supabase/ssr": "^0.7.0",
+    "@wise-evidence/ai": "workspace:*",
     "@wise-evidence/database": "workspace:*",
     "@wise-evidence/domain": "workspace:*",
     "@wise-evidence/metadata": "workspace:*",

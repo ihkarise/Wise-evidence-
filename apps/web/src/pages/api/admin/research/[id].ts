@@ -19,6 +19,8 @@ import {
   rejectStudy,
   approveAndPublish,
   archiveStudy,
+  getSuggestionOutput,
+  recordSuggestionDecision,
   type Actor,
   type SqlExecutor,
   type OutcomeValue,
@@ -28,6 +30,7 @@ import {
 } from "@wise-evidence/database";
 import { parseBody, backWithMessage, errorResponse } from "../../../../lib/http.js";
 import { asService, isDatabaseConfigured } from "../../../../lib/db.js";
+import { runEnrichment } from "../../../../lib/ai.js";
 
 export const prerender = false;
 
@@ -40,6 +43,17 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
 
   const body = await parseBody(request);
   const op = body.op ?? "";
+
+  // AI enrichment manages its own service-context + provider (docs/29 §7); it
+  // never writes canonical data. Handle it before the canonical dispatch.
+  if (op === "ai-enrich") {
+    try {
+      const result = await runEnrichment(actor, id, body.task ?? "");
+      return backWithMessage(back, result.ok ? "ok" : "error", result.message);
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
 
   try {
     await asService((db) => dispatch(db, actor, id, op, body));
@@ -124,9 +138,132 @@ async function dispatch(
     case "archive":
       await archiveStudy(db, actor, id, body.reason ?? "Archived");
       return;
+    case "ai-accept":
+      await acceptOrEditSuggestion(db, actor, id, body);
+      return;
+    case "ai-reject":
+      await rejectSuggestion(db, actor, id, body);
+      return;
     default:
       throw new Error(`unknown op: ${op}`);
   }
+}
+
+/**
+ * Accept or edit an AI suggestion (docs/29 §22). The human writes the canonical
+ * value through the SAME service op used for manual entry, carrying the
+ * ai_result_id as provenance; ACCEPT vs EDIT is derived by comparing the
+ * submitted value to the AI's suggested value. AI never writes the value — the
+ * human (this staff actor) does.
+ */
+async function acceptOrEditSuggestion(
+  db: SqlExecutor,
+  actor: Actor,
+  studyId: string,
+  body: Record<string, string>,
+): Promise<void> {
+  const resultId = body.resultId ?? "";
+  const suggestion = await getSuggestionOutput(db, resultId);
+  if (!suggestion || suggestion.studyId !== studyId) {
+    throw new Error("suggestion not found for this study");
+  }
+  if (suggestion.validationStatus !== "VALID") {
+    throw new Error("cannot accept an invalid AI suggestion");
+  }
+  const out = suggestion.output as Record<string, unknown>;
+
+  switch (suggestion.operation) {
+    case "outcome-classification": {
+      const value = body.value as OutcomeValue;
+      await setOutcome(db, actor, studyId, value, null, emptyToNull(body.explanation), resultId);
+      await decide(db, actor, resultId, studyId, suggestion.operation, value === out.outcome);
+      return;
+    }
+    case "evidence-quality": {
+      const value = body.value as "HIGH" | "MODERATE" | "LOW" | "UNCLEAR";
+      await setQualitySummary(db, actor, studyId, value, emptyToNull(body.explanation), resultId);
+      await decide(db, actor, resultId, studyId, suggestion.operation, value === out.quality);
+      return;
+    }
+    case "criticism-extraction": {
+      const category = body.category as CriticismCategory;
+      const text = body.value ?? "";
+      await addCriticism(db, actor, studyId, {
+        category,
+        origin: "AI_SUGGESTED" as CriticismOrigin,
+        text,
+        aiResultId: resultId,
+      });
+      const items = Array.isArray(out.criticisms)
+        ? (out.criticisms as Record<string, unknown>[])
+        : [];
+      const matched = items.some(
+        (i) => i.category === category && String(i.text ?? "").trim() === text.trim(),
+      );
+      await decide(db, actor, resultId, studyId, suggestion.operation, matched);
+      return;
+    }
+    case "research-summary": {
+      // human_summary has no ai_result_id FK; provenance is the audit decision.
+      await updateStudyIdentity(db, actor, studyId, { summary: body.value ?? "" });
+      await decide(
+        db,
+        actor,
+        resultId,
+        studyId,
+        suggestion.operation,
+        String(body.value ?? "").trim() === String(out.summary ?? "").trim(),
+      );
+      return;
+    }
+    case "metadata-extraction": {
+      await updateStudyIdentity(db, actor, studyId, {
+        subjectType: emptyToNull(body.subjectType) ?? undefined,
+        studyTypeCode: emptyToNull(body.studyTypeCode),
+      });
+      await decide(db, actor, resultId, studyId, suggestion.operation, true);
+      return;
+    }
+    default:
+      throw new Error(`cannot accept suggestion for operation: ${suggestion.operation}`);
+  }
+}
+
+/** Reject an AI suggestion: record the decision only; nothing becomes canonical. */
+async function rejectSuggestion(
+  db: SqlExecutor,
+  actor: Actor,
+  studyId: string,
+  body: Record<string, string>,
+): Promise<void> {
+  const resultId = body.resultId ?? "";
+  const suggestion = await getSuggestionOutput(db, resultId);
+  if (!suggestion || suggestion.studyId !== studyId) {
+    throw new Error("suggestion not found for this study");
+  }
+  await recordSuggestionDecision(db, actor, {
+    resultId,
+    studyId,
+    task: suggestion.operation,
+    decision: "REJECT",
+    note: emptyToNull(body.reason),
+  });
+}
+
+function decide(
+  db: SqlExecutor,
+  actor: Actor,
+  resultId: string,
+  studyId: string,
+  task: string,
+  accepted: boolean,
+): Promise<void> {
+  return recordSuggestionDecision(db, actor, {
+    resultId,
+    studyId,
+    task,
+    decision: accepted ? "ACCEPT" : "EDIT",
+  });
 }
 
 const OK_MESSAGES: Record<string, string> = {
@@ -142,6 +279,8 @@ const OK_MESSAGES: Record<string, string> = {
   reject: "Rejected",
   publish: "Published",
   archive: "Archived",
+  "ai-accept": "AI suggestion applied to the canonical value",
+  "ai-reject": "AI suggestion rejected",
 };
 
 const REDIRECT_TO_LIST = new Set(["publish", "reject", "archive"]);

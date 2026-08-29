@@ -19,6 +19,21 @@ interface ImportMetaEnv {
   // Direct PostgreSQL connection string for the data-access executor. Server
   // only. When absent, data surfaces degrade to a "not configured" notice.
   readonly SUPABASE_DB_URL?: string;
+
+  // ---- AI (Milestone 6) — SERVER-ONLY, never PUBLIC_*, never in the browser ----
+  // The provider abstraction (docs/29 §4). When AI_PROVIDER is unset or "mock",
+  // the offline deterministic MockAIProvider is used and NO key is required.
+  // A real provider is opt-in and its key never reaches client/island code.
+  readonly AI_PROVIDER?: string; // "mock" (default) | "openai-compatible"
+  readonly AI_BASE_URL?: string; // OpenAI-compatible base URL (real provider only)
+  readonly AI_API_KEY?: string; // provider secret (real provider only)
+  readonly AI_MODEL?: string; // model id (real provider only)
+  readonly AI_REQUEST_TIMEOUT_MS?: string;
+  readonly AI_MAX_OUTPUT_TOKENS?: string;
+  // Operator-supplied pricing (per 1,000,000 tokens) for cost derivation. Absent
+  // → cost is NULL, never guessed (docs/29 §16).
+  readonly AI_PRICE_INPUT_PER_MTOK?: string;
+  readonly AI_PRICE_OUTPUT_PER_MTOK?: string;
 }
 
 interface ImportMeta {
