@@ -231,9 +231,28 @@ writes nothing canonical. Design + as-built record in
 `docs/reports/M7.1-CHECKPOINT.md`. **M7.2 (Crossref adapter) is NOT started and
 NOT authorized.**
 
-Later M7 phases (Crossref/PubMed/Europe PMC adapters, the discovery
-orchestrator + candidate persistence, deduplication into the review queue, and
-scheduling) remain design-pending and unauthorized — build in order.
+**M7.2 — Crossref discovery connector  ✅ complete.** The first real
+`DiscoveryProvider`: `CrossrefDiscoveryProvider`, isolated in
+`packages/discovery/src/crossref/`, satisfying the M7.1 contract unchanged. It
+talks only to the structured Crossref REST API over a shared, injected,
+host-pinned (`api.crossref.org`), HTTPS-only, timeout/size-bounded,
+redirect-rejecting, content-type-validated HTTP layer; sanitizes untrusted
+metadata and canonicalises DOIs via `@wise-evidence/domain`; uses the canonical
+DOI as the stable source id; maps transport/HTTP failures (timeout, 429, 4xx/5xx,
+malformed, oversized, forbidden host) onto the typed discovery errors without
+leaking secrets; and registers CROSSREF in the registry (requiring an injected
+fetch, else `NOT_CONFIGURED`; MOCK unchanged; PUBMED/EUROPE_PMC still
+`NOT_CONFIGURED`). **No scraping, no scheduling, no retries, no AI, no database
+writes, no migration, no UI, no automatic classification or publication.** All
+tests are offline via injected fake fetch; one opt-in live smoke test is gated on
+`RUN_CROSSREF_LIVE=1` and skipped in CI (live call PENDING). See `docs/30` §9,
+`ADR-020` (M7.2 amendment), and `docs/reports/M7.2-CROSSREF-CONNECTOR.md`.
+**M7.3 (discovery orchestration + candidate persistence) is NOT started and NOT
+authorized.**
+
+Later M7 phases (PubMed/Europe PMC adapters, the discovery orchestrator +
+candidate persistence, deduplication into the review queue, and scheduling)
+remain design-pending and unauthorized — build in order.
 
 # 10. Phase 8 — Additional Sources
 

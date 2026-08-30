@@ -2,8 +2,8 @@
 ## Automated Research Discovery — Methodology & M7.1 Foundation
 
 **Document:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`
-**Version:** 0.1.0
-**Status:** M7.1 IMPLEMENTED (provider contract + deterministic mock). M7.2+ DESIGN-PENDING / NOT AUTHORIZED.
+**Version:** 0.2.0
+**Status:** M7.1 IMPLEMENTED (contract + mock) · M7.2 IMPLEMENTED (Crossref connector). M7.3+ DESIGN-PENDING / NOT AUTHORIZED.
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
 **Related:** `11-DATA-IMPORT-ARCHITECTURE.md`, `24-MULTI-SOURCE-INGESTION.md`,
 `05-DATABASE-ARCHITECTURE.md`, `16-SECURITY.md`, `19-DEPLOYMENT.md`,
@@ -22,9 +22,14 @@ discovery and the **as-built** state of its first slice, **Milestone 7.1**.
   model, a registry seam, and a deterministic offline mock. It makes **no real
   network request**, implements **no source connector** (no Crossref/PubMed/
   Europe PMC), adds **no scheduler, scraper, AI, or migration**.
-- **M7.2 and later (Crossref adapter, orchestrator + candidate persistence,
-  deduplication into the review queue, scheduling) are design-pending and NOT
-  authorized.** Build in order (`docs/22`).
+- **M7.2 (this document, §9) is implemented:** `CrossrefDiscoveryProvider`, the
+  first real `DiscoveryProvider`, isolated in `packages/discovery/src/crossref/`.
+  It talks only to the structured Crossref REST API over an injected, host-pinned,
+  bounded HTTP layer and returns only provider-neutral discovery objects. No
+  scraping, no scheduling, no AI, no database writes, no migration.
+- **M7.3 and later (discovery orchestrator + candidate persistence, deduplication
+  into the review queue, scheduling, PubMed / Europe PMC) are design-pending and
+  NOT authorized.** Build in order (`docs/22`).
 
 The multi-source ingestion design in `docs/24` + `ADR-012` remains the approved
 **Milestone 8** design; it is compatible with — and downstream of — the M7.1
@@ -204,3 +209,112 @@ queues, or Hermes; no scraping or HTML parsing; no AI discovery or enrichment; n
 automatic candidate acceptance or publication; no classification, efficacy
 scoring, or positive/negative weighting; no vector search; no community voting.
 These belong to later, separately-authorized milestones.
+
+---
+
+# 9. M7.2 — Crossref connector (implemented)
+
+`CrossrefDiscoveryProvider` (`packages/discovery/src/crossref/provider.ts`) is the
+first real `DiscoveryProvider`. It satisfies the M7.1 contract unchanged — no
+contract redesign was needed — and stays isolated inside
+`packages/discovery/src/crossref/`; no Crossref-specific concept leaks into the
+generic contracts, `packages/domain`, `packages/database`, `packages/ai`, or
+`apps/web` (an architecture guard enforces this).
+
+## 9.1 Boundary
+
+```text
+DiscoveryProvider → CrossrefDiscoveryProvider → Crossref REST API
+```
+
+The rest of the platform sees only `DiscoveryResult`, `SourceItem`,
+`FetchResult`, `NormalizedSourceItem`, and typed `DiscoveryError` — never a raw
+Crossref response. Only whitelisted source-specific fields (`crossrefType`,
+`crossrefMember`, `crossrefScore`) are retained on `SourceItem.raw` for
+provenance/debugging; the connector never blindly copies the whole record.
+
+## 9.2 HTTP security
+
+Shared, injected transport (`packages/discovery/src/http.ts`) plus the M7.1 host
+policy:
+
+- **Host-pinned** to `api.crossref.org` via a module constant; the host is never
+  taken from a caller-supplied base URL, and every request URL is additionally
+  routed through `assertUrlAllowed` against the descriptor (defense in depth).
+- **HTTPS only**, **timeout-bounded** (AbortController), **size-bounded** (streamed
+  byte cap), **redirects rejected** (`redirect: "error"` — a crafted response
+  cannot bounce onto another host), **content-type validated** as JSON.
+- `fetch` is **dependency-injected**; the package never reaches for an ambient
+  global fetch, so CI is fully offline and deterministic. Resolving CROSSREF from
+  the registry without an injected fetch fails closed as `NOT_CONFIGURED`.
+
+## 9.3 Politeness (User-Agent)
+
+Requests send an identifying `User-Agent`
+(`WiseEvidence/0.1 (+repo-url)`), with a `mailto:` appended only when a contact
+email is supplied by configuration (`contactEmail` option; wired from an env value
+by the caller). No personal email is hard-coded; absent configuration yields the
+anonymous-but-identifying UA.
+
+## 9.4 Query policy
+
+The query is **supplied by the caller** — the connector invents no hidden,
+permanent homeopathy query list. `discover()` requires a non-empty `query` or at
+least one DOI identifier (an unbounded request is refused as `INVALID_IDENTIFIER`)
+and always enforces the descriptor's row/candidate caps. Defining and running the
+official production query set is deferred to a later, authorized milestone.
+
+## 9.5 Identity, DOI, normalization
+
+The stable Crossref source identifier is the **canonical DOI** (Crossref's own
+stable identifier), never array position or request order. DOIs are canonicalised
+through `@wise-evidence/domain` `normalizeDoi`; the raw DOI is preserved on the
+`SourceItem` for provenance. An item with no usable DOI is still surfaced by
+`discover()` (one bad item never crashes the run) but has no stable id, so
+normalization rejects it (`NORMALIZATION_FAILED`) — a title-hash fallback id is a
+possible later enhancement. Crossref-specific parsing produces the `SourceItem`;
+the generic normalizer then produces the `NormalizedSourceItem`.
+
+## 9.6 Error mapping
+
+Transport and HTTP failures map onto the M7.1 typed errors: timeout → `TIMEOUT`;
+blocked redirect / connection failure → `SOURCE_UNAVAILABLE`; 429 → `RATE_LIMITED`
+(with any `Retry-After` in safe detail); 404 / other 4xx / 5xx →
+`SOURCE_UNAVAILABLE`; non-JSON content type, oversized body, invalid JSON, or a
+wrong-shaped payload → `MALFORMED_RESPONSE`; a host-policy violation →
+`FORBIDDEN_SOURCE`. Error messages/detail never carry secrets or headers.
+
+## 9.7 Retries & rate limits
+
+The connector performs **one request per operation** — no retry loop. Bounded
+retries, `Retry-After` honouring, backoff/jitter, and scheduling belong to the
+later, separately-authorized discovery orchestrator (M7.3); a 429 is surfaced as a
+typed `RATE_LIMITED` error for that orchestrator to act on. The descriptor's
+rate-limit and size caps are WiseEvidence's own conservative application-level
+values and are labelled **REQUIRES LIVE VERIFICATION** — Crossref's actual current
+limits were not verified from this offline environment.
+
+## 9.8 Fetch = enrichment only
+
+`fetch()` retrieves a single work's detail record from
+`api.crossref.org/works/{doi}`. It never downloads PDFs, follows arbitrary
+publisher URLs, bypasses paywalls, or leaves the Crossref host boundary.
+
+## 9.9 Testing & live status
+
+All connector tests are offline and deterministic via an injected fake fetch
+(fixtures + status/transport injection): contract, parsing, pagination, duplicate
+DOI, missing/invalid DOI, provenance, and the full security matrix (host, https,
+redirect, size, content-type, status mapping, secret redaction). A single
+**opt-in** live smoke test (`crossref/live.test.ts`) is `describe.runIf`-gated on
+`RUN_CROSSREF_LIVE=1` and stays skipped in `pnpm test` / CI. **The live Crossref
+call has NOT been run from this environment** (egress-restricted); it remains
+PENDING live verification.
+
+## 9.10 What M7.2 deliberately does NOT do
+
+No orchestration, no database candidate creation/ingestion, no scheduling, no
+Hermes, no scraping or HTML parsing, no PubMed/Europe PMC, no AI, no automatic
+classification/publication, no dedup against production records, no review or
+public UI, no voting, no efficacy scoring. These belong to later, separately
+authorized milestones.

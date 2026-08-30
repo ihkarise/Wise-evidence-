@@ -70,7 +70,7 @@ Architecture specifications (`docs/`):
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
 - `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Automated Research Discovery
-  methodology + Milestone 7.1 as-built record (**M7.1 implemented; M7.2+
+  methodology + as-built record (**M7.1 + M7.2 implemented; M7.3+
   design-pending / not authorized**): the LOCKED credibility boundaries
   (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research record,
   AI ≠ authority, duplicate ≠ delete, relevance ≠ efficacy), the provider-neutral
@@ -96,7 +96,8 @@ Architecture Decision Records (`docs/adr/`):
   registry, provider/model config, capability negotiation, secret references)
 - `ADR-020-automated-research-discovery.md` (Milestone 7.1 — provider-neutral
   discovery contract, typed objects/errors, registry seam, deterministic mock;
-  no connector, no scheduler, no AI, no migration)
+  - M7.2 amendment — Crossref connector realizing the CROSSREF seam with no
+    contract change; no scheduler, no AI, no migration)
 
 Reports (`docs/reports/`):
 
@@ -201,9 +202,9 @@ Reports (`docs/reports/`):
   AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
   non-canonical.
 
-## Automated discovery foundation (Milestone 7.1)
+## Automated discovery (Milestones 7.1 · 7.2)
 
-- `packages/discovery/` — the provider-neutral automated-discovery foundation.
+- `packages/discovery/` — the provider-neutral automated-discovery subsystem.
   Framework-independent (no Astro/React/Supabase/web/AI imports; depends only on
   `@wise-evidence/domain`): the `DiscoveryProvider` contract (discover / fetch /
   normalize), `SourceDescriptor` (secret-free identity/capability/limit/host
@@ -211,12 +212,21 @@ Reports (`docs/reports/`):
   `SourceItem`, `FetchResult`, `NormalizedSourceItem`, `Provenance`), a typed
   redacted error model (`DiscoveryError` + closed code set), the host/URL egress
   gate (`assertUrlAllowed`, no generic URL fetch), a pure normalizer, a registry
-  seam (MOCK registered; CROSSREF/PUBMED/EUROPE_PMC fail closed as
-  `NOT_CONFIGURED`), and a deterministic offline `MockDiscoveryProvider` +
-  fixtures. Writes nothing canonical, classifies nothing, accepts nothing; **no
-  network, no Crossref, no scheduler, no AI, no migration.** Boundary tests prove
-  the AI/database/web/fetch/secret separations. See `docs/30`, `ADR-020`,
+  seam, and a deterministic offline `MockDiscoveryProvider` + fixtures (M7.1).
+  Writes nothing canonical, classifies nothing, accepts nothing; boundary tests
+  prove the AI/database/web/fetch/secret separations. See `docs/30`, `ADR-020`,
   `docs/reports/M7.1-CHECKPOINT.md`.
+- `packages/discovery/src/crossref/` — **M7.2** the first real provider,
+  `CrossrefDiscoveryProvider`, plus a shared injected HTTP layer
+  (`src/http.ts`) and sanitized Crossref fixtures with a fake fetch. Host-pinned
+  to `api.crossref.org` (HTTPS-only, timeout/size-bounded, redirects rejected,
+  content-type-validated), DOIs canonicalised via `@wise-evidence/domain`, the
+  canonical DOI as the stable source id, transport/HTTP failures mapped onto typed
+  errors with no secret leakage. Registered as CROSSREF (needs an injected fetch,
+  else `NOT_CONFIGURED`; PUBMED/EUROPE_PMC still `NOT_CONFIGURED`). Offline tests +
+  one opt-in `RUN_CROSSREF_LIVE=1` smoke test (skipped in CI). **No scraping,
+  scheduling, retries, AI, DB writes, migration, or UI.** See `docs/30` §9,
+  `ADR-020` (M7.2 amendment), `docs/reports/M7.2-CROSSREF-CONNECTOR.md`.
 
 ## AI benchmark harness (Milestone 6.1)
 

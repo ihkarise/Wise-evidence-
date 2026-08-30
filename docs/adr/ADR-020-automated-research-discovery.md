@@ -1,7 +1,7 @@
 # ADR-020: Automated Research Discovery — Provider-Neutral Contract & Deterministic Mock (M7.1)
 
-**Status:** Accepted — IMPLEMENTED (Milestone 7.1). M7.2+ NOT started, NOT authorized.
-**Date:** 2026-08-30
+**Status:** Accepted — IMPLEMENTED (M7.1 contract + mock; M7.2 Crossref connector, see Amendment). M7.3+ NOT started, NOT authorized.
+**Date:** 2026-08-30 (M7.1); amended 2026-08-30 (M7.2)
 **Related:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`,
 `docs/11-DATA-IMPORT-ARCHITECTURE.md`, `docs/24-MULTI-SOURCE-INGESTION.md`,
 `docs/05-DATABASE-ARCHITECTURE.md`, `docs/16-SECURITY.md`, `docs/20-TESTING.md`,
@@ -101,6 +101,42 @@ keyless; the seam for M7.2 Crossref is ready with no orchestrator change.
 candidate-persistence, deduplication-into-review, and scheduling halves of the
 locked rules are contract-only until the later, authorized phases implement them.
 
-**Scope firewall.** M7.2 (Crossref adapter) and all later M7/M8 work — real
-connectors, orchestrator, dedup, scheduling, scraping, AI discovery — are **not
-started and not authorized** by this ADR.
+**Scope firewall (M7.1).** M7.2 (Crossref adapter) and all later M7/M8 work were
+not started or authorized by the original decision above.
+
+## Amendment (M7.2 — Crossref connector, implemented)
+
+M7.2 realizes the CROSSREF seam this ADR anticipated, with **no contract change**.
+Decisions specific to the connector:
+
+1. **Isolation.** `CrossrefDiscoveryProvider` lives in
+   `packages/discovery/src/crossref/` and returns only provider-neutral discovery
+   objects. An architecture guard proves no Crossref-specific code leaks into the
+   generic contracts, `packages/domain`, `packages/database`, `packages/ai`, or
+   `apps/web`.
+2. **Host pinning + injected transport.** The host is a module constant
+   (`api.crossref.org`), never a caller-supplied base URL; every URL is gated
+   through `assertUrlAllowed`. A shared, injected HTTP helper
+   (`packages/discovery/src/http.ts`) provides the bounded read and content-type
+   check; the package never uses an ambient global fetch. Registering CROSSREF
+   requires an injected `fetch` at resolve time, so it fails closed as
+   `NOT_CONFIGURED` without configured egress. MOCK is unchanged; PUBMED /
+   EUROPE_PMC remain unregistered.
+3. **DOI as the stable source id.** Crossref's stable identifier is the DOI;
+   the connector uses the canonical DOI (never array position/request order) and
+   surfaces — but cannot normalize — a DOI-less item.
+4. **No retries in the connector.** One request per operation; bounded retries,
+   `Retry-After` honouring, and scheduling are deferred to the M7.3 orchestrator.
+   A 429 becomes a typed `RATE_LIMITED` error. Rate-limit/size caps are
+   conservative app-level values labelled **REQUIRES LIVE VERIFICATION**.
+5. **No scraping, no AI, no DB writes, no migration, no UI.** M7.2 uses only the
+   structured Crossref REST API and produces discovery objects; ingestion,
+   dedup-into-review, classification, and publication remain out of scope.
+
+**Live status.** A single opt-in live smoke test is gated on `RUN_CROSSREF_LIVE=1`
+and stays skipped in CI; the live Crossref call has **not** been run from this
+egress-restricted environment (PENDING).
+
+**Scope firewall (M7.2).** M7.3 (discovery orchestration + candidate persistence),
+dedup against production records, scheduling, Hermes, PubMed / Europe PMC, and AI
+enrichment are **not started and not authorized**.

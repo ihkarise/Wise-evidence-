@@ -77,10 +77,23 @@ test-covered (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ res
 record, AI ≠ authority, duplicate ≠ delete): discovery imports no AI/database/
 web/vendor SDK, exposes no generic URL-fetch helper, and writes nothing canonical
 (see `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`, `ADR-020`,
-`docs/reports/M7.1-CHECKPOINT.md`). **M7.2 (Crossref adapter) and later M7/M8
-work are NOT started and NOT authorized.** There is still **no scraping and no
-live automated discovery**. Live provider + Supabase (browser/auth/DB)
-verification is PENDING a provisioned project.
+`docs/reports/M7.1-CHECKPOINT.md`). **Milestone 7.2** then added the first real
+provider, `CrossrefDiscoveryProvider` (`packages/discovery/src/crossref/`), on a
+shared injected HTTP layer: host-pinned to `api.crossref.org`, HTTPS-only,
+timeout/size-bounded, redirects rejected, content-type-validated; untrusted
+metadata sanitized and DOIs canonicalised via `@wise-evidence/domain`; the
+canonical DOI as the stable source id; transport/HTTP failures mapped onto the
+typed errors with no secret leakage; registered as CROSSREF (needs an injected
+fetch, else `NOT_CONFIGURED`; PUBMED/EUROPE_PMC still `NOT_CONFIGURED`). It uses
+**only the structured Crossref REST API — no scraping, no scheduling, no retries,
+no AI, no database writes, no migration, no UI**. All connector tests run offline
+via an injected fake fetch; one opt-in `RUN_CROSSREF_LIVE=1` smoke test is skipped
+in CI and the **live Crossref call has NOT been run** from this egress-restricted
+environment (PENDING). See `docs/30` §9, `ADR-020` (M7.2 amendment),
+`docs/reports/M7.2-CROSSREF-CONNECTOR.md`. **M7.3 (discovery orchestration +
+candidate persistence) and later M7/M8 work are NOT started and NOT authorized.**
+There is still **no live automated discovery**. Live provider + Supabase
+(browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
 .
@@ -99,7 +112,7 @@ verification is PENDING a provisioned project.
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
-├── packages/discovery/           # M7.1 provider-neutral discovery: DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock (no network/Crossref/scheduler/AI/migration)
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org, no scraping/scheduler/AI/DB/migration)
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
@@ -114,7 +127,7 @@ verification is PENDING a provisioned project.
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
     ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
     ├── adr/     ADR-001 … ADR-020 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,
