@@ -69,6 +69,16 @@ Architecture specifications (`docs/`):
   versioned prompts, untrusted-in/untrusted-out validation, cache identity, and the
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
+- `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Automated Research Discovery
+  methodology + Milestone 7.1 as-built record (**M7.1 implemented; M7.2+
+  design-pending / not authorized**): the LOCKED credibility boundaries
+  (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research record,
+  AI ≠ authority, duplicate ≠ delete, relevance ≠ efficacy), the provider-neutral
+  `packages/discovery` contract surface (`DiscoveryProvider`, `SourceDescriptor`,
+  typed objects, typed redacted errors, registry seam, host/URL egress gate,
+  provenance), the deterministic offline `MockDiscoveryProvider`, no-migration
+  database posture, and cost/security/testing posture; checkpoint in
+  `docs/reports/M7.1-CHECKPOINT.md`
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -84,6 +94,9 @@ Architecture Decision Records (`docs/adr/`):
   grant hardening + env-driven GitHub Pages base path)
 - `ADR-019-provider-agnostic-ai-architecture.md` (pre-M7 hardening — provider
   registry, provider/model config, capability negotiation, secret references)
+- `ADR-020-automated-research-discovery.md` (Milestone 7.1 — provider-neutral
+  discovery contract, typed objects/errors, registry seam, deterministic mock;
+  no connector, no scheduler, no AI, no migration)
 
 Reports (`docs/reports/`):
 
@@ -187,6 +200,23 @@ Reports (`docs/reports/`):
   op and Accept/Edit/Reject ops in `pages/api/admin/research/[id].ts` + the editor
   AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
   non-canonical.
+
+## Automated discovery foundation (Milestone 7.1)
+
+- `packages/discovery/` — the provider-neutral automated-discovery foundation.
+  Framework-independent (no Astro/React/Supabase/web/AI imports; depends only on
+  `@wise-evidence/domain`): the `DiscoveryProvider` contract (discover / fetch /
+  normalize), `SourceDescriptor` (secret-free identity/capability/limit/host
+  policy), typed discovery objects (`DiscoveryRequest`, `DiscoveryPage`,
+  `SourceItem`, `FetchResult`, `NormalizedSourceItem`, `Provenance`), a typed
+  redacted error model (`DiscoveryError` + closed code set), the host/URL egress
+  gate (`assertUrlAllowed`, no generic URL fetch), a pure normalizer, a registry
+  seam (MOCK registered; CROSSREF/PUBMED/EUROPE_PMC fail closed as
+  `NOT_CONFIGURED`), and a deterministic offline `MockDiscoveryProvider` +
+  fixtures. Writes nothing canonical, classifies nothing, accepts nothing; **no
+  network, no Crossref, no scheduler, no AI, no migration.** Boundary tests prove
+  the AI/database/web/fetch/secret separations. See `docs/30`, `ADR-020`,
+  `docs/reports/M7.1-CHECKPOINT.md`.
 
 ## AI benchmark harness (Milestone 6.1)
 

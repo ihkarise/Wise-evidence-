@@ -27,6 +27,7 @@ ADR (master prompt §38).
 | [ADR-017](ADR-017-ai-enrichment.md) | AI Enrichment: Suggestion-Only Pipeline, Provider Independence, and the Canonical/Publication/M5 Firewalls | Accepted (implemented) |
 | [ADR-018](ADR-018-grant-hardening-and-pages-base-path.md) | `anon` Grant Hardening and Environment-Driven GitHub Pages Base Path | Accepted (implemented) |
 | [ADR-019](ADR-019-provider-agnostic-ai-architecture.md) | Provider-Agnostic AI Architecture: Registry, Configuration, Capabilities, and Secret Handling | Accepted (implemented) |
+| [ADR-020](ADR-020-automated-research-discovery.md) | Automated Research Discovery: Provider-Neutral Contract & Deterministic Mock (M7.1) | Accepted (implemented) |
 
 ## Template
 

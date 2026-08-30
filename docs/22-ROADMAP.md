@@ -209,6 +209,32 @@ First structured source connector: discovery, fetch, normalize, deduplicate,
 review-queue integration, scheduled job. Not all sources at once (master prompt
 §85, `11` §11).
 
+**M7.1 — Discovery provider contract + deterministic mock  ✅ complete.**
+The smallest provider-neutral foundation: the framework-independent
+`packages/discovery` package with the `DiscoveryProvider` contract (discover /
+fetch / normalize), `SourceDescriptor` (identity, capabilities, host allow-list,
+HTTPS/rate/size/candidate limits — no secrets), the typed discovery objects
+(`DiscoveryRequest`, `DiscoveryPage`, `SourceItem`, `FetchResult`,
+`NormalizedSourceItem`, `Provenance`), a typed provider-neutral error model
+(`DiscoveryError` with a closed code set + redaction), a source/provider registry
+seam (MOCK registered; CROSSREF / PUBMED / EUROPE_PMC fail closed as
+`NOT_CONFIGURED`), a pure normalizer reusing `@wise-evidence/domain`, and a
+deterministic offline `MockDiscoveryProvider` with fixtures covering success,
+pagination, empty, duplicate, malformed, missing/invalid DOI, and fetch
+failure / timeout / rate-limit. **No real network call, no Crossref, no
+scheduling, no scraping, no AI, no migration.** Every LOCKED boundary is
+test-covered (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research
+record, AI ≠ authority, duplicate ≠ delete): the package imports no AI /
+database / web / vendor SDK, exposes no generic "fetch any URL" helper, and
+writes nothing canonical. Design + as-built record in
+`docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md` and `ADR-020`; checkpoint in
+`docs/reports/M7.1-CHECKPOINT.md`. **M7.2 (Crossref adapter) is NOT started and
+NOT authorized.**
+
+Later M7 phases (Crossref/PubMed/Europe PMC adapters, the discovery
+orchestrator + candidate persistence, deduplication into the review queue, and
+scheduling) remain design-pending and unauthorized — build in order.
+
 # 10. Phase 8 — Additional Sources
 
 Add connectors incrementally, each with tests, fixtures, normalization, and

@@ -64,9 +64,23 @@ configuration, thin presets (openrouter · ollama · lmstudio · vllm ·
 openai-compatible · mock), capability negotiation, base-URL SSRF policy, and
 secret-by-reference (`secretRef`, server-only) handling — with the Mock provider
 still the CI/default, every M6 safety guarantee unchanged, and **no migration**
-(see `docs/29` §27, `ADR-019`). There is still **no scraping and no automated
-discovery** — those belong to Milestone 7+. Live provider + Supabase
-(browser/auth/DB) verification is PENDING a provisioned project.
+(see `docs/29` §27, `ADR-019`). **Milestone 7.1** then added the
+provider-neutral **discovery foundation** in `packages/discovery`: the
+`DiscoveryProvider` contract (discover / fetch / normalize), a secret-free
+`SourceDescriptor` with a host/URL egress gate, typed discovery objects, a typed
+redacted `DiscoveryError` model, a registry seam (MOCK registered;
+CROSSREF/PUBMED/EUROPE_PMC fail closed as `NOT_CONFIGURED`), a pure normalizer
+reusing `@wise-evidence/domain`, and a deterministic offline
+`MockDiscoveryProvider` with fixtures — **no real network, no Crossref, no
+scheduler, no scraping, no AI, no migration**. Every LOCKED boundary is
+test-covered (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research
+record, AI ≠ authority, duplicate ≠ delete): discovery imports no AI/database/
+web/vendor SDK, exposes no generic URL-fetch helper, and writes nothing canonical
+(see `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`, `ADR-020`,
+`docs/reports/M7.1-CHECKPOINT.md`). **M7.2 (Crossref adapter) and later M7/M8
+work are NOT started and NOT authorized.** There is still **no scraping and no
+live automated discovery**. Live provider + Supabase (browser/auth/DB)
+verification is PENDING a provisioned project.
 
 ```text
 .
@@ -85,6 +99,7 @@ discovery** — those belong to Milestone 7+. Live provider + Supabase
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
+├── packages/discovery/           # M7.1 provider-neutral discovery: DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock (no network/Crossref/scheduler/AI/migration)
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
@@ -97,8 +112,9 @@ discovery** — those belong to Milestone 7+. Live provider + Supabase
     ├── 27-PUBLIC-RESEARCH-EXPLORER.md # M4 design checkpoint (implemented)
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
-    ├── adr/     ADR-001 … ADR-019 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION
+    ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
+    ├── adr/     ADR-001 … ADR-020 (+ index/template)
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,
