@@ -75,6 +75,15 @@ export {
   type DiscoveryProviderFactoryContext,
 } from "./registry.js";
 
+// Injected HTTP transport (for networked connectors)
+export {
+  ResponseTooLargeError,
+  readBoundedText,
+  isJsonContentType,
+  type FetchLike,
+  type FetchLikeResponse,
+} from "./http.js";
+
 // Deterministic offline mock
 export {
   MockDiscoveryProvider,
@@ -82,6 +91,15 @@ export {
   FIXED_MOCK_CLOCK,
   type MockDiscoveryProviderOptions,
 } from "./mock/provider.js";
+
+// Crossref connector (M7.2) — first real DiscoveryProvider
+export {
+  CrossrefDiscoveryProvider,
+  CROSSREF_SOURCE_DESCRIPTOR,
+  CROSSREF_HOST,
+  CROSSREF_DISCOVERY_VERSION,
+  type CrossrefDiscoveryProviderOptions,
+} from "./crossref/provider.js";
 
 export {
   DEFAULT_DISCOVERY_DATASET,

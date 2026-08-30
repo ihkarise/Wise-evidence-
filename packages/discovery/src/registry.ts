@@ -6,22 +6,40 @@
  * that ships in a later milestone will ask the registry for a provider — it will
  * never `new` an adapter and never learn which real source answered.
  *
- * Fail-closed: only `MOCK` is registered in M7.1. Resolving `CROSSREF`,
- * `PUBMED`, or `EUROPE_PMC` (or any unregistered type) throws a typed
- * `DiscoveryError("NOT_CONFIGURED")` with a SAFE message. There is deliberately
- * no fake Crossref behaviour and no network call anywhere in this module.
+ * Fail-closed: `MOCK` and `CROSSREF` (M7.2) ship registered; `PUBMED` /
+ * `EUROPE_PMC` (and any unregistered type) throw a typed
+ * `DiscoveryError("NOT_CONFIGURED")` with a SAFE message. CROSSREF additionally
+ * fails closed with `NOT_CONFIGURED` when resolved WITHOUT an injected `fetch` —
+ * the package never reaches for a global fetch, so egress must be supplied by the
+ * caller. Constructing a provider performs no I/O (the first network call happens
+ * only when the provider is actually used).
  *
- * Framework-independent: no Astro, React, Supabase, web, or AI imports; no I/O.
+ * Framework-independent: no Astro, React, Supabase, or AI imports; no ambient I/O.
  */
 import { DiscoveryError } from "./errors.js";
 import { MockDiscoveryProvider } from "./mock/provider.js";
+import { CrossrefDiscoveryProvider } from "./crossref/provider.js";
+import type { FetchLike } from "./http.js";
 import type { DiscoveryProvider } from "./provider.js";
 import type { DiscoveryProviderType } from "./types.js";
 
-/** Everything a factory may need to build a provider. Extended per adapter. */
+/**
+ * Everything a factory may need to build a provider. Extended per adapter. The
+ * `fetch` is injected (never a global) so networked adapters stay testable and
+ * the discovery package never reaches for ambient egress; an adapter that needs
+ * it and does not receive it fails closed with `NOT_CONFIGURED`.
+ */
 export interface DiscoveryProviderFactoryContext {
   /** Source key to assign (a source may reuse an adapter under different keys). */
   readonly key?: string;
+  /** Injected fetch for networked adapters (required by CROSSREF; unused by MOCK). */
+  readonly fetch?: FetchLike;
+  /** Contact email for a polite-pool User-Agent, supplied by configuration. */
+  readonly contactEmail?: string | null;
+  /** Deterministic clock override (tests). */
+  readonly clock?: () => string;
+  readonly timeoutMs?: number;
+  readonly maxBytes?: number;
 }
 
 /** Builds a provider instance. Must perform NO I/O and make NO network call. */
@@ -77,14 +95,29 @@ export class DiscoveryProviderRegistry {
 }
 
 /**
- * A registry pre-registered with the shipped adapters. In M7.1 that is MOCK
- * only; CROSSREF / PUBMED / EUROPE_PMC are intentionally NOT registered, so the
- * orchestrator fails clearly (NOT_CONFIGURED) until each adapter is added,
- * without any change to the seam.
+ * A registry pre-registered with the shipped adapters: MOCK and CROSSREF (M7.2).
+ * CROSSREF requires an injected `fetch` at resolve time (egress is never ambient
+ * in this package); resolving it without one fails closed as `NOT_CONFIGURED`.
+ * PUBMED / EUROPE_PMC are intentionally NOT registered, so the orchestrator fails
+ * clearly until each adapter is added, without any change to the seam.
  */
 export function createDefaultDiscoveryRegistry(): DiscoveryProviderRegistry {
-  return new DiscoveryProviderRegistry().register(
-    "MOCK",
-    (context) => new MockDiscoveryProvider({ key: context.key }),
-  );
+  return new DiscoveryProviderRegistry()
+    .register("MOCK", (context) => new MockDiscoveryProvider({ key: context.key }))
+    .register("CROSSREF", (context) => {
+      if (context.fetch === undefined) {
+        throw new DiscoveryError(
+          "NOT_CONFIGURED",
+          "CROSSREF requires an injected fetch (egress is not ambient in @wise-evidence/discovery)",
+        );
+      }
+      return new CrossrefDiscoveryProvider({
+        fetch: context.fetch,
+        key: context.key,
+        contactEmail: context.contactEmail ?? null,
+        clock: context.clock,
+        timeoutMs: context.timeoutMs,
+        maxBytes: context.maxBytes,
+      });
+    });
 }
