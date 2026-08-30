@@ -209,6 +209,15 @@ First structured source connector: discovery, fetch, normalize, deduplicate,
 review-queue integration, scheduled job. Not all sources at once (master prompt
 §85, `11` §11).
 
+**Design checkpoint:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md` (+ `ADR-020`,
+and the `docs/reports/M7-*` plan/security/cost/test reports) is the approved M7
+design — a provider-neutral `DiscoveryProvider` behind a source registry,
+candidate-only output routed to human review, conservative graded deduplication,
+SSRF-hardened injected-fetch connectors, append-only provenance, a deferred
+scheduler (Hermes deferred), and AI kept downstream/suggestion-only. It is
+**design-only**: implementation is NOT authorized. Build in order; do not jump
+ahead. M8 (`docs/24` / `ADR-012`) then extends this foundation to multiple sources.
+
 # 10. Phase 8 — Additional Sources
 
 Add connectors incrementally, each with tests, fixtures, normalization, and

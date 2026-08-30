@@ -69,6 +69,12 @@ Architecture specifications (`docs/`):
   versioned prompts, untrusted-in/untrusted-out validation, cache identity, and the
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
+- `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Milestone 7 Design Checkpoint
+  (**design-only; implementation NOT authorized**): provider-neutral
+  `DiscoveryProvider` behind a source registry, candidate-only output routed to human
+  review, conservative graded deduplication, SSRF-hardened injected-fetch connectors,
+  append-only provenance, deferred scheduler (Hermes deferred), AI kept downstream/
+  suggestion-only; foundational to and consistent with the M8 design in `24`
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -84,6 +90,8 @@ Architecture Decision Records (`docs/adr/`):
   grant hardening + env-driven GitHub Pages base path)
 - `ADR-019-provider-agnostic-ai-architecture.md` (pre-M7 hardening — provider
   registry, provider/model config, capability negotiation, secret references)
+- `ADR-020-automated-research-discovery.md` (Milestone 7 design — provider-neutral
+  connector, candidate-only output, deferred scheduler; implementation NOT authorized)
 
 Reports (`docs/reports/`):
 
@@ -116,6 +124,14 @@ Reports (`docs/reports/`):
   the owner's eventual live Supabase/Render/public/AI verification
 - `M7-READINESS-REVIEW.md` — review of the M7 (automated discovery) substrate;
   M7 IMPLEMENTATION = NOT STARTED, AUTHORIZATION = NOT GRANTED
+- `M7-IMPLEMENTATION-PLAN.md` — M7 broken into additive sub-milestones (M7.1–M7.10)
+  with design-only schema impact; implementation NOT authorized
+- `M7-SECURITY-REVIEW.md` — M7 threat model (SSRF, prompt injection, poisoned
+  metadata, duplicate flooding, auto-publish bypass) + mitigations + owner/legal gates
+- `M7-COST-REVIEW.md` — architecture-level M7 cost (free-first; $0 incremental by
+  default); live rate-limit/storage figures marked REQUIRES LIVE VERIFICATION
+- `M7-TEST-PLAN.md` — deterministic offline test plan (connector/dedup/RLS/SSRF/AI-
+  isolation/boundary guards); live source tests opt-in
 
 ## Application foundation (Milestone 1)
 
