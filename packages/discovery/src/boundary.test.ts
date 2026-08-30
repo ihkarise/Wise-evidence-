@@ -50,6 +50,11 @@ const FORBIDDEN_IMPORTS: readonly RegExp[] = [
   /node:https\b/,
   /node:net\b/,
   /\bundici\b/,
+  // No HTML scraping / browser automation (M7.2 is structured-API only).
+  /\bcheerio\b/,
+  /\bpuppeteer\b/,
+  /\bplaywright\b/,
+  /\bjsdom\b/,
 ];
 
 /** Extract the specifier from every static/dynamic import and re-export. */
@@ -112,6 +117,20 @@ describe("discovery architecture boundary", () => {
     const keys = Object.keys(MOCK_SOURCE_DESCRIPTOR);
     for (const key of keys) {
       expect(key).not.toMatch(/secret|api[-_]?key|token|password|authorization|credential/i);
+    }
+  });
+
+  it("keeps Crossref-specific code from leaking into the generic contracts", () => {
+    // Only the registry (registration) and the barrel (re-export) may reference
+    // the crossref adapter; the generic contract/types/normalize/host files must
+    // not import it.
+    const allowed = new Set(["/registry.ts", "/index.ts"]);
+    for (const file of FILES) {
+      const rel = file.replace(SRC_DIR, "");
+      if (rel.startsWith("/crossref/") || allowed.has(rel)) continue;
+      for (const spec of importSpecifiers(readFileSync(file, "utf8"))) {
+        expect(spec).not.toMatch(/crossref/i);
+      }
     }
   });
 });
