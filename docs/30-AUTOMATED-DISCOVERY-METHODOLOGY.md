@@ -2,8 +2,8 @@
 ## Automated Research Discovery — Methodology & M7.1 Foundation
 
 **Document:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`
-**Version:** 0.2.0
-**Status:** M7.1 IMPLEMENTED (contract + mock) · M7.2 IMPLEMENTED (Crossref connector). M7.3+ DESIGN-PENDING / NOT AUTHORIZED.
+**Version:** 0.3.0
+**Status:** M7.1 IMPLEMENTED (contract + mock) · M7.2 IMPLEMENTED (Crossref connector) · M7.3 orchestrator IMPLEMENTED offline (DB candidate persistence BLOCKED on approved migration `0013`). M7.4+ NOT AUTHORIZED.
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
 **Related:** `11-DATA-IMPORT-ARCHITECTURE.md`, `24-MULTI-SOURCE-INGESTION.md`,
 `05-DATABASE-ARCHITECTURE.md`, `16-SECURITY.md`, `19-DEPLOYMENT.md`,
@@ -27,9 +27,16 @@ discovery and the **as-built** state of its first slice, **Milestone 7.1**.
   It talks only to the structured Crossref REST API over an injected, host-pinned,
   bounded HTTP layer and returns only provider-neutral discovery objects. No
   scraping, no scheduling, no AI, no database writes, no migration.
-- **M7.3 and later (discovery orchestrator + candidate persistence, deduplication
-  into the review queue, scheduling, PubMed / Europe PMC) are design-pending and
-  NOT authorized.** Build in order (`docs/22`).
+- **M7.3 (this document, §10) is implemented offline:** the bounded discovery
+  **orchestrator** `runDiscovery` — registry-based provider selection, hard
+  budgets, bounded retries, conservative graded dedup, candidate idempotency, and
+  reviewable-candidate persistence through a **port** (in-memory adapter tested).
+  The real database adapter is **BLOCKED** on an approved migration for candidate
+  idempotency (`(source_key, stable_source_id)`); see §10.7 and
+  `docs/reports/M7.3-DISCOVERY-RUN.md`.
+- **M7.4 and later (the server-side DB adapter, staff-gated trigger, review-queue
+  UI, scheduling, PubMed / Europe PMC) are NOT authorized.** Build in order
+  (`docs/22`).
 
 The multi-source ingestion design in `docs/24` + `ADR-012` remains the approved
 **Milestone 8** design; it is compatible with — and downstream of — the M7.1
@@ -318,3 +325,84 @@ Hermes, no scraping or HTML parsing, no PubMed/Europe PMC, no AI, no automatic
 classification/publication, no dedup against production records, no review or
 public UI, no voting, no efficacy scoring. These belong to later, separately
 authorized milestones.
+
+---
+
+# 10. M7.3 — Discovery orchestrator + controlled run (implemented offline)
+
+`runDiscovery` (`packages/discovery/src/orchestrator/`) controls ONE bounded
+discovery run. It is provider-agnostic (registry-based selection), imports no
+`@wise-evidence/database`/AI, and writes reviewable candidates through a
+persistence PORT — so the whole package keeps its M7.1 boundary.
+
+## 10.1 Flow & responsibilities
+
+```text
+registry → provider → discover → (fetch) → normalize → identifier resolution
+        → deduplication → candidate DECISION → CandidateStore port (import_candidate)
+```
+
+PROVIDER talks to the source; ORCHESTRATOR controls the run; the STORE PORT
+persists run/candidate state; REVIEWER/ADMIN (later) accept/reject/publish; AI is
+a later, downstream step. Provider logic is never duplicated in the orchestrator.
+
+## 10.2 Bounded run + budgets
+
+Every run is hard-bounded (`budget.ts`): `maxPages`, `maxItems`, `maxCandidates`,
+`maxRequests`, `maxDurationMs`, `maxRetriesPerRequest`, `pageSize` — each with a
+conservative default and a HARD MAXIMUM a caller cannot exceed (negative/huge/unset
+values are clamped). No unbounded pages, rows, requests, or recursion.
+
+## 10.3 Failure isolation & retries
+
+Each item is processed in isolation: a malformed item, a failed fetch, or an
+unexpected throw increments a counter and the run continues. A run-level fatal
+(e.g. a first-page discover failure or an unconfigured provider) stops the run
+safely as FAILED. Retries (`retry.ts`) are bounded exponential backoff with jitter
+and honour a `Retry-After` hint; they retry ONLY transient failures
+(SOURCE_UNAVAILABLE / RATE_LIMITED / TIMEOUT), never malformed data, invalid
+identifiers, or a forbidden source. `sleep`/`rng` are injected for determinism.
+
+## 10.4 Deduplication (conservative, graded)
+
+`dedup.ts` applies the approved order against a read-only `KnownStudyIndex` port
+(reads existing canonical studies; never writes): exact DOI → exact persistent id
+(PMID/PMCID/ARXIV) → normalized title + year → normalized title. Verdicts:
+DEFINITE / PROBABLE / POSSIBLE / NEW. A DEFINITE match records the related study
+id for the reviewer; PROBABLE/POSSIBLE stay reviewable. Nothing is ever
+auto-merged or deleted (`DUPLICATE ≠ DELETE`); the new candidate is always kept.
+
+## 10.5 Idempotency
+
+Candidate idempotency is keyed on `(source_key, stable_source_id)` (the canonical
+DOI for Crossref; the source id for the mock). Re-running the same run creates no
+second candidate — verified against the in-memory store, which enforces exactly
+the uniqueness the proposed DB index will.
+
+## 10.6 Persistence, provenance & observability
+
+Runs map to `import_job` (state + counters + timestamps + safe error summary);
+candidates map to `import_candidate` with source key, stable id, a minimised
+normalized payload (no full text), a raw-payload hash, the dedup decision, and a
+candidate state (`REVIEW_REQUIRED` / `DUPLICATE_CANDIDATE`). The run returns a
+safe `DiscoveryRunResult` (counters, state, duration, redacted error summary, stop
+reason) — never raw payloads, headers, or secrets. No canonical `research_study` /
+`publication` is written; nothing is published; authorization refuses non-staff
+callers; there is no public endpoint and no UI.
+
+## 10.7 Schema firewall (candidate persistence BLOCKED)
+
+The current `import_candidate` schema has **no `source_key` / `stable_source_id`
+column and no unique constraint**, so DB-enforced candidate idempotency is
+**impossible without a migration**. Per the M7.3 firewall the migration was NOT
+created and idempotency was NOT weakened; the DB adapter is deferred. The proposed
+`0013_discovery_candidate_identity.sql` (two columns + a unique index; `service_role`
+write path; PGlite RLS/idempotency tests) is specified in
+`docs/reports/M7.3-DISCOVERY-RUN.md` and awaits approval. `import_job` already
+supports the run lifecycle unchanged.
+
+## 10.8 What M7.3 deliberately does NOT do
+
+No database adapter/migration (blocked, reported), no scheduler, Hermes, scraping,
+PubMed/Europe PMC, AI, vector search, canonical creation, publication, outcome/
+quality/efficacy classification, voting, review UI, or public endpoint.

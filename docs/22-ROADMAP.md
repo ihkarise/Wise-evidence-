@@ -250,9 +250,27 @@ tests are offline via injected fake fetch; one opt-in live smoke test is gated o
 **M7.3 (discovery orchestration + candidate persistence) is NOT started and NOT
 authorized.**
 
-Later M7 phases (PubMed/Europe PMC adapters, the discovery orchestrator +
-candidate persistence, deduplication into the review queue, and scheduling)
-remain design-pending and unauthorized — build in order.
+**M7.3 — Discovery orchestrator + controlled run  ✅ complete (offline); DB
+candidate persistence BLOCKED on approved migration.** The bounded `runDiscovery`
+orchestrator (`packages/discovery/src/orchestrator/`): registry-based provider
+selection (MOCK and CROSSREF both run through it; PUBMED/EUROPE_PMC fail closed),
+hard budgets (pages/items/candidates/requests/duration/retries — no unbounded
+run), bounded retries with backoff/jitter and Retry-After (transient failures
+only), per-item failure isolation, conservative graded dedup (DOI → persistent id
+→ title+year → title; DEFINITE/PROBABLE/POSSIBLE/NEW; never merges or deletes),
+candidate idempotency on `(source_key, stable_source_id)`, and reviewable-candidate
+persistence through a **port** with a tested in-memory adapter. It writes nothing
+canonical, never publishes/classifies, never calls AI, and refuses non-staff
+callers (no public endpoint, no UI). **Schema firewall fired:** the current
+`import_candidate` schema cannot enforce candidate idempotency, so the migration
+was **not** created and the DB adapter is deferred — the required
+`0013_discovery_candidate_identity.sql` is proposed for approval in
+`docs/reports/M7.3-DISCOVERY-RUN.md`. See `docs/30` §10, `ADR-020`. **M7.4 (DB
+adapter, staff trigger, review UI, scheduling) is NOT started and NOT authorized.**
+
+Later M7 phases (PubMed/Europe PMC adapters, the server-side DB adapter,
+review-queue UI, and scheduling) remain design-pending and unauthorized — build
+in order.
 
 # 10. Phase 8 — Additional Sources
 

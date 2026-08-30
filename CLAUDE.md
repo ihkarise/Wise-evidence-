@@ -90,10 +90,25 @@ no AI, no database writes, no migration, no UI**. All connector tests run offlin
 via an injected fake fetch; one opt-in `RUN_CROSSREF_LIVE=1` smoke test is skipped
 in CI and the **live Crossref call has NOT been run** from this egress-restricted
 environment (PENDING). See `docs/30` §9, `ADR-020` (M7.2 amendment),
-`docs/reports/M7.2-CROSSREF-CONNECTOR.md`. **M7.3 (discovery orchestration +
-candidate persistence) and later M7/M8 work are NOT started and NOT authorized.**
-There is still **no live automated discovery**. Live provider + Supabase
-(browser/auth/DB) verification is PENDING a provisioned project.
+`docs/reports/M7.2-CROSSREF-CONNECTOR.md`. **Milestone 7.3** then added the bounded
+**discovery orchestrator** (`packages/discovery/src/orchestrator/`) `runDiscovery`:
+registry-based provider selection (MOCK + CROSSREF run through it; PUBMED/EUROPE_PMC
+fail closed), hard budgets (pages/items/candidates/requests/duration/retries — no
+unbounded run), bounded retries with backoff/jitter + Retry-After (transient only),
+per-item failure isolation, conservative graded dedup (DOI → persistent id →
+title+year → title; DEFINITE/PROBABLE/POSSIBLE/NEW, never merges/deletes),
+candidate idempotency on `(source_key, stable_source_id)`, and reviewable-candidate
+persistence through a **port** with a tested in-memory adapter. It writes nothing
+canonical, never publishes/classifies, never calls AI, and refuses non-staff
+callers. **The M7.3 schema firewall fired:** the current `import_candidate` schema
+cannot enforce candidate idempotency, so **no migration was created** and the DB
+adapter is deferred — the required `0013_discovery_candidate_identity.sql` is
+proposed for approval in `docs/reports/M7.3-DISCOVERY-RUN.md` (§10.7). See
+`docs/30` §10. **M7.4 (server-side DB adapter, staff trigger, review UI,
+scheduling) and later M7/M8 work are NOT started and NOT authorized.** There is
+still **no live automated discovery** and **no discovery DB writes**. Live provider
+
+- Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
 .
@@ -112,7 +127,7 @@ There is still **no live automated discovery**. Live provider + Supabase
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
-├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org, no scraping/scheduler/AI/DB/migration)
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports (in-memory; DB adapter BLOCKED on migration 0013). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
@@ -127,7 +142,7 @@ There is still **no live automated discovery**. Live provider + Supabase
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
     ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
     ├── adr/     ADR-001 … ADR-020 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR · M7.3-DISCOVERY-RUN
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,

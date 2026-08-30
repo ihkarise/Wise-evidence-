@@ -70,8 +70,9 @@ Architecture specifications (`docs/`):
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
 - `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Automated Research Discovery
-  methodology + as-built record (**M7.1 + M7.2 implemented; M7.3+
-  design-pending / not authorized**): the LOCKED credibility boundaries
+  methodology + as-built record (**M7.1 + M7.2 + M7.3 orchestrator implemented
+  (M7.3 DB persistence blocked on migration 0013); M7.4+ not authorized**): the
+  LOCKED credibility boundaries
   (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research record,
   AI ≠ authority, duplicate ≠ delete, relevance ≠ efficacy), the provider-neutral
   `packages/discovery` contract surface (`DiscoveryProvider`, `SourceDescriptor`,
@@ -119,6 +120,12 @@ Reports (`docs/reports/`):
   matrix with honest provenance tiers (LOCAL / PGLITE / REAL SUPABASE reported /
   LIVE BROWSER / PENDING / BLOCKED); Pages base-path fix verified locally; live
   Pages/SSR/OpenRouter BLOCKED or PENDING (egress-sandboxed)
+- `M7.1-CHECKPOINT.md` — Milestone 7.1 discovery foundation checkpoint
+- `M7.2-CROSSREF-CONNECTOR.md` — Milestone 7.2 Crossref connector checkpoint
+  (offline tests; live Crossref PENDING)
+- `M7.3-DISCOVERY-RUN.md` — Milestone 7.3 orchestrator checkpoint + **schema
+  firewall** report: candidate persistence BLOCKED on the proposed
+  `0013_discovery_candidate_identity.sql` migration (documented, NOT created)
 
 ## Application foundation (Milestone 1)
 
@@ -202,7 +209,7 @@ Reports (`docs/reports/`):
   AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
   non-canonical.
 
-## Automated discovery (Milestones 7.1 · 7.2)
+## Automated discovery (Milestones 7.1 · 7.2 · 7.3)
 
 - `packages/discovery/` — the provider-neutral automated-discovery subsystem.
   Framework-independent (no Astro/React/Supabase/web/AI imports; depends only on
@@ -216,6 +223,18 @@ Reports (`docs/reports/`):
   Writes nothing canonical, classifies nothing, accepts nothing; boundary tests
   prove the AI/database/web/fetch/secret separations. See `docs/30`, `ADR-020`,
   `docs/reports/M7.1-CHECKPOINT.md`.
+- `packages/discovery/src/orchestrator/` — **M7.3** the bounded discovery
+  orchestrator `runDiscovery`: registry-based provider selection, hard budgets
+  (`budget.ts`), bounded retries with backoff/jitter + Retry-After (`retry.ts`),
+  conservative graded deduplication against a read-only `KnownStudyIndex` port
+  (`dedup.ts`), candidate idempotency + reviewable-candidate persistence through
+  `DiscoveryRunStore`/`CandidateStore` PORTS with deterministic in-memory adapters
+  (`store.ts`), per-item failure isolation, and a safe structured
+  `DiscoveryRunResult`. Writes nothing canonical, never publishes/classifies,
+  never calls AI, refuses non-staff callers. The real DB adapter (→ `import_job` /
+  `import_candidate` via `service_role`) is **BLOCKED** on an approved migration
+  for candidate idempotency; see `docs/reports/M7.3-DISCOVERY-RUN.md`. **No
+  migration, scheduler, Hermes, AI, UI, or canonical writes.**
 - `packages/discovery/src/crossref/` — **M7.2** the first real provider,
   `CrossrefDiscoveryProvider`, plus a shared injected HTTP layer
   (`src/http.ts`) and sanitized Crossref fixtures with a fake fetch. Host-pinned
