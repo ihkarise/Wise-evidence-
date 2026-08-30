@@ -101,6 +101,46 @@ export {
   type CrossrefDiscoveryProviderOptions,
 } from "./crossref/provider.js";
 
+// Discovery orchestrator (M7.3) — bounded controlled run + persistence ports
+export {
+  runDiscovery,
+  OrchestratorError,
+  type RunDiscoveryDeps,
+} from "./orchestrator/orchestrator.js";
+
+export { DEFAULT_BUDGET, HARD_MAX_BUDGET, resolveBudget } from "./orchestrator/budget.js";
+
+export { classifyDuplicate, yearOf, type KnownStudyIndex } from "./orchestrator/dedup.js";
+
+export { withRetry, parseRetryAfterMs, type RetryOptions } from "./orchestrator/retry.js";
+
+export {
+  InMemoryDiscoveryStore,
+  InMemoryStudyIndex,
+  type DiscoveryRunStore,
+  type CandidateStore,
+  type CreateRunInput,
+  type FinalizeRunInput,
+  type CandidateRecordInput,
+  type StoredRun,
+  type StoredCandidate,
+  type SeedStudy,
+} from "./orchestrator/store.js";
+
+export type {
+  DiscoveryActor,
+  DiscoveryBudget,
+  DiscoveryRunRequest,
+  DiscoveryRunResult,
+  DiscoveryRunState,
+  DiscoveryRunTrigger,
+  RunCounters,
+  RunErrorEntry,
+  DedupDecision,
+  DuplicateVerdict,
+  DuplicateMatchedBy,
+} from "./orchestrator/types.js";
+
 export {
   DEFAULT_DISCOVERY_DATASET,
   EMPTY_DISCOVERY_DATASET,
