@@ -191,6 +191,18 @@ Mock provider stays the CI/default; all M6 safety guarantees are unchanged; no
 migration was added. See `docs/29` §27 and `ADR-019`. This is architecture only —
 **M7 remains NOT STARTED and unauthorized.**
 
+**M6.2 — Production Readiness (2026-08-29).** A verification/deployment-prep pass:
+all offline gates re-run and recorded (331 tests + 1 skipped; typecheck/lint/
+format/build; secret scan — clean), and the compiled Astro Node **standalone
+server verified to start** (public pages 200, `/admin` fail-closes to sign-in).
+Added the previously-missing **`render.yaml`** Blueprint for the *existing* Node
+standalone server (Node 22, existing commands, secrets `sync:false` — no new SSR
+architecture). Migrations remain exactly `0001`–`0012`. Live **Render**, live
+**Supabase** (auth/RLS/workflow), the live **OpenRouter** benchmark, and the live
+**Pages** URL stay PENDING/BLOCKED (egress-denied hosts; nothing faked). Decision:
+**READY WITH DOCUMENTED BLOCKERS**; **M7 still NOT STARTED, unauthorized**. See
+`docs/reports/PRODUCTION-READINESS-6.2.md`.
+
 # 9. Phase 7 — Automated Discovery
 
 First structured source connector: discovery, fetch, normalize, deduplicate,

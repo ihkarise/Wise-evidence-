@@ -98,6 +98,10 @@ Reports (`docs/reports/`):
   pricing/token/latency/cost live gate BLOCKED — egress denied + no key; the exact
   rerun command; nothing fabricated)
 - `PRODUCTION-CONNECTION-VERIFICATION.md` — Production Readiness verification
+- `PRODUCTION-READINESS-6.2.md` — Milestone 6.2 production-readiness gate
+  (offline gates VERIFIED + standalone server starts; Render Blueprint added;
+  live Supabase/Render PENDING, OpenRouter BLOCKED; decision: READY WITH
+  DOCUMENTED BLOCKERS; M7 not started)
   matrix with honest provenance tiers (LOCAL / PGLITE / REAL SUPABASE reported /
   LIVE BROWSER / PENDING / BLOCKED); Pages base-path fix verified locally; live
   Pages/SSR/OpenRouter BLOCKED or PENDING (egress-sandboxed)
