@@ -268,9 +268,24 @@ was **not** created and the DB adapter is deferred — the required
 `docs/reports/M7.3-DISCOVERY-RUN.md`. See `docs/30` §10, `ADR-020`. **M7.4 (DB
 adapter, staff trigger, review UI, scheduling) is NOT started and NOT authorized.**
 
-Later M7 phases (PubMed/Europe PMC adapters, the server-side DB adapter,
-review-queue UI, and scheduling) remain design-pending and unauthorized — build
-in order.
+**M7.4A — Discovery candidate persistence + migration 0013  ✅ complete
+(PGlite-verified; live Supabase PENDING).** The M7.3 schema firewall is resolved:
+migration `0013_discovery_candidate_identity.sql` adds `source_key` /
+`source_stable_id` to `import_candidate` and a **partial** unique index on
+`(source_key, source_stable_id)` (NULL identities exempt), and a thin server-side
+(`service_role`) adapter (`packages/database/src/service/discovery.ts`) implements
+the M7.3 persistence ports — `DatabaseDiscoveryStore` (→ `import_job` /
+`import_candidate`, idempotent `INSERT … ON CONFLICT … DO NOTHING`) and
+`DatabaseStudyIndex` (read-only research-level dedup). An end-to-end mock run
+persists candidates through PGlite with DB-enforced idempotency, provenance,
+preserved dedup decisions, no canonical writes, and a verified anon-denied RLS
+boundary. **No review UI, no accept/reject, no scheduler, no new provider, no AI,
+no publication.** Migrations are now `0001`–`0013`. See `docs/30` §10.7,
+`docs/reports/M7.4A-DATABASE-PERSISTENCE.md`. **M7.4B (candidate review UI) is NOT
+started and NOT authorized.**
+
+Later M7 phases (the candidate review UI, PubMed/Europe PMC adapters, and
+scheduling) remain design-pending and unauthorized — build in order.
 
 # 10. Phase 8 — Additional Sources
 

@@ -104,11 +104,23 @@ callers. **The M7.3 schema firewall fired:** the current `import_candidate` sche
 cannot enforce candidate idempotency, so **no migration was created** and the DB
 adapter is deferred — the required `0013_discovery_candidate_identity.sql` is
 proposed for approval in `docs/reports/M7.3-DISCOVERY-RUN.md` (§10.7). See
-`docs/30` §10. **M7.4 (server-side DB adapter, staff trigger, review UI,
-scheduling) and later M7/M8 work are NOT started and NOT authorized.** There is
-still **no live automated discovery** and **no discovery DB writes**. Live provider
-
-- Supabase (browser/auth/DB) verification is PENDING a provisioned project.
+`docs/30` §10. **Milestone 7.4A** then resolved that firewall: migration
+`0013_discovery_candidate_identity.sql` adds `source_key` / `source_stable_id` to
+`import_candidate` and a **partial** unique index on `(source_key,
+source_stable_id)` (NULL identities exempt), and a thin server-side
+(`service_role`) adapter (`packages/database/src/service/discovery.ts`) implements
+the M7.3 ports — `DatabaseDiscoveryStore` (→ `import_job` / `import_candidate`,
+idempotent `INSERT … ON CONFLICT … DO NOTHING`) and `DatabaseStudyIndex`
+(read-only research-level dedup). An end-to-end mock run persists candidates
+through PGlite with DB-enforced idempotency, provenance, preserved dedup
+decisions, **no canonical writes** (a test asserts `research_study` / `publication`
+/ `classification` stay empty), and a verified anon-denied RLS/authorization
+matrix; live Supabase application of `0013` is PENDING. Migrations are now
+`0001`–`0013` (see `docs/30` §10.7, `docs/reports/M7.4A-DATABASE-PERSISTENCE.md`).
+**M7.4B (the candidate review UI / accept-reject) and later M7/M8 work are NOT
+started and NOT authorized.** There is still **no live automated discovery** and
+**no review UI**. Live provider and Supabase (browser/auth/DB) verification is
+PENDING a provisioned project.
 
 ```text
 .
@@ -122,14 +134,14 @@ still **no live automated discovery** and **no discovery DB writes**. Live provi
 │                                 #   M4 /research explorer + ResearchCard;
 │                                 #   M5 /evidence + /statistics + DistributionChart
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
-├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + PGlite tests
+├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
 ├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports (in-memory; DB adapter BLOCKED on migration 0013). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
-├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
+├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
@@ -142,7 +154,7 @@ still **no live automated discovery** and **no discovery DB writes**. Live provi
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
     ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
     ├── adr/     ADR-001 … ADR-020 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR · M7.3-DISCOVERY-RUN
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR · M7.3-DISCOVERY-RUN · M7.4A-DATABASE-PERSISTENCE
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,

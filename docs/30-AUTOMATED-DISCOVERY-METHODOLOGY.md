@@ -2,8 +2,8 @@
 ## Automated Research Discovery — Methodology & M7.1 Foundation
 
 **Document:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`
-**Version:** 0.3.0
-**Status:** M7.1 IMPLEMENTED (contract + mock) · M7.2 IMPLEMENTED (Crossref connector) · M7.3 orchestrator IMPLEMENTED offline (DB candidate persistence BLOCKED on approved migration `0013`). M7.4+ NOT AUTHORIZED.
+**Version:** 0.4.0
+**Status:** M7.1–M7.3 IMPLEMENTED · M7.4A IMPLEMENTED (migration `0013` + DB candidate persistence, PGlite-verified; live Supabase PENDING). M7.4B (review UI) NOT AUTHORIZED.
 **Parent:** `00-ARCHITECTURE-BASELINE.md`
 **Related:** `11-DATA-IMPORT-ARCHITECTURE.md`, `24-MULTI-SOURCE-INGESTION.md`,
 `05-DATABASE-ARCHITECTURE.md`, `16-SECURITY.md`, `19-DEPLOYMENT.md`,
@@ -390,19 +390,31 @@ reason) — never raw payloads, headers, or secrets. No canonical `research_stud
 `publication` is written; nothing is published; authorization refuses non-staff
 callers; there is no public endpoint and no UI.
 
-## 10.7 Schema firewall (candidate persistence BLOCKED)
+## 10.7 Candidate persistence (M7.4A — implemented, migration 0013)
 
-The current `import_candidate` schema has **no `source_key` / `stable_source_id`
-column and no unique constraint**, so DB-enforced candidate idempotency is
-**impossible without a migration**. Per the M7.3 firewall the migration was NOT
-created and idempotency was NOT weakened; the DB adapter is deferred. The proposed
-`0013_discovery_candidate_identity.sql` (two columns + a unique index; `service_role`
-write path; PGlite RLS/idempotency tests) is specified in
-`docs/reports/M7.3-DISCOVERY-RUN.md` and awaits approval. `import_job` already
-supports the run lifecycle unchanged.
+The M7.3 schema firewall was **resolved under M7.4A** (approved). `import_candidate`
+had no `source_key` / `source_stable_id` column and no unique constraint, so
+migration `0013_discovery_candidate_identity.sql` adds those two nullable columns
+plus a **partial** unique index on `(source_key, source_stable_id)` where both are
+present (NULL identities — manual/DEMO candidates — are exempt and never collide).
+It is additive, touches no other table, and adds no RLS policy.
 
-## 10.8 What M7.3 deliberately does NOT do
+A thin server-side adapter (`packages/database/src/service/discovery.ts`)
+implements the ports: `DatabaseDiscoveryStore` maps runs/candidates to
+`import_job` / `import_candidate` (idempotent `INSERT … ON CONFLICT … DO NOTHING`
+— the DB constraint is the authority; the existing candidate is preserved), and
+`DatabaseStudyIndex` reads `research_identifier` / `research_study` / `publication`
+for research-level dedup. Writes are the `service_role` path (RLS unchanged:
+staff-only SELECT, anon fully denied). The adapter writes nothing canonical, and a
+test asserts `research_study` / `publication` / `classification` stay empty after a
+run. PGlite verifies the full migration sequence `0001`→`0013`, idempotency, the
+NULL policy, provenance, dedup linkage, and the RLS/authorization matrix; live
+Supabase application is PENDING. See `docs/reports/M7.4A-DATABASE-PERSISTENCE.md`.
 
-No database adapter/migration (blocked, reported), no scheduler, Hermes, scraping,
-PubMed/Europe PMC, AI, vector search, canonical creation, publication, outcome/
-quality/efficacy classification, voting, review UI, or public endpoint.
+## 10.8 What M7.3 / M7.4A deliberately do NOT do
+
+No scheduler, Hermes, queue, scraping, PubMed/Europe PMC, AI, vector search,
+canonical creation, publication, outcome/quality/efficacy classification, voting,
+review UI, or public endpoint. Candidate acceptance (converting a candidate to a
+canonical draft) belongs to the later, separately-authorized human-review
+milestone (M7.4B).

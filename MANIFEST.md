@@ -70,9 +70,9 @@ Architecture specifications (`docs/`):
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
 - `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Automated Research Discovery
-  methodology + as-built record (**M7.1 + M7.2 + M7.3 orchestrator implemented
-  (M7.3 DB persistence blocked on migration 0013); M7.4+ not authorized**): the
-  LOCKED credibility boundaries
+  methodology + as-built record (**M7.1 + M7.2 + M7.3 + M7.4A implemented
+  (migration 0013 + DB candidate persistence, PGlite-verified; live Supabase
+  pending); M7.4B review UI not authorized**): the LOCKED credibility boundaries
   (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research record,
   AI ≠ authority, duplicate ≠ delete, relevance ≠ efficacy), the provider-neutral
   `packages/discovery` contract surface (`DiscoveryProvider`, `SourceDescriptor`,
@@ -126,6 +126,10 @@ Reports (`docs/reports/`):
 - `M7.3-DISCOVERY-RUN.md` — Milestone 7.3 orchestrator checkpoint + **schema
   firewall** report: candidate persistence BLOCKED on the proposed
   `0013_discovery_candidate_identity.sql` migration (documented, NOT created)
+- `M7.4A-DATABASE-PERSISTENCE.md` — Milestone 7.4A: migration `0013` + the
+  server-side discovery persistence adapter; DB-enforced idempotency, NULL policy,
+  provenance, dedup linkage, no canonical writes, and the anon-denied RLS matrix —
+  all PGlite-verified; live Supabase PENDING
 
 ## Application foundation (Milestone 1)
 
@@ -200,6 +204,17 @@ Reports (`docs/reports/`):
   privilege `anon` grant hardening (defence in depth beneath RLS), resilient to
   Supabase default privileges (ADR-018). Prepared + PGlite-tested; **not** applied
   to production without explicit owner approval.
+- `supabase/migrations/0013_discovery_candidate_identity.sql` — **M7.4A** discovery
+  candidate identity: adds `source_key` / `source_stable_id` to `import_candidate`
+  plus a **partial** unique index on `(source_key, source_stable_id)` (NULLs exempt)
+  for DB-enforced candidate idempotency. Additive; no other table, no RLS change.
+  PGlite-verified `0001`→`0013`; live Supabase application PENDING.
+- `packages/database/src/service/discovery.ts` — **M7.4A** the thin server-side
+  (`service_role`) discovery persistence adapter: `DatabaseDiscoveryStore` maps the
+  M7.3 ports to `import_job` / `import_candidate` (idempotent `INSERT … ON CONFLICT
+… DO NOTHING`, append-only audit) and `DatabaseStudyIndex` reads
+  `research_identifier` / `research_study` / `publication` for research-level dedup.
+  Persistence only — no provider/dedup/AI/UI logic; writes nothing canonical.
 - `packages/database/src/service/ai.ts` — AI job/result persistence, the cache
   identity resolver, minimised task input, suggestion listing, and the append-only
   human Accept/Edit/Reject decision; `ai_result_id` provenance threaded through the
