@@ -105,6 +105,17 @@ Reports (`docs/reports/`):
   matrix with honest provenance tiers (LOCAL / PGLITE / REAL SUPABASE reported /
   LIVE BROWSER / PENDING / BLOCKED); Pages base-path fix verified locally; live
   Pages/SSR/OpenRouter BLOCKED or PENDING (egress-sandboxed)
+- `M6.3-DEVELOPMENT-COMPLETION.md` — Milestone 6.3 offline development-completion
+  checkpoint (offline gates re-run VERIFIED; architecture boundary guards +
+  read-only production inspection tooling added; owner runbook + M7 readiness
+  review; live Supabase/Render/Pages PENDING, OpenRouter BLOCKED; M7 not started)
+- `PRODUCTION-DATABASE-INSPECTION.sql` / `.md` — owner-run, **read-only** live
+  database inspection (migrations 0001–0012, RLS, anon least-privilege, guard
+  functions); CI-guarded read-only; live result PENDING
+- `OWNER-PRODUCTION-VERIFICATION-RUNBOOK.md` — 14-step, laptop-friendly runbook for
+  the owner's eventual live Supabase/Render/public/AI verification
+- `M7-READINESS-REVIEW.md` — review of the M7 (automated discovery) substrate;
+  M7 IMPLEMENTATION = NOT STARTED, AUTHORIZATION = NOT GRANTED
 
 ## Application foundation (Milestone 1)
 
