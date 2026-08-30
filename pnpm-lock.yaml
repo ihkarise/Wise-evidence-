@@ -113,6 +113,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@wise-evidence/discovery':
+        specifier: workspace:*
+        version: link:../discovery
       '@wise-evidence/domain':
         specifier: workspace:*
         version: link:../domain
