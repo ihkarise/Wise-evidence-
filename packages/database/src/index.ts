@@ -68,3 +68,14 @@ export * from "./stats.js";
  * not import. AI never writes canonical data, never publishes, never enters M5.
  */
 export * from "./service/ai.js";
+
+/**
+ * Milestone 7.4A discovery persistence adapter (docs/30 §10, migration 0013,
+ * ADR-020). The thin, server-side (`service_role`) implementation of the M7.3
+ * discovery persistence ports (`DiscoveryRunStore` / `CandidateStore`) and the
+ * read-only `KnownStudyIndex`, mapping to `import_job` / `import_candidate` and
+ * reading existing canonical studies for dedup. Holds NO provider/pagination/
+ * dedup/AI logic; writes nothing canonical and never publishes. Candidate
+ * idempotency is DB-enforced (migration 0013 partial unique index).
+ */
+export { DatabaseDiscoveryStore, DatabaseStudyIndex } from "./service/discovery.js";

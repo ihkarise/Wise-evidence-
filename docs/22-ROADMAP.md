@@ -209,6 +209,84 @@ First structured source connector: discovery, fetch, normalize, deduplicate,
 review-queue integration, scheduled job. Not all sources at once (master prompt
 §85, `11` §11).
 
+**M7.1 — Discovery provider contract + deterministic mock  ✅ complete.**
+The smallest provider-neutral foundation: the framework-independent
+`packages/discovery` package with the `DiscoveryProvider` contract (discover /
+fetch / normalize), `SourceDescriptor` (identity, capabilities, host allow-list,
+HTTPS/rate/size/candidate limits — no secrets), the typed discovery objects
+(`DiscoveryRequest`, `DiscoveryPage`, `SourceItem`, `FetchResult`,
+`NormalizedSourceItem`, `Provenance`), a typed provider-neutral error model
+(`DiscoveryError` with a closed code set + redaction), a source/provider registry
+seam (MOCK registered; CROSSREF / PUBMED / EUROPE_PMC fail closed as
+`NOT_CONFIGURED`), a pure normalizer reusing `@wise-evidence/domain`, and a
+deterministic offline `MockDiscoveryProvider` with fixtures covering success,
+pagination, empty, duplicate, malformed, missing/invalid DOI, and fetch
+failure / timeout / rate-limit. **No real network call, no Crossref, no
+scheduling, no scraping, no AI, no migration.** Every LOCKED boundary is
+test-covered (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research
+record, AI ≠ authority, duplicate ≠ delete): the package imports no AI /
+database / web / vendor SDK, exposes no generic "fetch any URL" helper, and
+writes nothing canonical. Design + as-built record in
+`docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md` and `ADR-020`; checkpoint in
+`docs/reports/M7.1-CHECKPOINT.md`. **M7.2 (Crossref adapter) is NOT started and
+NOT authorized.**
+
+**M7.2 — Crossref discovery connector  ✅ complete.** The first real
+`DiscoveryProvider`: `CrossrefDiscoveryProvider`, isolated in
+`packages/discovery/src/crossref/`, satisfying the M7.1 contract unchanged. It
+talks only to the structured Crossref REST API over a shared, injected,
+host-pinned (`api.crossref.org`), HTTPS-only, timeout/size-bounded,
+redirect-rejecting, content-type-validated HTTP layer; sanitizes untrusted
+metadata and canonicalises DOIs via `@wise-evidence/domain`; uses the canonical
+DOI as the stable source id; maps transport/HTTP failures (timeout, 429, 4xx/5xx,
+malformed, oversized, forbidden host) onto the typed discovery errors without
+leaking secrets; and registers CROSSREF in the registry (requiring an injected
+fetch, else `NOT_CONFIGURED`; MOCK unchanged; PUBMED/EUROPE_PMC still
+`NOT_CONFIGURED`). **No scraping, no scheduling, no retries, no AI, no database
+writes, no migration, no UI, no automatic classification or publication.** All
+tests are offline via injected fake fetch; one opt-in live smoke test is gated on
+`RUN_CROSSREF_LIVE=1` and skipped in CI (live call PENDING). See `docs/30` §9,
+`ADR-020` (M7.2 amendment), and `docs/reports/M7.2-CROSSREF-CONNECTOR.md`.
+**M7.3 (discovery orchestration + candidate persistence) is NOT started and NOT
+authorized.**
+
+**M7.3 — Discovery orchestrator + controlled run  ✅ complete (offline); DB
+candidate persistence BLOCKED on approved migration.** The bounded `runDiscovery`
+orchestrator (`packages/discovery/src/orchestrator/`): registry-based provider
+selection (MOCK and CROSSREF both run through it; PUBMED/EUROPE_PMC fail closed),
+hard budgets (pages/items/candidates/requests/duration/retries — no unbounded
+run), bounded retries with backoff/jitter and Retry-After (transient failures
+only), per-item failure isolation, conservative graded dedup (DOI → persistent id
+→ title+year → title; DEFINITE/PROBABLE/POSSIBLE/NEW; never merges or deletes),
+candidate idempotency on `(source_key, stable_source_id)`, and reviewable-candidate
+persistence through a **port** with a tested in-memory adapter. It writes nothing
+canonical, never publishes/classifies, never calls AI, and refuses non-staff
+callers (no public endpoint, no UI). **Schema firewall fired:** the current
+`import_candidate` schema cannot enforce candidate idempotency, so the migration
+was **not** created and the DB adapter is deferred — the required
+`0013_discovery_candidate_identity.sql` is proposed for approval in
+`docs/reports/M7.3-DISCOVERY-RUN.md`. See `docs/30` §10, `ADR-020`. **M7.4 (DB
+adapter, staff trigger, review UI, scheduling) is NOT started and NOT authorized.**
+
+**M7.4A — Discovery candidate persistence + migration 0013  ✅ complete
+(PGlite-verified; live Supabase PENDING).** The M7.3 schema firewall is resolved:
+migration `0013_discovery_candidate_identity.sql` adds `source_key` /
+`source_stable_id` to `import_candidate` and a **partial** unique index on
+`(source_key, source_stable_id)` (NULL identities exempt), and a thin server-side
+(`service_role`) adapter (`packages/database/src/service/discovery.ts`) implements
+the M7.3 persistence ports — `DatabaseDiscoveryStore` (→ `import_job` /
+`import_candidate`, idempotent `INSERT … ON CONFLICT … DO NOTHING`) and
+`DatabaseStudyIndex` (read-only research-level dedup). An end-to-end mock run
+persists candidates through PGlite with DB-enforced idempotency, provenance,
+preserved dedup decisions, no canonical writes, and a verified anon-denied RLS
+boundary. **No review UI, no accept/reject, no scheduler, no new provider, no AI,
+no publication.** Migrations are now `0001`–`0013`. See `docs/30` §10.7,
+`docs/reports/M7.4A-DATABASE-PERSISTENCE.md`. **M7.4B (candidate review UI) is NOT
+started and NOT authorized.**
+
+Later M7 phases (the candidate review UI, PubMed/Europe PMC adapters, and
+scheduling) remain design-pending and unauthorized — build in order.
+
 # 10. Phase 8 — Additional Sources
 
 Add connectors incrementally, each with tests, fixtures, normalization, and

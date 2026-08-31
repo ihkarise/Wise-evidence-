@@ -190,6 +190,18 @@ resolution actor, reason, timestamps. Corrections never overwrite history (§10)
 `ImportCandidate`: raw payload, normalized payload, dedup decision, duplicate-of
 ref (nullable), state (from `04` §32), error detail.
 
+**Migration `0013` (M7.4A) — discovery candidate identity.** Automated discovery
+persistence requires candidate idempotency, which the original `import_candidate`
+could not enforce. `0013` adds two nullable columns — `source_key` and
+`source_stable_id` (e.g. `crossref` + the canonical DOI) — and a **partial** unique
+index `import_candidate_source_identity_uniq` on `(source_key, source_stable_id)`
+`WHERE source_key IS NOT NULL AND source_stable_id IS NOT NULL`. The partial
+predicate exempts NULL identities (manual entry / DEMO fixtures) so they never
+collide, keeping the change additive and safe for existing rows. Writes are the
+`service_role` server path (RLS unchanged: staff-only SELECT, anon denied); the
+adapter inserts idempotently via `ON CONFLICT … DO NOTHING`, preserving the
+existing candidate. See `docs/30` §10.7, `docs/reports/M7.4A-DATABASE-PERSISTENCE.md`.
+
 ## User / Role
 `User`: id, auth subject (Supabase auth id), email, display name.
 `Role`: `PUBLIC | REVIEWER | ADMIN` (future: SENIOR_REVIEWER, DATA_CURATOR,
