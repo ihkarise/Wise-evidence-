@@ -418,3 +418,80 @@ canonical creation, publication, outcome/quality/efficacy classification, voting
 review UI, or public endpoint. Candidate acceptance (converting a candidate to a
 canonical draft) belongs to the later, separately-authorized human-review
 milestone (M7.4B).
+
+# 11. M7.4B — Candidate review workflow (implemented, no migration)
+
+M7.4B adds the **human** review workflow over the `import_candidate` rows that
+M7.3/M7.4A persist. It closes the loop from an automated candidate to the START of
+the existing manual research lifecycle — never past it.
+
+## 11.1 Flow
+
+```text
+import_candidate → staff review → ACCEPT / REJECT / LINK DUPLICATE / CORRECT /
+REFETCH / DEFER
+    ↓ (ACCEPT)
+canonical ResearchStudy/Publication DRAFT  (via createDraftFromMetadata)
+    ↓
+existing human classification / review workflow (M3)
+    ↓
+ADMIN approval → PUBLISHED
+```
+
+Acceptance is only the first hop: it produces a `DRAFT` / `IMPORTED` study and
+**stops**. It never publishes, never sets outcome/quality/confidence/evidence
+level, and never calls AI — those remain the existing, separate, human-controlled
+M3/M6 steps.
+
+## 11.2 Service layer (`packages/database/src/service/candidates.ts`)
+
+Staff-only operations on the shared `SqlExecutor`, each re-checking the DB-backed
+role (`requireStaff`) as defense in depth over RLS, each writing append-only
+`audit_log`:
+
+- `listCandidates` / `getCandidateDetail` — reads (safe, defensively-coerced view
+  of the untrusted normalized payload; no classification fields exist to leak).
+- `acceptCandidate` — creates a draft through the **existing**
+  `createDraftFromMetadata`, reusing the SAME discovery `research_source` (so
+  provenance is shared), then marks the candidate `IMPORTED`. If a study already
+  owns the DOI, it links a duplicate instead of creating a second study.
+- `rejectCandidate` — terminal `FAILED` + reason; the row is retained (never
+  deleted).
+- `linkCandidateDuplicate` — sets `duplicate_of_study_id` to a **server-validated**
+  study; candidate stays reviewable (`DUPLICATE_CANDIDATE`).
+- `correctCandidate` — records a proposal in the existing `correction` table
+  (`target_type = 'import_candidate'`); the candidate payload is **not** mutated,
+  so discovery provenance is preserved.
+- `requestCandidateRefetch` — records an auditable request only; performs **no**
+  network I/O (the bounded, host-pinned re-fetch is the orchestrator's job — never
+  an arbitrary URL fetch from the review path).
+- `deferCandidate` — leaves the candidate in the queue with an audit note.
+
+## 11.3 Traceability (no new column / migration)
+
+The chain **source → discovery run → source stable id → import_candidate →
+research_study/publication** is fully traceable with the existing schema:
+`import_job.source_id` → the discovery `research_source`; `import_candidate`
+carries `import_job_id` + `source_key` + `source_stable_id` (the canonical DOI);
+on accept the created `publication.source_id` is that same `research_source`, the
+created `research_identifier.value_canonical` equals the candidate's DOI, and an
+append-only `audit_log` `candidate_accepted` entry records `{candidateId →
+studyId}`. The M7.4A schema firewall does **not** re-fire — migrations remain
+`0001`→`0013`.
+
+## 11.4 Web (`apps/web`)
+
+`/admin/imports` (queue, state filters) and `/admin/imports/[id]` (detail +
+structured Accept/Reject/Link/Correct/Refetch/Defer controls), plus the
+`POST /api/admin/imports/[id]` dispatch. Middleware gates `/admin` + `/api/admin`
+to staff; every write runs the service layer on the privileged path exactly like
+M3. Untrusted source metadata is auto-escaped by Astro (never rendered as HTML).
+
+## 11.5 What M7.4B deliberately does NOT do
+
+No automatic publication, no automatic classification, no AI, no candidate
+deletion, no scheduler/queue/Hermes, no scraping, no arbitrary URL fetching, no new
+auth/audit/research/candidate/classification/duplicate table, and no migration.
+Live Supabase (auth/RLS/workflow) verification is PENDING a provisioned project;
+all M7.4B verification here is offline PGlite. See
+`docs/reports/M7.4B-CANDIDATE-REVIEW.md`.

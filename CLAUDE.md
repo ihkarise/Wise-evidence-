@@ -117,10 +117,29 @@ decisions, **no canonical writes** (a test asserts `research_study` / `publicati
 / `classification` stay empty), and a verified anon-denied RLS/authorization
 matrix; live Supabase application of `0013` is PENDING. Migrations are now
 `0001`–`0013` (see `docs/30` §10.7, `docs/reports/M7.4A-DATABASE-PERSISTENCE.md`).
-**M7.4B (the candidate review UI / accept-reject) and later M7/M8 work are NOT
-started and NOT authorized.** There is still **no live automated discovery** and
-**no review UI**. Live provider and Supabase (browser/auth/DB) verification is
-PENDING a provisioned project.
+**Milestone 7.4B** then added the human **discovery-candidate review workflow**:
+a staff-only service layer (`packages/database/src/service/candidates.ts`) over
+`import_candidate` — list/detail plus accept / reject / link-duplicate / correct /
+refetch / defer — and the `/admin/imports` + `/admin/imports/[id]` UI with a
+`POST /api/admin/imports/[id]` dispatch. **ACCEPT starts the existing manual
+lifecycle only** (a `DRAFT` via `createDraftFromMetadata`, reusing the same
+discovery `research_source`): it **never publishes, never classifies (outcome /
+quality / confidence / evidence level), and never invokes AI**; candidates are
+never deleted (reject → retained `FAILED`; duplicates stay reviewable); correction
+reuses the existing `correction` table without mutating the payload; refetch does
+**no** network I/O (only an auditable request — the bounded, host-pinned re-fetch
+stays the orchestrator's job); every mutation re-checks the DB-backed staff role
+and writes append-only `audit_log`. Traceability source → run → candidate → study
+is preserved with existing columns + audit, so **no migration** was needed
+(migrations remain `0001`–`0013`; the M7.4A firewall did not re-fire). All firewalls
+are PGlite-test-covered (496 passed / 2 skipped; typecheck/lint/format/web-build
+clean); RLS is unchanged and authoritative (staff-only SELECT, anon denied). Live
+Supabase (auth/RLS/workflow) verification is PENDING a provisioned project (kept
+separate from the offline PGlite result). See `docs/30` §11,
+`docs/reports/M7.4B-CANDIDATE-REVIEW.md`. **Later M7/M8 work (M7.5 real providers /
+scheduling, M8 ingestion) is NOT started and NOT authorized.** There is still **no
+live automated discovery**. Live provider and Supabase (browser/auth/DB)
+verification is PENDING a provisioned project.
 
 ```text
 .
