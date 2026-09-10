@@ -102,6 +102,59 @@ export type DuplicateVerdict =
 /** What a duplicate was matched by, in the approved graded order. */
 export type DuplicateMatchedBy = "DOI" | "PERSISTENT_ID" | "TITLE_YEAR" | "TITLE" | null;
 
+/**
+ * An enumerated, auditable reason for a deduplication verdict (M7.5). Every
+ * decision carries exactly one code so a reviewer sees WHY the engine reached its
+ * verdict without parsing prose. The codes map 1:1 onto the matching hierarchy:
+ *
+ *   DOI_EXACT_MATCH             → LEVEL 1  (DEFINITE)
+ *   PERSISTENT_IDENTIFIER_MATCH → LEVEL 2  (DEFINITE)
+ *   TITLE_YEAR_MATCH            → LEVEL 3  (PROBABLE)
+ *   TITLE_EXACT_MATCH           → LEVEL 4  (POSSIBLE — includes the year-conflict case)
+ *   INSUFFICIENT_METADATA       → no comparable identity was available to check
+ *   NO_MATCH                    → checked, nothing matched (NEW)
+ *
+ * `TITLE_SIMILAR` (LEVEL 5, fuzzy similarity) is deliberately NOT implemented in
+ * M7.5 — it is the highest false-positive risk and would require either an
+ * unauthorized `pg_trgm` migration or an unbounded scan (see
+ * docs/reports/M7.5-DEDUPLICATION.md). It is intentionally absent from this union.
+ */
+export type DedupReasonCode =
+  | "DOI_EXACT_MATCH"
+  | "PERSISTENT_IDENTIFIER_MATCH"
+  | "TITLE_YEAR_MATCH"
+  | "TITLE_EXACT_MATCH"
+  | "INSUFFICIENT_METADATA"
+  | "NO_MATCH";
+
+/**
+ * Structured, reviewer-facing explanation of a deduplication decision (M7.5).
+ * It records WHICH signals contributed so a human can adjudicate — it is an
+ * identity signal ONLY and never implies outcome, quality, confidence, efficacy,
+ * or scientific validity. All values are safe (canonical identifiers / years),
+ * never raw untrusted markup.
+ */
+export interface DedupExplanation {
+  /** The enumerated reason for the verdict. */
+  readonly reasonCode: DedupReasonCode;
+  /** Identifier type that matched (DOI/PMID/PMCID/ARXIV), or null. */
+  readonly matchedIdentifierType: string | null;
+  /** The canonical identifier value that matched, or null. */
+  readonly matchedIdentifierValue: string | null;
+  /** Whether the normalized title matched an existing study. */
+  readonly titleMatched: boolean;
+  /** The candidate's publication year (`YYYY`), or null when unknown. */
+  readonly candidateYear: string | null;
+  /** The matched study's known publication years (empty when none/unknown). */
+  readonly matchedStudyYears: readonly string[];
+  /**
+   * True when the title matched but the candidate's year could not be confirmed
+   * against the matched study (year absent on either side, or years differ). A
+   * year conflict is why a title match stays POSSIBLE, never PROBABLE.
+   */
+  readonly yearConflict: boolean;
+}
+
 /** The conservative deduplication decision for one candidate. */
 export interface DedupDecision {
   readonly verdict: DuplicateVerdict;
@@ -110,6 +163,8 @@ export interface DedupDecision {
   readonly relatedStudyId: string | null;
   /** Safe, human-readable reason preserved for the reviewer. */
   readonly reason: string;
+  /** Structured explainability for the reviewer (M7.5). */
+  readonly explanation: DedupExplanation;
 }
 
 /** The safe, structured result of a run (observability; no secrets/raw payloads). */

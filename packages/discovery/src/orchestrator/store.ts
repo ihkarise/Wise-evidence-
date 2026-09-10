@@ -22,7 +22,7 @@ import type {
   DiscoveryRunTrigger,
   RunCounters,
 } from "./types.js";
-import type { KnownStudyIndex } from "./dedup.js";
+import type { KnownStudyIndex, KnownStudyMatch } from "./dedup.js";
 
 /** Input to create a run row (`import_job`). */
 export interface CreateRunInput {
@@ -174,20 +174,23 @@ export interface SeedStudy {
   readonly doi?: string;
   readonly identifiers?: readonly { readonly type: string; readonly value: string }[];
   readonly normalizedTitle?: string;
+  /** A single known year (convenience). Combined with `years` for the match. */
   readonly year?: string;
+  /** All known publication years for the study. */
+  readonly years?: readonly string[];
 }
 
 /**
  * Deterministic, offline read-only `KnownStudyIndex` for tests. It NEVER writes
  * canonical data — it only answers the dedup lookups against a seeded set of
- * existing studies, standing in for the future `research_identifier`/`publication`
- * read adapter.
+ * existing studies, standing in for the `research_identifier`/`research_study`/
+ * `publication` read adapter. Title collisions resolve to the FIRST seeded study
+ * (stable, deterministic) exactly as the DB adapter's `order by`/`limit 1` does.
  */
 export class InMemoryStudyIndex implements KnownStudyIndex {
   readonly #byDoi = new Map<string, string>();
   readonly #byIdentifier = new Map<string, string>();
-  readonly #byTitleYear = new Map<string, string>();
-  readonly #byTitle = new Map<string, string>();
+  readonly #byTitle = new Map<string, KnownStudyMatch>();
 
   constructor(seed: readonly SeedStudy[] = []) {
     for (const s of seed) {
@@ -195,11 +198,9 @@ export class InMemoryStudyIndex implements KnownStudyIndex {
       for (const id of s.identifiers ?? []) {
         this.#byIdentifier.set(identityKey(id.type, id.value), s.studyId);
       }
-      if (s.normalizedTitle !== undefined) {
-        this.#byTitle.set(s.normalizedTitle, s.studyId);
-        if (s.year !== undefined) {
-          this.#byTitleYear.set(identityKey(s.normalizedTitle, s.year), s.studyId);
-        }
+      if (s.normalizedTitle !== undefined && !this.#byTitle.has(s.normalizedTitle)) {
+        const years = [...new Set([...(s.year !== undefined ? [s.year] : []), ...(s.years ?? [])])];
+        this.#byTitle.set(s.normalizedTitle, { studyId: s.studyId, years });
       }
     }
   }
@@ -210,10 +211,7 @@ export class InMemoryStudyIndex implements KnownStudyIndex {
   findStudyByIdentifier(type: string, value: string): Promise<string | null> {
     return Promise.resolve(this.#byIdentifier.get(identityKey(type, value)) ?? null);
   }
-  findStudyByTitleYear(normalizedTitle: string, year: string): Promise<string | null> {
-    return Promise.resolve(this.#byTitleYear.get(identityKey(normalizedTitle, year)) ?? null);
-  }
-  findStudyByTitle(normalizedTitle: string): Promise<string | null> {
+  findStudyByTitle(normalizedTitle: string): Promise<KnownStudyMatch | null> {
     return Promise.resolve(this.#byTitle.get(normalizedTitle) ?? null);
   }
 }

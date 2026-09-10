@@ -110,7 +110,12 @@ export {
 
 export { DEFAULT_BUDGET, HARD_MAX_BUDGET, resolveBudget } from "./orchestrator/budget.js";
 
-export { classifyDuplicate, yearOf, type KnownStudyIndex } from "./orchestrator/dedup.js";
+export {
+  classifyDuplicate,
+  yearOf,
+  type KnownStudyIndex,
+  type KnownStudyMatch,
+} from "./orchestrator/dedup.js";
 
 export { withRetry, parseRetryAfterMs, type RetryOptions } from "./orchestrator/retry.js";
 
@@ -137,6 +142,8 @@ export type {
   RunCounters,
   RunErrorEntry,
   DedupDecision,
+  DedupExplanation,
+  DedupReasonCode,
   DuplicateVerdict,
   DuplicateMatchedBy,
 } from "./orchestrator/types.js";
