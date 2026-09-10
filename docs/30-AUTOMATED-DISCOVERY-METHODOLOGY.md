@@ -363,7 +363,7 @@ and honour a `Retry-After` hint; they retry ONLY transient failures
 (SOURCE_UNAVAILABLE / RATE_LIMITED / TIMEOUT), never malformed data, invalid
 identifiers, or a forbidden source. `sleep`/`rng` are injected for determinism.
 
-## 10.4 Deduplication (conservative, graded)
+## 10.4 Deduplication (conservative, graded) — M7.5 explainability
 
 `dedup.ts` applies the approved order against a read-only `KnownStudyIndex` port
 (reads existing canonical studies; never writes): exact DOI → exact persistent id
@@ -371,6 +371,36 @@ identifiers, or a forbidden source. `sleep`/`rng` are injected for determinism.
 DEFINITE / PROBABLE / POSSIBLE / NEW. A DEFINITE match records the related study
 id for the reviewer; PROBABLE/POSSIBLE stay reviewable. Nothing is ever
 auto-merged or deleted (`DUPLICATE ≠ DELETE`); the new candidate is always kept.
+
+**M7.5** made every decision explainable and hardened the conservative edges,
+with **no schema change** (existing `idx_identifier_value_canonical` and
+`idx_study_normalized_title` are sufficient; the title lookup returns the matched
+study's publication years via a bounded correlated aggregate, never a table scan):
+
+- Each `DedupDecision` now carries a structured `explanation` with an enumerated
+  `reasonCode` (`DOI_EXACT_MATCH`, `PERSISTENT_IDENTIFIER_MATCH`,
+  `TITLE_YEAR_MATCH`, `TITLE_EXACT_MATCH`, `INSUFFICIENT_METADATA`, `NO_MATCH`),
+  the matched identifier type/value, whether the title matched, the candidate's
+  year, the matched study's known years, and a `yearConflict` flag — so a reviewer
+  sees WHAT matched, WHY, WHICH study, WHICH identifier, and the year comparison
+  (e.g. "2022 vs 2023"). The `/admin/imports/[id]` panel surfaces reason code and
+  the year comparison.
+- **Year conflict** is explicit: a title match whose year cannot be confirmed
+  against the matched study (year absent on either side, or years differ) stays
+  POSSIBLE and explains the mismatch — it never silently reads as PROBABLE.
+- **Empty/punctuation-only title guard**: a title that normalizes to `""` is
+  treated as no title signal and can never match a study with an empty normalized
+  title (a false-positive that the pre-M7.5 title check could have produced).
+- **Study ≠ Publication**: a DOI/persistent-id match only FLAGS the related study
+  and routes to human review; the candidate may be a different publication of that
+  study (protocol, primary report, secondary analysis, erratum, …). The engine
+  never collapses records.
+- **LEVEL 5 fuzzy title similarity is deliberately NOT implemented.** It is the
+  highest false-positive risk and would need either an unauthorized `pg_trgm`
+  migration or an unbounded scan; WiseEvidence prefers a missed duplicate
+  (reviewable later) over a wrong merge (destroys provenance). See
+  `docs/reports/M7.5-DEDUPLICATION.md`. The matcher stays PURE and deterministic
+  (no randomness, clock, network, or AI).
 
 ## 10.5 Idempotency
 

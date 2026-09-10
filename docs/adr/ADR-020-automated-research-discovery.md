@@ -1,7 +1,7 @@
 # ADR-020: Automated Research Discovery — Provider-Neutral Contract & Deterministic Mock (M7.1)
 
-**Status:** Accepted — IMPLEMENTED (M7.1 contract + mock; M7.2 Crossref connector, see Amendment). M7.3+ NOT started, NOT authorized.
-**Date:** 2026-08-30 (M7.1); amended 2026-08-30 (M7.2)
+**Status:** Accepted — IMPLEMENTED (M7.1 contract + mock; M7.2 Crossref connector; M7.3 orchestrator; M7.4A DB persistence + migration 0013; M7.4B review UI; M7.5 dedup explainability — see Amendments). M7.6 NOT started, NOT authorized.
+**Date:** 2026-08-30 (M7.1); amended 2026-08-30 (M7.2), 2026-09-10 (M7.5)
 **Related:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`,
 `docs/11-DATA-IMPORT-ARCHITECTURE.md`, `docs/24-MULTI-SOURCE-INGESTION.md`,
 `docs/05-DATABASE-ARCHITECTURE.md`, `docs/16-SECURITY.md`, `docs/20-TESTING.md`,
@@ -140,3 +140,32 @@ egress-restricted environment (PENDING).
 **Scope firewall (M7.2).** M7.3 (discovery orchestration + candidate persistence),
 dedup against production records, scheduling, Hermes, PubMed / Europe PMC, and AI
 enrichment are **not started and not authorized**.
+
+## Amendment (M7.5 — conservative dedup explainability, implemented)
+
+M7.5 enriches the M7.3/M7.4A research-level deduplication with **no contract
+break and no migration** (`DedupDecision` gains an optional structured
+`explanation`; existing consumers are unaffected). Decisions specific to matching:
+
+1. **Explainable, enumerated decisions.** Every decision carries a `reasonCode`
+   (`DOI_EXACT_MATCH` / `PERSISTENT_IDENTIFIER_MATCH` / `TITLE_YEAR_MATCH` /
+   `TITLE_EXACT_MATCH` / `INSUFFICIENT_METADATA` / `NO_MATCH`) plus the matched
+   identifier, the candidate/study years, and a `yearConflict` flag — surfaced in
+   the M7.4B review UI.
+2. **Conservative edges hardened.** A title that normalizes to empty can never
+   match; a title match with an unconfirmed/conflicting year stays POSSIBLE (never
+   PROBABLE). `Study ≠ Publication` is preserved — a DOI/id match only flags a
+   related study and routes to review; nothing is merged, deleted, or published.
+3. **LEVEL 5 fuzzy similarity deliberately NOT implemented.** It is the highest
+   false-positive risk and would require an unauthorized `pg_trgm` migration or an
+   unbounded scan; `TITLE_SIMILAR` is intentionally absent from the reason-code
+   union. WiseEvidence prefers a missed duplicate over a wrong merge.
+4. **Pure & indexed.** The matcher is deterministic (no randomness/clock/network/
+   AI); the DB index uses existing `idx_identifier_value_canonical` /
+   `idx_study_normalized_title` with bounded, per-study year aggregation — never a
+   table scan.
+
+**Scope firewall (M7.5).** M7.6, scheduling, Hermes, new providers (PubMed /
+Europe PMC), AI enrichment, vector/keyword search, and any automatic
+merge/accept/delete/classify/publish are **not started and not authorized**. No
+live provider or Supabase run was performed; those remain PENDING/BLOCKED.

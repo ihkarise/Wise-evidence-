@@ -281,11 +281,23 @@ persists candidates through PGlite with DB-enforced idempotency, provenance,
 preserved dedup decisions, no canonical writes, and a verified anon-denied RLS
 boundary. **No review UI, no accept/reject, no scheduler, no new provider, no AI,
 no publication.** Migrations are now `0001`–`0013`. See `docs/30` §10.7,
-`docs/reports/M7.4A-DATABASE-PERSISTENCE.md`. **M7.4B (candidate review UI) is NOT
-started and NOT authorized.**
+`docs/reports/M7.4A-DATABASE-PERSISTENCE.md`.
 
-Later M7 phases (the candidate review UI, PubMed/Europe PMC adapters, and
-scheduling) remain design-pending and unauthorized — build in order.
+**M7.4B (candidate review UI)** then added the staff-only human review workflow
+over `import_candidate` (accept → DRAFT only, reject, link-duplicate, correct,
+refetch, defer; never publish/classify/AI; candidates never deleted). See
+`docs/30` §11, `docs/reports/M7.4B-CANDIDATE-REVIEW.md`.
+
+**M7.5 (conservative deduplication & matching)** then made every research-level
+dedup decision explainable (enumerated reason codes, identifier/year evidence,
+explicit year-conflict), guarded an empty-title false positive, and added
+adversarial/determinism/safety coverage — with **no migration, no new provider,
+no AI**. Fuzzy title similarity (LEVEL 5) is deliberately deferred (false-positive
+risk + would need an unauthorized index). See `docs/30` §10.4,
+`docs/reports/M7.5-DEDUPLICATION.md`. **M7.6 is NOT started and NOT authorized.**
+
+Later M7 phases (PubMed/Europe PMC adapters and scheduling) remain design-pending
+and unauthorized — build in order.
 
 # 10. Phase 8 — Additional Sources
 

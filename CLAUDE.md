@@ -136,9 +136,28 @@ are PGlite-test-covered (496 passed / 2 skipped; typecheck/lint/format/web-build
 clean); RLS is unchanged and authoritative (staff-only SELECT, anon denied). Live
 Supabase (auth/RLS/workflow) verification is PENDING a provisioned project (kept
 separate from the offline PGlite result). See `docs/30` §11,
-`docs/reports/M7.4B-CANDIDATE-REVIEW.md`. **Later M7/M8 work (M7.5 real providers /
-scheduling, M8 ingestion) is NOT started and NOT authorized.** There is still **no
-live automated discovery**. Live provider and Supabase (browser/auth/DB)
+`docs/reports/M7.4B-CANDIDATE-REVIEW.md`. **Milestone 7.5** then made the existing
+research-level **deduplication explainable and hardened its conservative edges**,
+with **no migration, no new provider, and no AI**: every `DedupDecision` now
+carries a structured `explanation` (enumerated `reasonCode` —
+`DOI_EXACT_MATCH` / `PERSISTENT_IDENTIFIER_MATCH` / `TITLE_YEAR_MATCH` /
+`TITLE_EXACT_MATCH` / `INSUFFICIENT_METADATA` / `NO_MATCH` — the matched
+identifier, candidate/study years, and a `yearConflict` flag), surfaced in the
+`/admin/imports/[id]` review panel; a title that normalizes to empty can no longer
+forge a match; a title match with an unconfirmed/conflicting year stays POSSIBLE
+(never PROBABLE); and `Study ≠ Publication` is preserved (a DOI/id match only
+FLAGS a related study and routes to human review — never merges/deletes/publishes/
+classifies). **LEVEL 5 fuzzy title similarity is deliberately NOT implemented**
+(the highest false-positive risk; would need an unauthorized `pg_trgm` migration
+or an unbounded scan) — WiseEvidence prefers a missed duplicate over a wrong merge.
+The matcher stays pure/deterministic and uses only existing indexes
+(`idx_identifier_value_canonical`, `idx_study_normalized_title`) with bounded
+per-study year aggregation — **no `research_study` table scan**. Migrations remain
+`0001`–`0013`. Offline: 526 passed / 2 skipped (typecheck/lint/format/web-build/
+diff-check/secret-scan clean); live PENDING/BLOCKED (see `docs/30` §10.4, `ADR-020`
+M7.5 amendment, `docs/reports/M7.5-DEDUPLICATION.md`). **Later M7/M8 work (M7.6,
+real-provider scheduling, M8 ingestion) is NOT started and NOT authorized.** There
+is still **no live automated discovery**. Live provider and Supabase (browser/auth/DB)
 verification is PENDING a provisioned project.
 
 ```text
@@ -158,7 +177,7 @@ verification is PENDING a provisioned project.
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
-├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports (in-memory; DB adapter BLOCKED on migration 0013). No scraping/scheduler/AI/DB-write/migration.
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports; M7.5 explainable conservative dedup (dedup.ts matcher.test.ts — reason codes, year-conflict, empty-title guard; no fuzzy similarity). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
@@ -171,7 +190,7 @@ verification is PENDING a provisioned project.
     ├── 27-PUBLIC-RESEARCH-EXPLORER.md # M4 design checkpoint (implemented)
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
-    ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
+    ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1–M7.5 discovery (implemented; §10.4 M7.5 dedup; M7.6+ design-pending)
     ├── adr/     ADR-001 … ADR-020 (+ index/template)
     └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR · M7.3-DISCOVERY-RUN · M7.4A-DATABASE-PERSISTENCE
 ```
