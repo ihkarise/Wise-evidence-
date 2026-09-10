@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@wise-evidence/discovery": "workspace:*",
     "@wise-evidence/domain": "workspace:*"
   },
   "devDependencies": {

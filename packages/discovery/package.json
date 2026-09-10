@@ -1,0 +1,23 @@
+{
+  "name": "@wise-evidence/discovery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Provider-neutral automated-research-discovery foundation for WiseEvidence (M7.1): the DiscoveryProvider contract, SourceDescriptor, typed discovery objects and errors, a source/provider registry seam, and a deterministic offline MockDiscoveryProvider. Discovery may discover/fetch/normalize/queue candidates only — it never publishes, classifies, or writes canonical research. No Astro, React, Supabase, web UI, or AI imports; DOI/title canonicalisation is reused from @wise-evidence/domain.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@wise-evidence/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0"
+  }
+}

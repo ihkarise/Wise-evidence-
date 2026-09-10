@@ -113,6 +113,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@wise-evidence/discovery':
+        specifier: workspace:*
+        version: link:../discovery
       '@wise-evidence/domain':
         specifier: workspace:*
         version: link:../domain
@@ -120,6 +123,16 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.5.8
         version: 0.5.8
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+
+  packages/discovery:
+    dependencies:
+      '@wise-evidence/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.1

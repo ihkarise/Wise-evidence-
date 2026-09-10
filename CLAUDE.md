@@ -64,9 +64,63 @@ configuration, thin presets (openrouter · ollama · lmstudio · vllm ·
 openai-compatible · mock), capability negotiation, base-URL SSRF policy, and
 secret-by-reference (`secretRef`, server-only) handling — with the Mock provider
 still the CI/default, every M6 safety guarantee unchanged, and **no migration**
-(see `docs/29` §27, `ADR-019`). There is still **no scraping and no automated
-discovery** — those belong to Milestone 7+. Live provider + Supabase
-(browser/auth/DB) verification is PENDING a provisioned project.
+(see `docs/29` §27, `ADR-019`). **Milestone 7.1** then added the
+provider-neutral **discovery foundation** in `packages/discovery`: the
+`DiscoveryProvider` contract (discover / fetch / normalize), a secret-free
+`SourceDescriptor` with a host/URL egress gate, typed discovery objects, a typed
+redacted `DiscoveryError` model, a registry seam (MOCK registered;
+CROSSREF/PUBMED/EUROPE_PMC fail closed as `NOT_CONFIGURED`), a pure normalizer
+reusing `@wise-evidence/domain`, and a deterministic offline
+`MockDiscoveryProvider` with fixtures — **no real network, no Crossref, no
+scheduler, no scraping, no AI, no migration**. Every LOCKED boundary is
+test-covered (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research
+record, AI ≠ authority, duplicate ≠ delete): discovery imports no AI/database/
+web/vendor SDK, exposes no generic URL-fetch helper, and writes nothing canonical
+(see `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`, `ADR-020`,
+`docs/reports/M7.1-CHECKPOINT.md`). **Milestone 7.2** then added the first real
+provider, `CrossrefDiscoveryProvider` (`packages/discovery/src/crossref/`), on a
+shared injected HTTP layer: host-pinned to `api.crossref.org`, HTTPS-only,
+timeout/size-bounded, redirects rejected, content-type-validated; untrusted
+metadata sanitized and DOIs canonicalised via `@wise-evidence/domain`; the
+canonical DOI as the stable source id; transport/HTTP failures mapped onto the
+typed errors with no secret leakage; registered as CROSSREF (needs an injected
+fetch, else `NOT_CONFIGURED`; PUBMED/EUROPE_PMC still `NOT_CONFIGURED`). It uses
+**only the structured Crossref REST API — no scraping, no scheduling, no retries,
+no AI, no database writes, no migration, no UI**. All connector tests run offline
+via an injected fake fetch; one opt-in `RUN_CROSSREF_LIVE=1` smoke test is skipped
+in CI and the **live Crossref call has NOT been run** from this egress-restricted
+environment (PENDING). See `docs/30` §9, `ADR-020` (M7.2 amendment),
+`docs/reports/M7.2-CROSSREF-CONNECTOR.md`. **Milestone 7.3** then added the bounded
+**discovery orchestrator** (`packages/discovery/src/orchestrator/`) `runDiscovery`:
+registry-based provider selection (MOCK + CROSSREF run through it; PUBMED/EUROPE_PMC
+fail closed), hard budgets (pages/items/candidates/requests/duration/retries — no
+unbounded run), bounded retries with backoff/jitter + Retry-After (transient only),
+per-item failure isolation, conservative graded dedup (DOI → persistent id →
+title+year → title; DEFINITE/PROBABLE/POSSIBLE/NEW, never merges/deletes),
+candidate idempotency on `(source_key, stable_source_id)`, and reviewable-candidate
+persistence through a **port** with a tested in-memory adapter. It writes nothing
+canonical, never publishes/classifies, never calls AI, and refuses non-staff
+callers. **The M7.3 schema firewall fired:** the current `import_candidate` schema
+cannot enforce candidate idempotency, so **no migration was created** and the DB
+adapter is deferred — the required `0013_discovery_candidate_identity.sql` is
+proposed for approval in `docs/reports/M7.3-DISCOVERY-RUN.md` (§10.7). See
+`docs/30` §10. **Milestone 7.4A** then resolved that firewall: migration
+`0013_discovery_candidate_identity.sql` adds `source_key` / `source_stable_id` to
+`import_candidate` and a **partial** unique index on `(source_key,
+source_stable_id)` (NULL identities exempt), and a thin server-side
+(`service_role`) adapter (`packages/database/src/service/discovery.ts`) implements
+the M7.3 ports — `DatabaseDiscoveryStore` (→ `import_job` / `import_candidate`,
+idempotent `INSERT … ON CONFLICT … DO NOTHING`) and `DatabaseStudyIndex`
+(read-only research-level dedup). An end-to-end mock run persists candidates
+through PGlite with DB-enforced idempotency, provenance, preserved dedup
+decisions, **no canonical writes** (a test asserts `research_study` / `publication`
+/ `classification` stay empty), and a verified anon-denied RLS/authorization
+matrix; live Supabase application of `0013` is PENDING. Migrations are now
+`0001`–`0013` (see `docs/30` §10.7, `docs/reports/M7.4A-DATABASE-PERSISTENCE.md`).
+**M7.4B (the candidate review UI / accept-reject) and later M7/M8 work are NOT
+started and NOT authorized.** There is still **no live automated discovery** and
+**no review UI**. Live provider and Supabase (browser/auth/DB) verification is
+PENDING a provisioned project.
 
 ```text
 .
@@ -80,13 +134,14 @@ discovery** — those belong to Milestone 7+. Live provider + Supabase
 │                                 #   M4 /research explorer + ResearchCard;
 │                                 #   M5 /evidence + /statistics + DistributionChart
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
-├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + PGlite tests
+├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports (in-memory; DB adapter BLOCKED on migration 0013). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
-├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening (prepared, NOT applied to prod)
+├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
 └── docs/
@@ -97,8 +152,9 @@ discovery** — those belong to Milestone 7+. Live provider + Supabase
     ├── 27-PUBLIC-RESEARCH-EXPLORER.md # M4 design checkpoint (implemented)
     ├── 28-EVIDENCE-VISUALIZATION-METHODOLOGY.md # M5 design checkpoint (implemented)
     ├── 29-AI-ENRICHMENT.md           # M6 design + as-built record (implemented)
-    ├── adr/     ADR-001 … ADR-019 (+ index/template)
-    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION
+    ├── 30-AUTOMATED-DISCOVERY-METHODOLOGY.md # M7.1 discovery foundation (implemented; M7.2+ design-pending)
+    ├── adr/     ADR-001 … ADR-020 (+ index/template)
+    └── reports/ ARCHITECTURE-CROSSCHECK · MVP-SCOPE · TECH-STACK-DECISION · M6-IMPLEMENTATION-VERIFICATION · M6.1-OPERATIONAL-VERIFICATION · M7.1-CHECKPOINT · M7.2-CROSSREF-CONNECTOR · M7.3-DISCOVERY-RUN · M7.4A-DATABASE-PERSISTENCE
 ```
 
 Do not assume the state of the repository — inspect first (`git status`, `ls`,

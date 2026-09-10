@@ -69,6 +69,17 @@ Architecture specifications (`docs/`):
   versioned prompts, untrusted-in/untrusted-out validation, cache identity, and the
   canonical/publication/M5 firewalls; verification in
   `docs/reports/M6-IMPLEMENTATION-VERIFICATION.md`
+- `30-AUTOMATED-DISCOVERY-METHODOLOGY.md` — Automated Research Discovery
+  methodology + as-built record (**M7.1 + M7.2 + M7.3 + M7.4A implemented
+  (migration 0013 + DB candidate persistence, PGlite-verified; live Supabase
+  pending); M7.4B review UI not authorized**): the LOCKED credibility boundaries
+  (discovery ≠ publication, fetch ≠ acceptance, candidate ≠ research record,
+  AI ≠ authority, duplicate ≠ delete, relevance ≠ efficacy), the provider-neutral
+  `packages/discovery` contract surface (`DiscoveryProvider`, `SourceDescriptor`,
+  typed objects, typed redacted errors, registry seam, host/URL egress gate,
+  provenance), the deterministic offline `MockDiscoveryProvider`, no-migration
+  database posture, and cost/security/testing posture; checkpoint in
+  `docs/reports/M7.1-CHECKPOINT.md`
 
 Architecture Decision Records (`docs/adr/`):
 
@@ -84,6 +95,10 @@ Architecture Decision Records (`docs/adr/`):
   grant hardening + env-driven GitHub Pages base path)
 - `ADR-019-provider-agnostic-ai-architecture.md` (pre-M7 hardening — provider
   registry, provider/model config, capability negotiation, secret references)
+- `ADR-020-automated-research-discovery.md` (Milestone 7.1 — provider-neutral
+  discovery contract, typed objects/errors, registry seam, deterministic mock;
+  - M7.2 amendment — Crossref connector realizing the CROSSREF seam with no
+    contract change; no scheduler, no AI, no migration)
 
 Reports (`docs/reports/`):
 
@@ -105,6 +120,16 @@ Reports (`docs/reports/`):
   matrix with honest provenance tiers (LOCAL / PGLITE / REAL SUPABASE reported /
   LIVE BROWSER / PENDING / BLOCKED); Pages base-path fix verified locally; live
   Pages/SSR/OpenRouter BLOCKED or PENDING (egress-sandboxed)
+- `M7.1-CHECKPOINT.md` — Milestone 7.1 discovery foundation checkpoint
+- `M7.2-CROSSREF-CONNECTOR.md` — Milestone 7.2 Crossref connector checkpoint
+  (offline tests; live Crossref PENDING)
+- `M7.3-DISCOVERY-RUN.md` — Milestone 7.3 orchestrator checkpoint + **schema
+  firewall** report: candidate persistence BLOCKED on the proposed
+  `0013_discovery_candidate_identity.sql` migration (documented, NOT created)
+- `M7.4A-DATABASE-PERSISTENCE.md` — Milestone 7.4A: migration `0013` + the
+  server-side discovery persistence adapter; DB-enforced idempotency, NULL policy,
+  provenance, dedup linkage, no canonical writes, and the anon-denied RLS matrix —
+  all PGlite-verified; live Supabase PENDING
 
 ## Application foundation (Milestone 1)
 
@@ -179,6 +204,17 @@ Reports (`docs/reports/`):
   privilege `anon` grant hardening (defence in depth beneath RLS), resilient to
   Supabase default privileges (ADR-018). Prepared + PGlite-tested; **not** applied
   to production without explicit owner approval.
+- `supabase/migrations/0013_discovery_candidate_identity.sql` — **M7.4A** discovery
+  candidate identity: adds `source_key` / `source_stable_id` to `import_candidate`
+  plus a **partial** unique index on `(source_key, source_stable_id)` (NULLs exempt)
+  for DB-enforced candidate idempotency. Additive; no other table, no RLS change.
+  PGlite-verified `0001`→`0013`; live Supabase application PENDING.
+- `packages/database/src/service/discovery.ts` — **M7.4A** the thin server-side
+  (`service_role`) discovery persistence adapter: `DatabaseDiscoveryStore` maps the
+  M7.3 ports to `import_job` / `import_candidate` (idempotent `INSERT … ON CONFLICT
+… DO NOTHING`, append-only audit) and `DatabaseStudyIndex` reads
+  `research_identifier` / `research_study` / `publication` for research-level dedup.
+  Persistence only — no provider/dedup/AI/UI logic; writes nothing canonical.
 - `packages/database/src/service/ai.ts` — AI job/result persistence, the cache
   identity resolver, minimised task input, suggestion listing, and the append-only
   human Accept/Edit/Reject decision; `ai_result_id` provenance threaded through the
@@ -187,6 +223,44 @@ Reports (`docs/reports/`):
   op and Accept/Edit/Reject ops in `pages/api/admin/research/[id].ts` + the editor
   AI panel in `pages/admin/research/[id].astro` — suggestions shown as clearly
   non-canonical.
+
+## Automated discovery (Milestones 7.1 · 7.2 · 7.3)
+
+- `packages/discovery/` — the provider-neutral automated-discovery subsystem.
+  Framework-independent (no Astro/React/Supabase/web/AI imports; depends only on
+  `@wise-evidence/domain`): the `DiscoveryProvider` contract (discover / fetch /
+  normalize), `SourceDescriptor` (secret-free identity/capability/limit/host
+  policy), typed discovery objects (`DiscoveryRequest`, `DiscoveryPage`,
+  `SourceItem`, `FetchResult`, `NormalizedSourceItem`, `Provenance`), a typed
+  redacted error model (`DiscoveryError` + closed code set), the host/URL egress
+  gate (`assertUrlAllowed`, no generic URL fetch), a pure normalizer, a registry
+  seam, and a deterministic offline `MockDiscoveryProvider` + fixtures (M7.1).
+  Writes nothing canonical, classifies nothing, accepts nothing; boundary tests
+  prove the AI/database/web/fetch/secret separations. See `docs/30`, `ADR-020`,
+  `docs/reports/M7.1-CHECKPOINT.md`.
+- `packages/discovery/src/orchestrator/` — **M7.3** the bounded discovery
+  orchestrator `runDiscovery`: registry-based provider selection, hard budgets
+  (`budget.ts`), bounded retries with backoff/jitter + Retry-After (`retry.ts`),
+  conservative graded deduplication against a read-only `KnownStudyIndex` port
+  (`dedup.ts`), candidate idempotency + reviewable-candidate persistence through
+  `DiscoveryRunStore`/`CandidateStore` PORTS with deterministic in-memory adapters
+  (`store.ts`), per-item failure isolation, and a safe structured
+  `DiscoveryRunResult`. Writes nothing canonical, never publishes/classifies,
+  never calls AI, refuses non-staff callers. The real DB adapter (→ `import_job` /
+  `import_candidate` via `service_role`) is **BLOCKED** on an approved migration
+  for candidate idempotency; see `docs/reports/M7.3-DISCOVERY-RUN.md`. **No
+  migration, scheduler, Hermes, AI, UI, or canonical writes.**
+- `packages/discovery/src/crossref/` — **M7.2** the first real provider,
+  `CrossrefDiscoveryProvider`, plus a shared injected HTTP layer
+  (`src/http.ts`) and sanitized Crossref fixtures with a fake fetch. Host-pinned
+  to `api.crossref.org` (HTTPS-only, timeout/size-bounded, redirects rejected,
+  content-type-validated), DOIs canonicalised via `@wise-evidence/domain`, the
+  canonical DOI as the stable source id, transport/HTTP failures mapped onto typed
+  errors with no secret leakage. Registered as CROSSREF (needs an injected fetch,
+  else `NOT_CONFIGURED`; PUBMED/EUROPE_PMC still `NOT_CONFIGURED`). Offline tests +
+  one opt-in `RUN_CROSSREF_LIVE=1` smoke test (skipped in CI). **No scraping,
+  scheduling, retries, AI, DB writes, migration, or UI.** See `docs/30` §9,
+  `ADR-020` (M7.2 amendment), `docs/reports/M7.2-CROSSREF-CONNECTOR.md`.
 
 ## AI benchmark harness (Milestone 6.1)
 
