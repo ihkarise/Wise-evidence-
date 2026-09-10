@@ -79,3 +79,14 @@ export * from "./service/ai.js";
  * idempotency is DB-enforced (migration 0013 partial unique index).
  */
 export { DatabaseDiscoveryStore, DatabaseStudyIndex } from "./service/discovery.js";
+
+/**
+ * Milestone 7.4B discovery-candidate review workflow (docs/30 §11, ADR-020). The
+ * staff-only review operations over `import_candidate`: list/detail reads plus
+ * accept / reject / link-duplicate / correct / refetch / defer. ACCEPT starts the
+ * EXISTING manual research lifecycle (a DRAFT via `createDraftFromMetadata`) and
+ * NEVER publishes, classifies, or calls AI; candidates are never deleted and
+ * duplicates stay reviewable. Provenance is preserved through the shared discovery
+ * `research_source`, the candidate DOI, and append-only `audit_log`.
+ */
+export * from "./service/candidates.js";
