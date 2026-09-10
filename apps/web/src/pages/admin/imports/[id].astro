@@ -147,6 +147,26 @@ const p = detail?.payload ?? null;
                 <dt class="text-ink-muted">Matched by</dt>
                 <dd>{humanize(detail.dedupMatchedBy)}</dd>
               </div>
+              {detail.dedupReasonCode && (
+                <div class="flex justify-between gap-3">
+                  <dt class="text-ink-muted">Reason code</dt>
+                  <dd>
+                    <code class="text-xs">{detail.dedupReasonCode}</code>
+                  </dd>
+                </div>
+              )}
+              {detail.dedupYears && (
+                <div class="flex justify-between gap-3">
+                  <dt class="text-ink-muted">Year</dt>
+                  <dd>
+                    {detail.dedupYears.candidate ?? "unknown"}
+                    {" vs "}
+                    {detail.dedupYears.study.length > 0
+                      ? detail.dedupYears.study.join("/")
+                      : "unknown"}
+                  </dd>
+                </div>
+              )}
               {detail.dedupReason && (
                 <div>
                   <dt class="text-ink-muted">Reason</dt>

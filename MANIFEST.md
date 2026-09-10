@@ -130,6 +130,14 @@ Reports (`docs/reports/`):
   server-side discovery persistence adapter; DB-enforced idempotency, NULL policy,
   provenance, dedup linkage, no canonical writes, and the anon-denied RLS matrix —
   all PGlite-verified; live Supabase PENDING
+- `M7.4B-CANDIDATE-REVIEW.md` — Milestone 7.4B: staff-only human candidate review
+  workflow (accept → DRAFT only, reject/link/correct/refetch/defer; never
+  publish/classify/AI; candidates never deleted); no migration
+- `M7.5-DEDUPLICATION.md` — Milestone 7.5: conservative, explainable research
+  deduplication (enumerated reason codes, identifier/year evidence, year-conflict,
+  empty-title guard; Study ≠ Publication preserved; LEVEL 5 fuzzy similarity
+  deliberately deferred); no migration, no new provider, no AI; 526 tests pass;
+  live PENDING/BLOCKED
 
 ## Application foundation (Milestone 1)
 

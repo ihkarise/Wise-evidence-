@@ -181,7 +181,21 @@ describe("DatabaseDiscoveryStore — lifecycle & idempotency", () => {
         stableSourceId: "10.0000/concurrent",
         normalizedPayload: { title: "first" },
         rawHash: "a".repeat(64),
-        dedup: { verdict: "NEW", matchedBy: null, relatedStudyId: null, reason: "x" } as const,
+        dedup: {
+          verdict: "NEW",
+          matchedBy: null,
+          relatedStudyId: null,
+          reason: "x",
+          explanation: {
+            reasonCode: "NO_MATCH",
+            matchedIdentifierType: null,
+            matchedIdentifierValue: null,
+            titleMatched: false,
+            candidateYear: null,
+            matchedStudyYears: [],
+            yearConflict: false,
+          },
+        } as const,
         state: "REVIEW_REQUIRED",
       };
       const a = await store.insertCandidate(record);

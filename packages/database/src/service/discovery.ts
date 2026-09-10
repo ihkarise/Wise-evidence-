@@ -31,6 +31,7 @@ import type {
   DiscoveryRunStore,
   FinalizeRunInput,
   KnownStudyIndex,
+  KnownStudyMatch,
 } from "@wise-evidence/discovery";
 import { type Actor, type SqlExecutor, ServiceError, requireStaff } from "../executor.js";
 
@@ -242,26 +243,31 @@ export class DatabaseStudyIndex implements KnownStudyIndex {
     return row?.study_id ?? null;
   }
 
-  async findStudyByTitleYear(normalizedTitle: string, year: string): Promise<string | null> {
-    const row = await one<{ id: string }>(
+  /**
+   * Deterministic, indexed title lookup returning the study and its known
+   * publication years. Uses `idx_study_normalized_title`; the correlated year
+   * aggregate is bounded to the one matched study (never a table scan). When
+   * several studies share a normalized title, `order by s.id` picks a stable one
+   * — the year comparison (and PROBABLE vs POSSIBLE grading) is the matcher's job.
+   */
+  async findStudyByTitle(normalizedTitle: string): Promise<KnownStudyMatch | null> {
+    const row = await one<{ id: string; years: number[] | null }>(
       this.#db,
-      `select s.id
+      `select s.id,
+              array_remove(
+                array_agg(distinct extract(year from p.publication_date)::int),
+                null
+              ) as years
          from research_study s
-         join publication p on p.study_id = s.id
+         left join publication p on p.study_id = s.id
         where s.normalized_title = $1
-          and extract(year from p.publication_date)::text = $2
+        group by s.id
+        order by s.id
         limit 1`,
-      [normalizedTitle, year],
-    );
-    return row?.id ?? null;
-  }
-
-  async findStudyByTitle(normalizedTitle: string): Promise<string | null> {
-    const row = await one<{ id: string }>(
-      this.#db,
-      "select id from research_study where normalized_title = $1 limit 1",
       [normalizedTitle],
     );
-    return row?.id ?? null;
+    if (row === null) return null;
+    const years = (row.years ?? []).map((y) => String(y)).sort();
+    return { studyId: row.id, years };
   }
 }

@@ -96,6 +96,13 @@ export interface CandidateDetail {
   readonly dedupVerdict: string | null;
   readonly dedupMatchedBy: string | null;
   readonly dedupReason: string | null;
+  /** Enumerated, auditable reason code (M7.5), e.g. TITLE_YEAR_MATCH. */
+  readonly dedupReasonCode: string | null;
+  /** Candidate year vs the matched study's years, when a title matched (M7.5). */
+  readonly dedupYears: {
+    readonly candidate: string | null;
+    readonly study: readonly string[];
+  } | null;
   readonly duplicateOfStudyId: string | null;
   readonly payload: CandidatePayloadView | null;
   readonly createdAt: string;
@@ -248,21 +255,49 @@ function toPayloadView(raw: unknown): CandidatePayloadView | null {
   };
 }
 
-function parseDedup(raw: string | null): {
+interface ParsedDedup {
   verdict: string | null;
   matchedBy: string | null;
   reason: string | null;
-} {
-  if (raw === null) return { verdict: null, matchedBy: null, reason: null };
+  reasonCode: string | null;
+  years: { candidate: string | null; study: string[] } | null;
+}
+
+const EMPTY_DEDUP: ParsedDedup = {
+  verdict: null,
+  matchedBy: null,
+  reason: null,
+  reasonCode: null,
+  years: null,
+};
+
+function parseDedup(raw: string | null): ParsedDedup {
+  if (raw === null) return EMPTY_DEDUP;
   try {
     const d = JSON.parse(raw) as Record<string, unknown>;
+    // The structured explanation is optional (older rows predate M7.5).
+    const exp =
+      d.explanation !== null && typeof d.explanation === "object"
+        ? (d.explanation as Record<string, unknown>)
+        : null;
+    const years =
+      exp !== null && exp.titleMatched === true
+        ? {
+            candidate: str(exp.candidateYear),
+            study: Array.isArray(exp.matchedStudyYears)
+              ? exp.matchedStudyYears.filter((y): y is string => typeof y === "string")
+              : [],
+          }
+        : null;
     return {
       verdict: str(d.verdict),
       matchedBy: str(d.matchedBy),
       reason: str(d.reason),
+      reasonCode: exp !== null ? str(exp.reasonCode) : null,
+      years,
     };
   } catch {
-    return { verdict: null, matchedBy: null, reason: null };
+    return EMPTY_DEDUP;
   }
 }
 
@@ -387,6 +422,8 @@ export async function getCandidateDetail(
     dedupVerdict: dedup.verdict,
     dedupMatchedBy: dedup.matchedBy,
     dedupReason: dedup.reason,
+    dedupReasonCode: dedup.reasonCode,
+    dedupYears: dedup.years,
     duplicateOfStudyId: row.duplicate_of_study_id,
     payload,
     createdAt: row.created_at,
