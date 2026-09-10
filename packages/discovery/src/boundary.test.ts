@@ -133,4 +133,18 @@ describe("discovery architecture boundary", () => {
       }
     }
   });
+
+  it("keeps Europe-PMC-specific code from leaking into the generic contracts", () => {
+    // Only the registry (registration) and the barrel (re-export) may reference
+    // the europepmc adapter; the generic contract/types/normalize/host files must
+    // not import it.
+    const allowed = new Set(["/registry.ts", "/index.ts"]);
+    for (const file of FILES) {
+      const rel = file.replace(SRC_DIR, "");
+      if (rel.startsWith("/europepmc/") || allowed.has(rel)) continue;
+      for (const spec of importSpecifiers(readFileSync(file, "utf8"))) {
+        expect(spec).not.toMatch(/europepmc/i);
+      }
+    }
+  });
 });

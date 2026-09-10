@@ -1,7 +1,7 @@
 # ADR-020: Automated Research Discovery — Provider-Neutral Contract & Deterministic Mock (M7.1)
 
-**Status:** Accepted — IMPLEMENTED (M7.1 contract + mock; M7.2 Crossref connector; M7.3 orchestrator; M7.4A DB persistence + migration 0013; M7.4B review UI; M7.5 dedup explainability — see Amendments). M7.6 NOT started, NOT authorized.
-**Date:** 2026-08-30 (M7.1); amended 2026-08-30 (M7.2), 2026-09-10 (M7.5)
+**Status:** Accepted — IMPLEMENTED (M7.1 contract + mock; M7.2 Crossref connector; M7.3 orchestrator; M7.4A DB persistence + migration 0013; M7.4B review UI; M7.5 dedup explainability; M7.6 Europe PMC connector — see Amendments). M7.7 / scheduling / PubMed NOT started, NOT authorized.
+**Date:** 2026-08-30 (M7.1); amended 2026-08-30 (M7.2), 2026-09-10 (M7.5), 2026-09-10 (M7.6)
 **Related:** `docs/30-AUTOMATED-DISCOVERY-METHODOLOGY.md`,
 `docs/11-DATA-IMPORT-ARCHITECTURE.md`, `docs/24-MULTI-SOURCE-INGESTION.md`,
 `docs/05-DATABASE-ARCHITECTURE.md`, `docs/16-SECURITY.md`, `docs/20-TESTING.md`,
@@ -167,5 +167,57 @@ break and no migration** (`DedupDecision` gains an optional structured
 
 **Scope firewall (M7.5).** M7.6, scheduling, Hermes, new providers (PubMed /
 Europe PMC), AI enrichment, vector/keyword search, and any automatic
+merge/accept/delete/classify/publish are **not started and not authorized**. No
+live provider or Supabase run was performed; those remain PENDING/BLOCKED.
+
+## Amendment (M7.6 — Europe PMC connector, implemented)
+
+M7.6 realizes the EUROPE_PMC seam this ADR anticipated (the C2 source in
+`docs/24`, the priority after Crossref), with **no contract change and no
+migration**. It is the second real `DiscoveryProvider` and reuses the M7.2
+security machinery unchanged. Decisions specific to the connector:
+
+1. **Isolation.** `EuropePMCDiscoveryProvider` lives in
+   `packages/discovery/src/europepmc/` and returns only provider-neutral
+   discovery objects. A second architecture guard proves no Europe-PMC-specific
+   code leaks into the generic contracts, `packages/domain`,
+   `packages/database`, `packages/ai`, or `apps/web` (mirrors the Crossref
+   guard).
+2. **Host pinning + injected transport.** The host is a module constant
+   (`www.ebi.ac.uk`), never a caller-supplied base URL; the only endpoint used is
+   the structured REST `search` path. Every URL is gated through
+   `assertUrlAllowed`; the shared injected `http.ts` provides the bounded read and
+   content-type check; the package never uses an ambient global fetch. Registering
+   EUROPE_PMC requires an injected `fetch` at resolve time, so it fails closed as
+   `NOT_CONFIGURED` without configured egress. MOCK and CROSSREF are unchanged;
+   PUBMED remains unregistered.
+3. **Composite `SOURCE/ID` as the stable source id.** Europe PMC's persistent
+   identifier is the `source`+`id` pair (e.g. `MED/36000001`); the connector uses
+   that composite as the idempotency key, falling back to the canonical DOI. This
+   means a DOI-less preprint that Crossref could not have keyed still gets a stable
+   id and normalizes — a strength of the cross-linked Europe PMC id space. It also
+   emits DOI/PMID/PMCID identifiers, strengthening later conservative dedup.
+4. **Query hardening.** Free-text queries are stripped of Lucene/Europe-PMC
+   operators and boolean keywords before they reach the field-scoped query, so
+   untrusted text can never restructure the query; DOI/`SRC`/`EXT_ID` values are
+   quote-escaped. No API key is required or accepted.
+5. **No retries in the connector.** One request per operation; bounded retries,
+   `Retry-After` honouring, and scheduling stay with the M7.3 orchestrator (which
+   drives EUROPE_PMC through the registry unchanged — proven by an integration
+   test). A 429 becomes a typed `RATE_LIMITED` error. Rate-limit/size caps are
+   conservative app-level values labelled **REQUIRES LIVE VERIFICATION**.
+6. **No scraping, no AI, no DB writes, no migration, no UI.** M7.6 uses only the
+   structured Europe PMC REST API and produces discovery objects; ingestion,
+   dedup-into-review, classification, and publication remain out of scope and
+   unchanged. `DUPLICATE ≠ DELETE` and `Study ≠ Publication` hold: a Europe PMC
+   record whose DOI already belongs to a known study is flagged
+   `DUPLICATE_CANDIDATE` for human review, never merged or deleted.
+
+**Live status.** A single opt-in live smoke test is gated on
+`RUN_EUROPE_PMC_LIVE=1` and stays skipped in CI; the live Europe PMC call has
+**not** been run from this egress-restricted environment (PENDING).
+
+**Scope firewall (M7.6).** PubMed / NCBI (C3), scheduling, Hermes, queues,
+workers, AI enrichment, fuzzy/vector search, full-text hosting, and any automatic
 merge/accept/delete/classify/publish are **not started and not authorized**. No
 live provider or Supabase run was performed; those remain PENDING/BLOCKED.

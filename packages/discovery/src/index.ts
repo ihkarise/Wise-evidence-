@@ -101,6 +101,15 @@ export {
   type CrossrefDiscoveryProviderOptions,
 } from "./crossref/provider.js";
 
+// Europe PMC connector (M7.6) — second real DiscoveryProvider (docs/24 C2)
+export {
+  EuropePMCDiscoveryProvider,
+  EUROPE_PMC_SOURCE_DESCRIPTOR,
+  EUROPE_PMC_HOST,
+  EUROPE_PMC_DISCOVERY_VERSION,
+  type EuropePMCDiscoveryProviderOptions,
+} from "./europepmc/provider.js";
+
 // Discovery orchestrator (M7.3) — bounded controlled run + persistence ports
 export {
   runDiscovery,
