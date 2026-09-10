@@ -1,0 +1,346 @@
+---
+/**
+ * Discovery candidate detail + review actions (M7.4B; docs/30 §11). Staff-only.
+ *
+ * Shows one candidate's (untrusted, auto-escaped) discovery metadata, provenance,
+ * dedup decision, and any proposed corrections, plus the structured review
+ * controls: Accept · Reject · Link duplicate · Correct · Refetch · Defer. Every
+ * action posts to /api/admin/imports/[id]; the service layer enforces the rules
+ * (accept starts a DRAFT only — never publish/classify/AI; candidates are never
+ * deleted). Controls are shown only while the candidate is reviewable.
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { getCandidateDetail } from "@wise-evidence/database";
+import { asService, isDatabaseConfigured } from "../../../lib/db.js";
+import { humanize } from "../../../lib/labels.js";
+
+export const prerender = false;
+
+const { id = "" } = Astro.params;
+const actor = Astro.locals.actor;
+
+const detail =
+  isDatabaseConfigured && actor ? await asService((db) => getCandidateDetail(db, actor, id)) : null;
+
+if (isDatabaseConfigured && actor && !detail) {
+  return new Response("Candidate not found", { status: 404 });
+}
+
+const post = `/api/admin/imports/${id}`;
+const actionable =
+  detail !== null && (detail.state === "REVIEW_REQUIRED" || detail.state === "DUPLICATE_CANDIDATE");
+const p = detail?.payload ?? null;
+---
+
+<AdminLayout title="Discovery candidate">
+  {
+    !isDatabaseConfigured ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        The database is not configured in this environment.
+      </p>
+    ) : detail === null ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        Candidate not found.
+      </p>
+    ) : (
+      <div class="space-y-6">
+        <p class="text-sm">
+          <a href="/admin/imports" class="text-brand hover:underline">
+            ← Back to discovery imports
+          </a>
+        </p>
+
+        {/* --- Overview --- */}
+        <section class="rounded-lg border border-slate-200 bg-white p-5">
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <h2 class="text-lg font-semibold text-ink">{p?.title ?? "(untitled candidate)"}</h2>
+            <span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {humanize(detail.state)}
+            </span>
+          </div>
+          <dl class="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            <div>
+              <dt class="text-ink-muted">DOI</dt>
+              <dd class="font-mono text-xs">{p?.canonicalDoi ?? "—"}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-muted">Journal</dt>
+              <dd>{p?.journal ?? "—"}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-muted">Publication date</dt>
+              <dd>{p?.publicationDate ?? "—"}</dd>
+            </div>
+            <div>
+              <dt class="text-ink-muted">Authors</dt>
+              <dd>{p && p.authors.length > 0 ? p.authors.join(", ") : "—"}</dd>
+            </div>
+            <div class="sm:col-span-2">
+              <dt class="text-ink-muted">Source URL</dt>
+              <dd class="break-all">
+                {p?.url ? (
+                  <a
+                    href={p.url}
+                    rel="noreferrer noopener nofollow"
+                    class="text-brand hover:underline"
+                  >
+                    {p.url}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+          </dl>
+          {p?.abstract && (
+            <div class="mt-4">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Abstract</h3>
+              <p class="mt-1 whitespace-pre-line text-sm text-ink">{p.abstract}</p>
+            </div>
+          )}
+        </section>
+
+        {/* --- Provenance & dedup --- */}
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Provenance
+            </h3>
+            <dl class="space-y-1">
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Source</dt>
+                <dd>{detail.job?.sourceName ?? detail.sourceKey ?? "—"}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Source key</dt>
+                <dd class="font-mono text-xs">{detail.sourceKey ?? "—"}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Stable source id</dt>
+                <dd class="font-mono text-xs break-all">{detail.sourceStableId ?? "—"}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Provider</dt>
+                <dd class="font-mono text-xs">{p?.provenance?.providerVersion ?? "—"}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Raw hash</dt>
+                <dd class="font-mono text-xs break-all">{p?.provenance?.rawHash ?? "—"}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Discovery run</dt>
+                <dd class="font-mono text-xs break-all">{detail.importJobId}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Deduplication
+            </h3>
+            <dl class="space-y-1">
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Verdict</dt>
+                <dd>{humanize(detail.dedupVerdict)}</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-ink-muted">Matched by</dt>
+                <dd>{humanize(detail.dedupMatchedBy)}</dd>
+              </div>
+              {detail.dedupReason && (
+                <div>
+                  <dt class="text-ink-muted">Reason</dt>
+                  <dd>{detail.dedupReason}</dd>
+                </div>
+              )}
+              {detail.duplicateOfStudyId && (
+                <div class="flex justify-between gap-3">
+                  <dt class="text-ink-muted">Possible duplicate of</dt>
+                  <dd>
+                    <a
+                      href={`/admin/research/${detail.duplicateOfStudyId}`}
+                      class="text-brand hover:underline"
+                    >
+                      view study
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {detail.linkedStudyId && (
+                <div class="flex justify-between gap-3">
+                  <dt class="text-ink-muted">Existing study with this DOI</dt>
+                  <dd>
+                    <a
+                      href={`/admin/research/${detail.linkedStudyId}`}
+                      class="text-brand hover:underline"
+                    >
+                      view study
+                    </a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        </section>
+
+        {detail.errorDetail && (
+          <section class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+            <strong>Rejection / failure note:</strong> {detail.errorDetail}
+          </section>
+        )}
+
+        {/* --- Review actions --- */}
+        {actionable ? (
+          <section class="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+            <h3 class="text-sm font-semibold text-ink">Review actions</h3>
+            <p class="text-xs text-ink-muted">
+              Accept starts a <strong>draft</strong> only. It never publishes, never sets an outcome
+              / quality / confidence, and never calls AI.
+            </p>
+
+            <div class="flex flex-wrap gap-3">
+              <form method="post" action={post}>
+                <input type="hidden" name="op" value="accept" />
+                <button
+                  type="submit"
+                  class="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+                >
+                  Accept → create draft
+                </button>
+              </form>
+              <form method="post" action={post}>
+                <input type="hidden" name="op" value="refetch" />
+                <button
+                  type="submit"
+                  class="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+                >
+                  Request refetch
+                </button>
+              </form>
+              <form method="post" action={post}>
+                <input type="hidden" name="op" value="defer" />
+                <input type="hidden" name="note" value="Deferred from review" />
+                <button
+                  type="submit"
+                  class="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+                >
+                  Defer
+                </button>
+              </form>
+            </div>
+
+            <form
+              method="post"
+              action={post}
+              class="grid gap-2 border-t border-slate-100 pt-4 sm:max-w-lg"
+            >
+              <input type="hidden" name="op" value="reject" />
+              <label class="text-xs font-medium text-ink-muted" for="reject-reason">
+                Reject (records a reason; the candidate is kept, never deleted)
+              </label>
+              <textarea
+                id="reject-reason"
+                name="reason"
+                rows="2"
+                required
+                class="rounded border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Why this candidate is being rejected"
+              />
+              <button
+                type="submit"
+                class="justify-self-start rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-900 hover:bg-red-100"
+              >
+                Reject
+              </button>
+            </form>
+
+            <form
+              method="post"
+              action={post}
+              class="grid gap-2 border-t border-slate-100 pt-4 sm:max-w-lg"
+            >
+              <input type="hidden" name="op" value="link-duplicate" />
+              <label class="text-xs font-medium text-ink-muted" for="dup-study">
+                Link as duplicate of an existing study (study UUID)
+              </label>
+              <input
+                id="dup-study"
+                name="studyId"
+                required
+                class="rounded border border-slate-300 px-3 py-2 font-mono text-xs"
+                placeholder="00000000-0000-0000-0000-000000000000"
+              />
+              <button
+                type="submit"
+                class="justify-self-start rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+              >
+                Link duplicate
+              </button>
+            </form>
+
+            <form
+              method="post"
+              action={post}
+              class="grid gap-2 border-t border-slate-100 pt-4 sm:max-w-lg"
+            >
+              <input type="hidden" name="op" value="correct" />
+              <label class="text-xs font-medium text-ink-muted">
+                Propose a correction (recorded as a reviewable correction; the candidate metadata is
+                not changed)
+              </label>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <input
+                  name="field"
+                  required
+                  class="rounded border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Field (e.g. title)"
+                />
+                <input
+                  name="proposedValue"
+                  required
+                  class="rounded border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Proposed value"
+                />
+              </div>
+              <input
+                name="reason"
+                class="rounded border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Reason (optional)"
+              />
+              <button
+                type="submit"
+                class="justify-self-start rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100"
+              >
+                Propose correction
+              </button>
+            </form>
+          </section>
+        ) : (
+          <section class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-ink-muted">
+            This candidate is in a terminal state ({humanize(detail.state)}) and has no further
+            review actions. It is retained for the record.
+          </section>
+        )}
+
+        {/* --- Corrections --- */}
+        {detail.corrections.length > 0 && (
+          <section class="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Proposed corrections
+            </h3>
+            <ul class="space-y-2">
+              {detail.corrections.map((c) => (
+                <li class="rounded border border-slate-100 px-3 py-2">
+                  <span class="font-medium text-ink">{c.field ?? "—"}</span> →{" "}
+                  <span>{c.proposedValue ?? "—"}</span>
+                  <span class="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs">{c.status}</span>
+                  {c.reason && <p class="mt-1 text-xs text-ink-muted">{c.reason}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    )
+  }
+</AdminLayout>
