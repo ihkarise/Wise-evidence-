@@ -1,0 +1,121 @@
+---
+/**
+ * Discovery candidate review queue (M7.4B; docs/30 §11). Staff-only
+ * (middleware-guarded; the service layer re-checks the role). Lists automated-
+ * discovery `import_candidate` rows awaiting a human decision.
+ *
+ * This is a REVIEW surface only: a candidate is NOT a research record. Accepting
+ * one starts the existing manual lifecycle (a DRAFT) — it never publishes,
+ * classifies, or invokes AI. All metadata shown is untrusted source data and is
+ * auto-escaped by Astro (never rendered as HTML).
+ */
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { listCandidates } from "@wise-evidence/database";
+import { asService, isDatabaseConfigured } from "../../../lib/db.js";
+import { humanize } from "../../../lib/labels.js";
+
+export const prerender = false;
+
+const actor = Astro.locals.actor;
+const stateFilter = Astro.url.searchParams.get("state") ?? "";
+
+const candidates =
+  isDatabaseConfigured && actor
+    ? await asService((db) =>
+        listCandidates(db, actor, { state: stateFilter || undefined, limit: 200 }),
+      )
+    : [];
+
+const FILTERS: { value: string; label: string }[] = [
+  { value: "", label: "All" },
+  { value: "REVIEW_REQUIRED", label: "Review required" },
+  { value: "DUPLICATE_CANDIDATE", label: "Possible duplicates" },
+  { value: "IMPORTED", label: "Imported" },
+  { value: "FAILED", label: "Rejected / failed" },
+];
+
+const STATE_STYLES: Record<string, string> = {
+  REVIEW_REQUIRED: "bg-amber-100 text-amber-900",
+  DUPLICATE_CANDIDATE: "bg-purple-100 text-purple-900",
+  IMPORTED: "bg-green-100 text-green-900",
+  FAILED: "bg-slate-200 text-slate-700",
+};
+---
+
+<AdminLayout title="Discovery imports">
+  <p class="mb-4 text-sm text-ink-muted">
+    Candidates found by automated discovery. A candidate is <strong>not</strong> a research record: accepting
+    one creates a <strong>draft</strong> that then goes through the normal review and publish workflow.
+    Nothing here is published, classified, or AI-processed automatically.
+  </p>
+
+  <div class="mb-4 flex flex-wrap gap-2" role="navigation" aria-label="Filter by state">
+    {
+      FILTERS.map((f) => (
+        <a
+          href={f.value ? `/admin/imports?state=${f.value}` : "/admin/imports"}
+          class:list={[
+            "rounded-full border px-3 py-1 text-xs font-medium",
+            stateFilter === f.value
+              ? "border-brand bg-brand text-white"
+              : "border-slate-300 bg-white text-ink-muted hover:bg-slate-100",
+          ]}
+        >
+          {f.label}
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    !isDatabaseConfigured ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        The database is not configured in this environment.
+      </p>
+    ) : candidates.length === 0 ? (
+      <p class="rounded border border-slate-200 bg-white px-4 py-6 text-sm text-ink-muted">
+        No discovery candidates{stateFilter ? " in this state" : ""}.
+      </p>
+    ) : (
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-4 py-2">Title</th>
+              <th class="px-4 py-2">Source</th>
+              <th class="px-4 py-2">DOI</th>
+              <th class="px-4 py-2">Dedup</th>
+              <th class="px-4 py-2">State</th>
+              <th class="px-4 py-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {candidates.map((c) => (
+              <tr class="border-b border-slate-100 last:border-0">
+                <td class="px-4 py-2 font-medium text-ink">{c.title ?? "(untitled)"}</td>
+                <td class="px-4 py-2 text-ink-muted">{c.sourceKey ?? "—"}</td>
+                <td class="px-4 py-2 font-mono text-xs text-ink-muted">{c.canonicalDoi ?? "—"}</td>
+                <td class="px-4 py-2 text-ink-muted">{humanize(c.dedupVerdict)}</td>
+                <td class="px-4 py-2">
+                  <span
+                    class:list={[
+                      "rounded px-2 py-0.5 text-xs font-medium",
+                      STATE_STYLES[c.state] ?? "bg-slate-100 text-slate-700",
+                    ]}
+                  >
+                    {humanize(c.state)}
+                  </span>
+                </td>
+                <td class="px-4 py-2 text-right">
+                  <a href={`/admin/imports/${c.id}`} class="text-brand hover:underline">
+                    Review
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</AdminLayout>
