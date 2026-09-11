@@ -319,3 +319,58 @@ passed / 4 skipped (typecheck/lint/format/web-build clean).
 workers / queues / background jobs**, AI enrichment of candidates, fuzzy/vector
 search, PDF hosting, and any automatic merge/accept/delete/classify/publish are
 **not started and not authorized**.
+
+## Amendment (M7.9 — controlled recurring discovery, implemented)
+
+M7.9 makes the existing discovery engine runnable on a recurring schedule with
+**no in-application scheduler** and **no contract change, no new provider, and no
+migration** (migrations remain `0001`→`0013`; `import_job_trigger` already carried
+`SCHEDULED` since `0001`). Recurrence lives entirely in an **external** scheduler;
+the application only gains one trusted, non-browser entry point.
+
+1. **Reuse, not a second engine.** `runScheduledDiscovery` shares the exact M7.8
+   composition via a common `runComposedDiscovery`; the only differences are the
+   recorded `trigger` (`SCHEDULED`) and the overlap guard. `DEFAULT_BUDGET`, the
+   closed allowlist, the host-pinned connectors, and the reviewable-only adapters
+   are inherited unchanged.
+2. **Two-layer trust for a machine caller.** (a) A server-only shared secret
+   `DISCOVERY_RUN_TOKEN`, presented as `Authorization: Bearer <token>`, is compared
+   in **constant time** and never echoed; when unset the feature is **disabled**
+   and the endpoint 404s (never revealing it exists). (b) The run executes under a
+   **real** staff actor configured server-side (`DISCOVERY_RUN_ACTOR_ID`, resolved
+   against `app_user` like a browser session); role is never taken from the request
+   and a non-staff/unknown id fails closed (403). The pure decision logic is a
+   framework-independent, unit-tested `packages/database` module.
+3. **Client still never trusted.** The search query is server-configured
+   (`DISCOVERY_SCHEDULED_QUERY`, default `homeopathy`); the budget is never
+   client-supplied; the only request-derived input is a provider validated against
+   the closed allowlist (no URL/host/budget crosses the boundary).
+4. **Idempotency / overlap / failure.** Candidate idempotency stays DB-enforced
+   (migration `0013`). A new overlap guard in `DatabaseDiscoveryStore.createRun`,
+   gated on `trigger === "SCHEDULED"`, refuses (`invalid-state` → HTTP 409) when a
+   run for the same source is `RUNNING`, creating no row; manual runs are
+   unaffected. It is best-effort check-then-insert, backed by the scheduler's
+   `concurrency:` control and the DB unique index (data can never be corrupted). A
+   failed run is finalized `FAILED`, never left `RUNNING`.
+5. **External scheduler, opt-in, zero-cost.** `.github/workflows/discovery.yml`
+   (`schedule:` cron + `workflow_dispatch` + `concurrency:`) POSTs to the endpoint
+   with the token; it runs no discovery logic and cleanly skips when unconfigured.
+   GitHub Actions cron was chosen over Render Cron (paid, new service) and an
+   external pinger (third-party dependency): free on this repo, reuses CI infra,
+   free-first. Render carries the same env vars, `sync: false`.
+6. **Boundaries preserved.** A scheduled run persists REVIEWABLE candidates only —
+   never publishes, classifies, scores, accepts, merges, deletes, calls AI,
+   downloads PDFs, or scrapes; writes no canonical research data. `DUPLICATE ≠
+   DELETE` and `Study ≠ Publication` hold. The human remains the sole decision
+   boundary at `/admin/imports`.
+
+**Live status.** MOCK scheduled runs are fully offline/deterministic. A live
+scheduled run against a deployed SSR host + Supabase remains **PENDING / NOT RUN**
+(this egress-restricted environment cannot reach it; none was faked). Offline: 640
+passed / 4 skipped (typecheck/lint/format/web-build clean).
+
+**Scope firewall (M7.9).** An **in-app** scheduler/cron/worker/queue/background
+job, a DB-backed schedule-config table + admin schedule UI, saved searches / date
+windows, additional providers, AI enrichment of candidates, fuzzy/vector search,
+PDF hosting, and any automatic merge/accept/delete/classify/publish are **not
+built and not authorized**.

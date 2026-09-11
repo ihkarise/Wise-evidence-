@@ -45,6 +45,25 @@ interface ImportMetaEnv {
   // this package never reaches for an ambient fetch, and no discovery URL/host is
   // ever accepted from the client.
   readonly DISCOVERY_CONTACT_EMAIL?: string;
+
+  // ---- SCHEDULED DISCOVERY (Milestone 7.9) — SERVER-ONLY, opt-in ----
+  // Enables the trusted, non-browser scheduled run endpoint
+  // (/api/internal/discovery/run). When DISCOVERY_RUN_TOKEN is unset the
+  // endpoint is DISABLED (404) — the whole feature is opt-in.
+  //   DISCOVERY_RUN_TOKEN     — shared secret the external scheduler presents as
+  //                             `Authorization: Bearer <token>` (constant-time
+  //                             checked, never echoed). A SECRET.
+  //   DISCOVERY_RUN_ACTOR_ID  — the app_user id (UUID) a scheduled run acts as;
+  //                             must be a REVIEWER/ADMIN or the run is refused.
+  //                             Not a secret, but identifies whose authority runs.
+  //   DISCOVERY_SCHEDULED_QUERY    — the recurring search term (default
+  //                                  "homeopathy"). Not a secret.
+  //   DISCOVERY_SCHEDULED_PROVIDER — default provider when the caller names none
+  //                                  (allowlist: MOCK|CROSSREF|EUROPE_PMC|PUBMED).
+  readonly DISCOVERY_RUN_TOKEN?: string;
+  readonly DISCOVERY_RUN_ACTOR_ID?: string;
+  readonly DISCOVERY_SCHEDULED_QUERY?: string;
+  readonly DISCOVERY_SCHEDULED_PROVIDER?: string;
 }
 
 interface ImportMeta {

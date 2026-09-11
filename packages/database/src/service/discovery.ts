@@ -74,6 +74,16 @@ export class DatabaseDiscoveryStore implements DiscoveryRunStore, CandidateStore
 
   async createRun(input: CreateRunInput): Promise<{ readonly runId: string }> {
     const sourceId = await this.#getOrCreateSource(input.sourceKey);
+    // Overlap guard (M7.9): a SCHEDULED run must never pile onto a run that is
+    // still in progress for the same source (wasted API calls, duplicate jobs).
+    // Manual runs are intentionally NOT guarded here — M7.8 behaviour is
+    // unchanged. This is a best-effort check-then-insert: the realistic overlap
+    // (two invocations of the same schedule) is prevented upstream by the
+    // scheduler's own concurrency control; the residual same-source race cannot
+    // corrupt data because candidate identity is DB-unique (migration 0013).
+    if (input.trigger === "SCHEDULED") {
+      await this.#assertNoActiveRun(sourceId);
+    }
     const run = await one<{ id: string }>(
       this.#db,
       `insert into import_job (source_id, trigger, state, started_at)
@@ -86,6 +96,27 @@ export class DatabaseDiscoveryStore implements DiscoveryRunStore, CandidateStore
       trigger: input.trigger,
     });
     return { runId: run.id };
+  }
+
+  /**
+   * Refuse to start when a discovery run for this source is still RUNNING
+   * (M7.9). Throws a typed, non-secret `invalid-state` error so the caller can
+   * map it to a clean "already in progress" response; no `import_job` row is
+   * created for the refused run. Checks ANY in-progress run for the source
+   * (manual or scheduled) so a scheduled run never overlaps a manual one.
+   */
+  async #assertNoActiveRun(sourceId: string): Promise<void> {
+    const active = await one<{ id: string }>(
+      this.#db,
+      `select id from import_job where source_id = $1 and state = 'RUNNING' limit 1`,
+      [sourceId],
+    );
+    if (active !== null) {
+      throw new ServiceError(
+        "invalid-state",
+        "a discovery run is already in progress for this source",
+      );
+    }
   }
 
   async finalizeRun(runId: string, input: FinalizeRunInput): Promise<void> {

@@ -38,6 +38,7 @@ import {
   type DiscoveryProviderRegistry,
   type DiscoveryProviderType,
   type DiscoveryRunResult,
+  type DiscoveryRunTrigger,
   type FetchLike,
 } from "@wise-evidence/discovery";
 import { type Actor, type SqlExecutor, ServiceError, requireStaff } from "../executor.js";
@@ -116,24 +117,26 @@ export interface ManualDiscoveryDeps {
 }
 
 /**
- * Start ONE bounded, human-triggered discovery run and return its safe result.
- *
- * It re-checks the staff role (defense in depth over middleware + RLS), validates
- * the provider selection, wires the existing persistence adapters and registry
- * into the existing orchestrator with the conservative default budget, and never
- * exceeds the discovery boundary. The client's chosen provider and bounded query
- * are the ONLY inputs that cross from the request; identity, role, budget, host,
- * and every persistence decision are server-controlled.
+ * Shared composition for one bounded discovery run. The ONLY difference between
+ * a manual (M7.8) and a scheduled (M7.9) run is the recorded `trigger`; every
+ * safety property — staff re-check, closed provider allowlist, no client budget,
+ * host-pinned egress, reviewable-candidate-only persistence — is identical, so
+ * both entry points share this exact wiring and there is no second discovery
+ * implementation. The scheduled overlap guard lives in the persistence adapter
+ * (`DatabaseDiscoveryStore.createRun`, gated on `trigger === "SCHEDULED"`), so a
+ * scheduled run that would overlap an in-progress run throws `invalid-state`
+ * before any `import_job` row is created.
  */
-export async function runManualDiscovery(
+async function runComposedDiscovery(
   db: SqlExecutor,
   actor: Actor,
   input: ManualDiscoveryInput,
-  deps: ManualDiscoveryDeps = {},
+  trigger: DiscoveryRunTrigger,
+  deps: ManualDiscoveryDeps,
 ): Promise<DiscoveryRunResult> {
-  // Defense in depth: middleware already gated /api/admin, and the orchestrator
-  // refuses a non-staff DiscoveryActor — this refuses one more time, at the DB
-  // boundary, before any run row is created.
+  // Defense in depth: middleware already gated the entry point, and the
+  // orchestrator refuses a non-staff DiscoveryActor — this refuses one more
+  // time, at the DB boundary, before any run row is created.
   requireStaff(actor);
 
   const provider = parseManualDiscoveryProvider(input.provider);
@@ -150,9 +153,9 @@ export async function runManualDiscovery(
     {
       providerType: provider,
       query,
-      trigger: "MANUAL",
+      trigger,
       // NO client-supplied budget: the orchestrator applies the conservative
-      // DEFAULT_BUDGET. A manual run can never be unbounded or client-tuned.
+      // DEFAULT_BUDGET. A run can never be unbounded or client-tuned.
     },
     {
       registry,
@@ -171,4 +174,54 @@ export async function runManualDiscovery(
       rng: deps.rng,
     },
   );
+}
+
+/**
+ * Start ONE bounded, human-triggered (MANUAL) discovery run and return its safe
+ * result. Recorded as a MANUAL `import_job`; not subject to the scheduled
+ * overlap guard (M7.8 behaviour is unchanged).
+ *
+ * It re-checks the staff role (defense in depth over middleware + RLS), validates
+ * the provider selection, wires the existing persistence adapters and registry
+ * into the existing orchestrator with the conservative default budget, and never
+ * exceeds the discovery boundary. The client's chosen provider and bounded query
+ * are the ONLY inputs that cross from the request; identity, role, budget, host,
+ * and every persistence decision are server-controlled.
+ */
+export async function runManualDiscovery(
+  db: SqlExecutor,
+  actor: Actor,
+  input: ManualDiscoveryInput,
+  deps: ManualDiscoveryDeps = {},
+): Promise<DiscoveryRunResult> {
+  return runComposedDiscovery(db, actor, input, "MANUAL", deps);
+}
+
+/**
+ * Start ONE bounded, SCHEDULED discovery run and return its safe result (M7.9;
+ * docs/30 §15, ADR-020 M7.9 amendment).
+ *
+ * This is the entry point a trusted, non-browser scheduled invocation uses (the
+ * `/api/internal/discovery/run` endpoint, authenticated by a shared secret and
+ * acting under a server-configured real staff actor). It reuses the EXACT M7.8
+ * composition — the same orchestrator, registry, persistence adapters, closed
+ * provider allowlist, and conservative `DEFAULT_BUDGET` — differing only in that
+ * the run is recorded as a SCHEDULED `import_job` and is subject to the overlap
+ * guard: if a run for the same source is still in progress the persistence
+ * adapter throws `invalid-state` and NO new run row is created.
+ *
+ * Every LOCKED boundary is inherited unchanged: it discovers, normalizes,
+ * conservatively deduplicates, and PERSISTS REVIEWABLE CANDIDATES ONLY. It never
+ * publishes, classifies, scores, accepts, merges, deletes, calls AI, downloads
+ * PDFs, or scrapes, and writes no canonical research/publication/classification.
+ * The `actor` is resolved and role-checked server-side (never from the request);
+ * the caller controls no URL, host, or budget.
+ */
+export async function runScheduledDiscovery(
+  db: SqlExecutor,
+  actor: Actor,
+  input: ManualDiscoveryInput,
+  deps: ManualDiscoveryDeps = {},
+): Promise<DiscoveryRunResult> {
+  return runComposedDiscovery(db, actor, input, "SCHEDULED", deps);
 }

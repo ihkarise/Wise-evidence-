@@ -160,6 +160,17 @@ Reports (`docs/reports/`):
   publish/classify/score/accept/merge/delete/AI/PDF/scrape; **no scheduler/cron/
   worker/queue/background job**; no new provider, no migration. 619 tests pass;
   live provider + Supabase NOT RUN / PENDING
+- `M7.9-SCHEDULED-DISCOVERY.md` — Milestone 7.9: controlled recurring discovery
+  with **no in-application scheduler** and **no migration**. Recurrence lives in an
+  EXTERNAL GitHub Actions cron (`.github/workflows/discovery.yml`) that POSTs to one
+  trusted endpoint `POST /api/internal/discovery/run` (constant-time
+  `DISCOVERY_RUN_TOKEN`, unset → disabled/404; run under a server-configured REAL
+  staff actor `DISCOVERY_RUN_ACTOR_ID`, role never from the request). Reuses
+  `runScheduledDiscovery` (M7.8 composition + `trigger=SCHEDULED` + a scheduled-only
+  overlap guard → 409, manual unchanged); server-configured query (default
+  `homeopathy`), `DEFAULT_BUDGET`, closed provider allowlist. Reviewable candidates
+  only — no publish/classify/score/accept/merge/delete/AI/PDF/scrape. **640 tests
+  pass / 4 skipped**; live scheduled run NOT RUN / PENDING
 
 ## Application foundation (Milestone 1)
 
