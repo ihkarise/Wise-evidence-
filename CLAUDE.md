@@ -198,9 +198,36 @@ via an injected fake fetch; one opt-in `RUN_PUBMED_LIVE=1` smoke test is skipped
 CI and the **live PubMed call has NOT been run** from this egress-restricted
 environment (PENDING). Migrations remain `0001`–`0013`. Offline: 605 passed / 4
 skipped (typecheck/lint/format/web-build/diff-check/secret-scan clean). See `docs/30`
-§13, `ADR-020` (M7.7 amendment), `docs/reports/M7.7-PUBMED-CONNECTOR.md`. **Later M7
-work (M7.8, real-provider scheduling) and M8 ingestion are NOT started and NOT
-authorized.** There is still **no live automated discovery**. Live provider and
+§13, `ADR-020` (M7.7 amendment), `docs/reports/M7.7-PUBMED-CONNECTOR.md`.
+**Milestone 7.8** then added the first **runtime control** that invokes the existing
+discovery engine — the manual **"Run discovery now"** — with **no new discovery
+logic, no new provider, no scheduler, and no migration** (migrations remain
+`0001`–`0013`). Until M7.8 the bounded orchestrator (M7.3) and the persistence
+adapters (M7.4A) were reachable only from tests; M7.8 wires them into the app via a
+single `packages/database` composition point, `runManualDiscovery`
+(`packages/database/src/service/run-discovery.ts`) — it validates the provider
+against a closed allowlist (MOCK · CROSSREF · EUROPE_PMC · PUBMED), builds the
+existing `DatabaseDiscoveryStore`/`DatabaseStudyIndex` on the privileged executor,
+resolves the provider through the shipped registry, and calls the existing
+`runDiscovery` with the conservative `DEFAULT_BUDGET`. A staff-only
+`POST /api/admin/imports/run` endpoint calls it and a "▶️ Run discovery now" panel
+on `/admin/imports` drives it (source select + optional bounded query). **The client
+is never trusted:** actor/role come from the server session (middleware + service +
+store + orchestrator all re-check staff; a PUBLIC actor is refused before any
+`import_job` is created), the provider allowlist rejects any URL/host, the budget is
+never client-supplied, and every connector is host-pinned internally. It persists
+**reviewable candidates only** — it never publishes, classifies, scores,
+auto-accepts, auto-merges, auto-deletes, calls AI, downloads PDFs, or scrapes, and
+writes no canonical `research_study`/`publication`/`classification`. Crucially there
+is **no scheduler, cron, recurring discovery, worker, queue, `setInterval`, GitHub
+Actions scheduled discovery, or Render cron** — a run fires only on a human button
+press. MOCK runs fully offline (default); real CROSSREF/EUROPE_PMC/PUBMED runs fail
+closed in this egress-restricted environment and are recorded `FAILED` (no candidate,
+no secret). Offline: 619 passed / 4 skipped (typecheck/lint/format/web-build clean).
+See `docs/30` §14, `ADR-020` (M7.8 amendment),
+`docs/reports/M7.8-MANUAL-RUN-DISCOVERY.md`. **Later M7 work (M7.9, real-provider
+scheduling) and M8 ingestion are NOT started and NOT authorized.** There is still
+**no live automated discovery** and **no scheduling of any kind**. Live provider and
 Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
@@ -213,9 +240,10 @@ Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 ├── apps/web/                     # Astro hybrid SSR + React island + Tailwind;
 │                                 #   M3 admin workflow UI + public /research/[id];
 │                                 #   M4 /research explorer + ResearchCard;
-│                                 #   M5 /evidence + /statistics + DistributionChart
+│                                 #   M5 /evidence + /statistics + DistributionChart;
+│                                 #   M7.8 /admin/imports "Run discovery now" panel + POST /api/admin/imports/run
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
-├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + PGlite tests
+├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + M7.8 service/run-discovery (runManualDiscovery composition point) + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation

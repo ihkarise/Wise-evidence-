@@ -339,8 +339,29 @@ passed / 4 skipped (typecheck/lint/format/web-build/diff-check/secret-scan clean
 See `docs/30` §13, `ADR-020` (M7.7 amendment),
 `docs/reports/M7.7-PUBMED-CONNECTOR.md`.
 
-Later M7 phases (real-provider scheduling) and M8 ingestion remain design-pending and
-unauthorized — build in order. **M7.8 is NOT started and NOT authorized.**
+**M7.8 — manual "Run discovery now"  ✅ complete (offline; live PENDING).** The
+first runtime control that invokes the existing discovery engine. Until M7.8 the
+bounded orchestrator (M7.3) and the persistence adapters (M7.4A) were reachable only
+from tests; M7.8 wires them into the running app with **no new discovery logic, no
+new provider, no scheduler, and no migration** (migrations remain `0001`→`0013`). A
+single `packages/database` service, `runManualDiscovery`, is the one composition
+point (registry + persistence ports + orchestrator); a staff-only
+`POST /api/admin/imports/run` endpoint calls it, and a "▶️ Run discovery now" panel
+on `/admin/imports` drives it (source select + optional query). The client is never
+trusted: actor/role come from the server session (middleware + service + store +
+orchestrator all re-check staff), the provider is validated against a closed
+allowlist (no URL/host), and the budget is the conservative `DEFAULT_BUDGET` (never
+client-supplied). It persists REVIEWABLE candidates only — never publishes,
+classifies, scores, accepts, merges, deletes, calls AI, downloads PDFs, or scrapes —
+and adds **no cron / scheduler / worker / queue / background job** of any kind. MOCK
+runs fully offline; real CROSSREF/EUROPE_PMC/PUBMED runs fail closed here and are
+recorded FAILED (no candidate, no secret). Offline: 619 passed / 4 skipped
+(typecheck/lint/format/web-build clean). See `docs/30` §14, `ADR-020` (M7.8
+amendment), `docs/reports/M7.8-MANUAL-RUN-DISCOVERY.md`.
+
+Later M7 phases (real-provider **scheduling**) and M8 ingestion remain design-pending
+and unauthorized — build in order. **M7.9 and scheduling are NOT started and NOT
+authorized.**
 
 # 10. Phase 8 — Additional Sources
 

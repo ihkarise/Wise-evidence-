@@ -274,3 +274,48 @@ enrichment, fuzzy/vector search, XML abstract parsing, full-text hosting, and an
 automatic merge/accept/delete/classify/publish are **not started and not
 authorized**. No live provider or Supabase run was performed; those remain
 PENDING/BLOCKED.
+
+## Amendment (M7.8 — manual "Run discovery now", implemented)
+
+M7.8 adds the first **runtime control** that invokes the discovery engine. Until
+now the bounded orchestrator (M7.3) and the persistence adapters (M7.4A) were only
+reachable from tests; M7.8 wires them into the running application with **no
+contract change, no new provider, no scheduler, and no migration** (migrations
+remain `0001`→`0013`).
+
+1. **One composition point, no second implementation.** A new
+   `packages/database` service, `runManualDiscovery(db, actor, { provider, query },
+   deps)`, is the ONLY place that composes registry + persistence ports +
+   orchestrator. The web layer calls it exactly like every other admin service; it
+   re-implements nothing. The package stays framework-independent and takes egress
+   as an injected dependency (never an ambient global).
+2. **Client is never trusted.** The request carries only a provider selection
+   (validated against the closed allowlist MOCK · CROSSREF · EUROPE_PMC · PUBMED —
+   no URL/host accepted) and a bounded optional query. Actor identity + role come
+   from the server-resolved session; staff is enforced by middleware and re-checked
+   in the service, the store, and the orchestrator. Budget is never client-supplied
+   — the conservative `DEFAULT_BUDGET` applies, hard-clamped, so a run can never be
+   unbounded. Hosts are pinned inside each connector; there is no generic URL fetch.
+3. **Boundaries preserved.** A manual run persists REVIEWABLE candidates only. It
+   never publishes, classifies, scores, accepts, merges, deletes, calls AI,
+   downloads PDFs, or scrapes; it writes no canonical
+   `research_study`/`publication`/`classification`. `DUPLICATE ≠ DELETE` and
+   `Study ≠ Publication` hold unchanged.
+4. **No scheduling of any kind.** No cron, scheduler, recurring discovery, worker,
+   queue, `setInterval`, GitHub Actions scheduled discovery, or Render cron. A run
+   fires only on a human button press. M7.8 exists to prove the manual path before
+   automation is considered.
+5. **UI.** A small "Run discovery now" panel on `/admin/imports` (source select +
+   optional query) posts to `POST /api/admin/imports/run` and returns a flash
+   summary; the copy makes clear it only finds candidates for human review.
+
+**Live status.** MOCK runs fully offline (the default). Real
+CROSSREF/EUROPE_PMC/PUBMED runs fail closed in this egress-restricted environment
+and are recorded `FAILED` with no candidate written and no secret involved; live
+provider and live Supabase verification remain **PENDING / NOT RUN**. Offline: 619
+passed / 4 skipped (typecheck/lint/format/web-build clean).
+
+**Scope firewall (M7.8).** M7.9+, real-provider **scheduling / cron / Hermes /
+workers / queues / background jobs**, AI enrichment of candidates, fuzzy/vector
+search, PDF hosting, and any automatic merge/accept/delete/classify/publish are
+**not started and not authorized**.

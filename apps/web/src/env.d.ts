@@ -36,6 +36,15 @@ interface ImportMetaEnv {
   // → cost is NULL, never guessed (docs/29 §16).
   readonly AI_PRICE_INPUT_PER_MTOK?: string;
   readonly AI_PRICE_OUTPUT_PER_MTOK?: string;
+
+  // ---- DISCOVERY (Milestone 7) — SERVER-ONLY ----
+  // Optional contact email used only to build a polite-pool User-Agent for the
+  // networked discovery connectors (Crossref/Europe PMC/PubMed). NOT a secret and
+  // NOT an API key — the connectors need no key. Absent → connectors run without
+  // a contact header. Discovery egress is supplied by the server-side runtime;
+  // this package never reaches for an ambient fetch, and no discovery URL/host is
+  // ever accepted from the client.
+  readonly DISCOVERY_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

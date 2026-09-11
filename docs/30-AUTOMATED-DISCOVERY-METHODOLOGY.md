@@ -693,3 +693,121 @@ migration** (migrations remain `0001`→`0013`; 0013's generic
 `source_key`/`source_stable_id` already carry PMID identity). No new provider secret
 is introduced (none is needed). Live provider and Supabase verification remain
 PENDING a network-permitted, provisioned environment.
+
+# 14. M7.8 — manual "Run discovery now" (implemented, no migration)
+
+M7.8 gives an authenticated **staff** user a safe manual switch that invokes the
+**existing** discovery engine from the admin UI. Until M7.8 the bounded
+orchestrator (`runDiscovery`, M7.3) and the database persistence adapters
+(`DatabaseDiscoveryStore` / `DatabaseStudyIndex`, M7.4A) existed and were
+end-to-end tested, but nothing in the running application called them — a run
+could only be started from a test. M7.8 wires the one missing runtime control.
+It adds **no new discovery logic, no new provider, no scheduler, and no
+migration** (migrations remain `0001`→`0013`).
+
+The runtime flow is:
+
+```text
+👤 Staff user
+   ↓  (POST /api/admin/imports/run — provider + optional query)
+🔐 server-side staff authorization (middleware + service re-check)
+   ↓
+⚙️ existing runDiscovery (registry-selected provider, DEFAULT_BUDGET)
+   ↓
+🔎 selected source (MOCK · CROSSREF · EUROPE_PMC · PUBMED)
+   ↓
+🧹 normalization + conservative deduplication (unchanged)
+   ↓
+📥 import_candidate queue (REVIEW_REQUIRED / DUPLICATE_CANDIDATE)
+   ↓
+👤 human review (/admin/imports — unchanged M7.4B workflow)
+```
+
+## 14.1 One composition point (no second discovery implementation)
+
+`packages/database/src/service/run-discovery.ts` exposes `runManualDiscovery(db,
+actor, { provider, query }, deps)`. It is the ONLY place that composes the pieces:
+it validates the provider against a closed allowlist, constructs the existing
+`DatabaseDiscoveryStore` / `DatabaseStudyIndex` on the privileged executor, resolves
+the provider through the shipped `createDefaultDiscoveryRegistry()`, and calls the
+existing `runDiscovery`. The web layer never re-implements discovery, dedup, or
+persistence — it calls this service exactly as every other admin operation calls a
+`packages/database` service function. The package stays framework-independent
+(it imports only `@wise-evidence/discovery` and local modules); egress is injected
+by the caller, never taken from an ambient global.
+
+## 14.2 Trust boundary — the client is never trusted
+
+The client sends only two things: a **provider selection** (validated against
+`MANUAL_DISCOVERY_PROVIDERS` = MOCK · CROSSREF · EUROPE_PMC · PUBMED — anything
+else, including a URL or host, is rejected `invalid-input`) and an **optional
+free-text query** (trimmed, length-bounded to 500 chars, and further hardened
+against operator/field-tag injection inside each connector). Everything else is
+server-controlled:
+
+- **Actor identity + role** come from `locals.actor`, resolved server-side from the
+  Supabase session by middleware. Middleware already returns 401 (unauthenticated)
+  / 403 (non-staff) for `/api/admin/*`; `runManualDiscovery` re-checks
+  `requireStaff` and `DatabaseDiscoveryStore` re-checks it again on construction;
+  the orchestrator refuses a non-staff `DiscoveryActor` a third time. A PUBLIC
+  actor is refused **before any `import_job` row is created**.
+- **Budget** is never accepted from the client — the run uses the conservative
+  `DEFAULT_BUDGET` (5 pages / 100 items / 100 candidates / 50 requests / 60 s / 3
+  retries per request), each field hard-clamped in `resolveBudget`. A run can never
+  be unbounded regardless of source size.
+- **Host / base URL** are never accepted from the client — each connector is
+  host-pinned internally (`api.crossref.org` / `www.ebi.ac.uk` /
+  `eutils.ncbi.nlm.nih.gov`). There is no generic "fetch any URL" path.
+- **Persistence, dedup, and study identity** decisions are made server-side by the
+  unchanged orchestrator + adapters.
+
+## 14.3 Egress and live status
+
+The networked connectors need an injected `fetch`; the web endpoint supplies the
+server-side `globalThis.fetch` and an optional polite-pool `DISCOVERY_CONTACT_EMAIL`
+(not a secret, no API key — the three providers need none). In this
+egress-restricted environment a real CROSSREF/EUROPE_PMC/PUBMED run **fails
+closed** (transport error / `NOT_CONFIGURED` when no fetch is present), the run is
+recorded `FAILED`, no candidate is written, and no secret is involved or echoed.
+**MOCK** runs fully offline and is the default. The live provider run and live
+Supabase (auth/RLS/workflow) verification remain **PENDING / NOT RUN** — no live
+result is claimed.
+
+## 14.4 Admin UI
+
+`/admin/imports` gains a small "▶️ Run discovery now" panel: a source `<select>`
+(MOCK default), an optional query input, and a submit button posting to
+`POST /api/admin/imports/run`. The copy states plainly that it *"finds research
+candidates for human review"* and does **not** accept, publish, classify, score, or
+AI-process anything. On completion the endpoint redirects back with a flash summary
+(state + candidate/duplicate/found counts) rendered by the existing `AdminLayout`
+`?ok=`/`?error=` mechanism. No dangerous/arbitrary configuration is exposed.
+
+## 14.5 What M7.8 deliberately does NOT do
+
+A manual run discovers → normalizes → conservatively deduplicates → persists
+**reviewable candidates** only. It **never** publishes, classifies (outcome /
+quality / confidence / evidence level), scores efficacy/quality/outcome,
+auto-accepts, auto-merges, auto-deletes, calls or consults AI, downloads PDFs,
+scrapes, or bypasses a connector's host pin. Crucially there is **no scheduler, no
+cron, no recurring discovery, no worker, no queue infrastructure, no
+`setInterval`, no GitHub Actions scheduled discovery, and no Render cron** — a run
+happens only when a human presses the button. Scheduling is a separate, **not yet
+authorized** milestone; M7.8 exists precisely to prove the manual path
+(manual run → real discovery → database → candidate → human review) before any
+automation is considered.
+
+## 14.6 Testing & offline status
+
+`packages/database/test/run-discovery.test.ts` (14 tests, PGlite, real migrations
+`0001`→`0013`, fully offline/deterministic) covers: staff can run; PUBLIC/non-staff
+refused (with no job/candidate written); the existing orchestrator is actually
+invoked (canonical MOCK counters); candidates persist; idempotency and duplicate
+runs add nothing; NO canonical `research_study`/`publication`/`classification`
+rows; AI never invoked (`ai_job`/`ai_result` empty); `DEFAULT_BUDGET` enforced
+against a 200-item source (client cannot widen it); provider errors handled safely
+without DB corruption; a networked provider without egress fails closed
+(`NOT_CONFIGURED`); no secret-like content in the run result; and the audit trail
+records the server actor. Offline suite: **619 passed / 4 skipped**
+(typecheck / lint / format / web-build clean). The 4 skips are the opt-in live
+provider smoke tests, which remain **NOT RUN**.
