@@ -221,3 +221,56 @@ security machinery unchanged. Decisions specific to the connector:
 workers, AI enrichment, fuzzy/vector search, full-text hosting, and any automatic
 merge/accept/delete/classify/publish are **not started and not authorized**. No
 live provider or Supabase run was performed; those remain PENDING/BLOCKED.
+
+## Amendment (M7.7 — PubMed / NCBI connector, implemented; JSON only)
+
+M7.7 adds the third real provider, `PubMedDiscoveryProvider`
+(`packages/discovery/src/pubmed/`), the **C3** source (order Crossref → Europe PMC
+→ PubMed). Authorized scope is **Option A — JSON only**. It satisfies the M7.1
+contract unchanged and reuses the M7.2/M7.6 machinery verbatim.
+
+1. **JSON-only, two structured endpoints.** The connector uses only the official
+   **ESearch** and **ESummary** JSON endpoints. A discovery page is two host-pinned
+   GETs (ESearch term → PMIDs, then ESummary PMIDs → metadata); `fetch()` is a
+   single ESummary call for one PMID. It deliberately does **NOT** parse XML, fetch
+   abstracts, or retrieve full text — so `capabilities.providesAbstracts = false`,
+   and a boundary test asserts no XML parser is imported and `efetch.fcgi` is never
+   referenced. Crossref/Europe PMC supply abstracts for the same record.
+2. **HTTP security identical to Crossref/Europe PMC.** HTTPS only, host-PINNED to
+   `eutils.ncbi.nlm.nih.gov` via a module constant and re-gated through
+   `assertUrlAllowed`; timeout/size-bounded, redirects rejected, content-type
+   validated on the shared injected `http.ts`; never an ambient global fetch.
+   Registering PUBMED requires an injected `fetch`, so it fails closed as
+   `NOT_CONFIGURED` without configured egress. MOCK/CROSSREF/EUROPE_PMC unchanged.
+3. **PMID as the stable source id.** A DOI-less record is still fully discoverable
+   because PMID is always present. DOIs are canonicalised via
+   `@wise-evidence/domain` (from `articleids`, or a fallback parse of
+   `elocationid`); PMID/PMCID reuse existing identifier conventions. No new
+   identifier type was invented.
+4. **Query hardening.** Free-text queries are stripped of PubMed field tags and
+   boolean operators before entering the `term`; PMID clauses are digit-validated
+   and DOI clauses quote-escaped, so untrusted text can never restructure the
+   query. **No API key** is required or accepted (the optional `api_key`/`tool`/
+   `email` params are intentionally not added; a configured contact email appears
+   only in a polite User-Agent, never in the URL).
+5. **No retries in the connector.** One request per `discover()`/`fetch()`; bounded
+   retries, `Retry-After` honouring, and scheduling stay with the M7.3 orchestrator
+   (which drives PUBMED through the registry unchanged — proven by an integration
+   test). A 429 becomes a typed `RATE_LIMITED` error. Rate-limit/size caps are
+   conservative app-level values labelled **REQUIRES LIVE VERIFICATION** (NCBI's
+   ~3 req/s public no-key ceiling is not verified from this environment).
+6. **No scraping, no AI, no DB writes, no migration, no UI.** `DUPLICATE ≠ DELETE`
+   and `Study ≠ Publication` hold: a record whose DOI already belongs to a known
+   study is flagged `DUPLICATE_CANDIDATE` for human review, never merged, deleted,
+   or published. Migration 0013's generic `source_key`/`source_stable_id` already
+   carry PMID identity, so **no migration** was needed (the firewall did not fire).
+
+**Live status.** A single opt-in live smoke test is gated on `RUN_PUBMED_LIVE=1`
+and stays skipped in CI; the live PubMed call has **not** been run from this
+egress-restricted environment (PENDING).
+
+**Scope firewall (M7.7).** M7.8+, scheduling, Hermes, queues, workers, AI
+enrichment, fuzzy/vector search, XML abstract parsing, full-text hosting, and any
+automatic merge/accept/delete/classify/publish are **not started and not
+authorized**. No live provider or Supabase run was performed; those remain
+PENDING/BLOCKED.

@@ -174,9 +174,33 @@ connector tests run offline via an injected fake fetch; one opt-in
 has NOT been run** from this egress-restricted environment (PENDING). Migrations
 remain `0001`–`0013`. Offline: 561 passed / 3 skipped (typecheck/lint/format/
 web-build/diff-check/secret-scan clean). See `docs/30` §12, `ADR-020` (M7.6
-amendment), `docs/reports/M7.6-EUROPE-PMC-CONNECTOR.md`. **Later M7 work (M7.7,
-PubMed/NCBI adapter, real-provider scheduling) and M8 ingestion are NOT started and
-NOT authorized.** There is still **no live automated discovery**. Live provider and
+amendment), `docs/reports/M7.6-EUROPE-PMC-CONNECTOR.md`. **Milestone 7.7** then
+added the third real provider, `PubMedDiscoveryProvider`
+(`packages/discovery/src/pubmed/`), the **C3** source (completing the order Crossref
+→ Europe PMC → PubMed), authorized as **Option A — JSON only**: on the shared
+injected HTTP layer host-pinned to `eutils.ncbi.nlm.nih.gov`, HTTPS-only,
+timeout/size-bounded, redirects rejected, JSON-validated, **no API key**. It uses
+only the structured **ESearch + ESummary** JSON endpoints (a discovery page = two
+calls: term → PMIDs → metadata), keys candidates on the **PMID** (so a DOI-less
+record is still discoverable), emits DOI/PMID/PMCID (DOI via `articleids` or an
+`elocationid` fallback, canonicalised through `@wise-evidence/domain`), hardens
+untrusted free-text queries against field-tag/operator injection, and maps failures
+onto the typed errors. Registered as PUBMED (needs an injected fetch, else
+`NOT_CONFIGURED`; the orchestrator drives it through the registry unchanged). It
+does **no XML parsing, no abstract/full-text retrieval** (`providesAbstracts=false`;
+a boundary test forbids an XML parser and `efetch.fcgi`), **no scraping, no
+scheduling, no retries in the connector, no AI, no database writes, no migration, no
+UI, and no automatic classification/publication/acceptance/merge/delete**
+(`DUPLICATE ≠ DELETE` and `Study ≠ Publication` test-covered). Migration 0013's
+generic `source_key`/`source_stable_id` already carry PMID identity, so **no
+migration** was needed (the firewall did not fire). All connector tests run offline
+via an injected fake fetch; one opt-in `RUN_PUBMED_LIVE=1` smoke test is skipped in
+CI and the **live PubMed call has NOT been run** from this egress-restricted
+environment (PENDING). Migrations remain `0001`–`0013`. Offline: 605 passed / 4
+skipped (typecheck/lint/format/web-build/diff-check/secret-scan clean). See `docs/30`
+§13, `ADR-020` (M7.7 amendment), `docs/reports/M7.7-PUBMED-CONNECTOR.md`. **Later M7
+work (M7.8, real-provider scheduling) and M8 ingestion are NOT started and NOT
+authorized.** There is still **no live automated discovery**. Live provider and
 Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
@@ -196,7 +220,7 @@ Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
-├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports; M7.5 explainable conservative dedup (dedup.ts matcher.test.ts — reason codes, year-conflict, empty-title guard; no fuzzy similarity); M7.6 europepmc/ connector (host-pinned www.ebi.ac.uk, REST search, composite SOURCE/ID, DOI/PMID/PMCID, query-injection hardening; registered EUROPE_PMC). No scraping/scheduler/AI/DB-write/migration.
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports; M7.5 explainable conservative dedup (dedup.ts matcher.test.ts — reason codes, year-conflict, empty-title guard; no fuzzy similarity); M7.6 europepmc/ connector (host-pinned www.ebi.ac.uk, REST search, composite SOURCE/ID, DOI/PMID/PMCID, query-injection hardening; registered EUROPE_PMC); M7.7 pubmed/ connector (JSON-only ESearch+ESummary, host-pinned eutils.ncbi.nlm.nih.gov, PMID stable identity, DOI/PMID/PMCID, query-injection hardening, no XML/abstracts; registered PUBMED). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures

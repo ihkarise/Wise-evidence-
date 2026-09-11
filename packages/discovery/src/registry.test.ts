@@ -9,6 +9,8 @@ import { CrossrefDiscoveryProvider } from "./crossref/provider.js";
 import { makeCrossrefFixtureFetch } from "./crossref/fixtures.js";
 import { EuropePMCDiscoveryProvider } from "./europepmc/provider.js";
 import { makeEuropePMCFixtureFetch } from "./europepmc/fixtures.js";
+import { PubMedDiscoveryProvider } from "./pubmed/provider.js";
+import { makePubMedFixtureFetch } from "./pubmed/fixtures.js";
 import { DiscoveryError, isDiscoveryError } from "./errors.js";
 import type { DiscoveryProviderType } from "./types.js";
 
@@ -20,13 +22,13 @@ describe("DiscoveryProviderRegistry", () => {
     expect(provider.descriptor.providerType).toBe("MOCK");
   });
 
-  it("registers MOCK, CROSSREF and EUROPE_PMC by default; PUBMED stays unconfigured", () => {
+  it("registers MOCK, CROSSREF, EUROPE_PMC and PUBMED by default", () => {
     const registry = createDefaultDiscoveryRegistry();
-    expect(registry.registeredTypes()).toEqual(["MOCK", "CROSSREF", "EUROPE_PMC"]);
+    expect(registry.registeredTypes()).toEqual(["MOCK", "CROSSREF", "EUROPE_PMC", "PUBMED"]);
     expect(registry.has("MOCK")).toBe(true);
     expect(registry.has("CROSSREF")).toBe(true);
     expect(registry.has("EUROPE_PMC")).toBe(true);
-    expect(registry.has("PUBMED")).toBe(false);
+    expect(registry.has("PUBMED")).toBe(true);
   });
 
   it("resolves CROSSREF when an injected fetch is supplied", () => {
@@ -45,7 +47,15 @@ describe("DiscoveryProviderRegistry", () => {
     expect(provider.descriptor.providerType).toBe("EUROPE_PMC");
   });
 
-  it.each<DiscoveryProviderType>(["CROSSREF", "EUROPE_PMC"])(
+  it("resolves PUBMED when an injected fetch is supplied", () => {
+    const registry = createDefaultDiscoveryRegistry();
+    const { fetch } = makePubMedFixtureFetch({});
+    const provider = registry.resolve("PUBMED", { fetch });
+    expect(provider).toBeInstanceOf(PubMedDiscoveryProvider);
+    expect(provider.descriptor.providerType).toBe("PUBMED");
+  });
+
+  it.each<DiscoveryProviderType>(["CROSSREF", "EUROPE_PMC", "PUBMED"])(
     "fails closed with NOT_CONFIGURED when %s is resolved without a fetch",
     (type) => {
       const registry = createDefaultDiscoveryRegistry();
@@ -60,8 +70,8 @@ describe("DiscoveryProviderRegistry", () => {
     },
   );
 
-  it("fails closed with NOT_CONFIGURED for the still-unregistered PUBMED", () => {
-    const registry = createDefaultDiscoveryRegistry();
+  it("fails closed with NOT_CONFIGURED for a genuinely unregistered custom type", () => {
+    const registry = new DiscoveryProviderRegistry();
     let thrown: unknown;
     try {
       registry.resolve("PUBMED");

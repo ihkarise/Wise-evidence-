@@ -147,4 +147,32 @@ describe("discovery architecture boundary", () => {
       }
     }
   });
+
+  it("keeps PubMed-specific code from leaking into the generic contracts", () => {
+    // Only the registry (registration) and the barrel (re-export) may reference
+    // the pubmed adapter; the generic contract/types/normalize/host files must
+    // not import it.
+    const allowed = new Set(["/registry.ts", "/index.ts"]);
+    for (const file of FILES) {
+      const rel = file.replace(SRC_DIR, "");
+      if (rel.startsWith("/pubmed/") || allowed.has(rel)) continue;
+      for (const spec of importSpecifiers(readFileSync(file, "utf8"))) {
+        expect(spec).not.toMatch(/pubmed/i);
+      }
+    }
+  });
+
+  it("the PubMed connector parses no XML and hosts no full text (JSON-only scope)", () => {
+    // M7.7 is authorized for JSON only: the connector must not pull in an XML
+    // parser or any browser/scraping tooling, and must not reference EFetch.
+    for (const file of FILES) {
+      const rel = file.replace(SRC_DIR, "");
+      if (!rel.startsWith("/pubmed/")) continue;
+      const src = readFileSync(file, "utf8");
+      for (const spec of importSpecifiers(src)) {
+        expect(spec).not.toMatch(/xml|xml2js|fast-xml|xmldom|sax\b/i);
+      }
+      expect(src).not.toMatch(/efetch\.fcgi/i); // no full-text / abstract XML endpoint
+    }
+  });
 });

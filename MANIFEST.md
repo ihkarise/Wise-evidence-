@@ -144,6 +144,13 @@ Reports (`docs/reports/`):
   registered EUROPE_PMC, orchestrator-driven via the registry); no scraping/
   scheduler/AI/DB-write/migration/UI; DUPLICATE ≠ DELETE and Study ≠ Publication
   preserved; 561 tests pass; live PENDING
+- `M7.7-PUBMED-CONNECTOR.md` — Milestone 7.7: the C3 PubMed / NCBI
+  `DiscoveryProvider` (JSON-only ESearch + ESummary, host-pinned
+  eutils.ncbi.nlm.nih.gov, PMID stable identity, DOI/PMID/PMCID, query-injection
+  hardening, no API key, no XML/abstracts — `providesAbstracts=false`; registered
+  PUBMED, orchestrator-driven via the registry); no XML/scraping/scheduler/AI/
+  DB-write/migration/UI; DUPLICATE ≠ DELETE and Study ≠ Publication preserved; 605
+  tests pass; live PENDING
 
 ## Application foundation (Milestone 1)
 

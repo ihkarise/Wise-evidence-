@@ -316,8 +316,31 @@ egress-restricted environment (PENDING). Offline: 561 passed / 3 skipped
 (typecheck/lint/format/web-build/diff-check/secret-scan clean). See `docs/30` §12,
 `ADR-020` (M7.6 amendment), `docs/reports/M7.6-EUROPE-PMC-CONNECTOR.md`.
 
-Later M7 phases (the PubMed/NCBI adapter and scheduling) remain design-pending and
-unauthorized — build in order. **M7.7 is NOT started and NOT authorized.**
+**M7.7 — PubMed / NCBI connector  ✅ complete (offline; live PENDING).** The third
+real `DiscoveryProvider`, `PubMedDiscoveryProvider`
+(`packages/discovery/src/pubmed/`), the **C3** source in `docs/24` (completing the
+order Crossref → Europe PMC → PubMed). Authorized scope: **Option A — JSON only**.
+It satisfies the M7.1 contract unchanged and reuses the M7.2/M7.6 security machinery
+verbatim: host-pinned to `eutils.ncbi.nlm.nih.gov`, HTTPS-only, injected/bounded
+HTTP, redirects rejected, JSON-validated, **no API key**. It uses only the
+structured **ESearch + ESummary** JSON endpoints (a page = two calls: term → PMIDs →
+metadata); keys candidates on the **PMID** (so a DOI-less record is still
+discoverable), emits DOI/PMID/PMCID, hardens untrusted free-text queries against
+field-tag/operator injection, and maps failures onto the typed errors. Registered as
+PUBMED (needs an injected fetch, else `NOT_CONFIGURED`; the orchestrator drives it
+through the registry unchanged). **No XML parsing, no abstract/full-text retrieval,
+no scraping, no scheduling, no retries in the connector, no AI, no database writes,
+no migration, no UI, no automatic classification/publication/acceptance/merge/
+delete** (`capabilities.providesAbstracts = false`; a boundary test forbids an XML
+parser and `efetch.fcgi`). All tests run offline via an injected fake fetch; one
+opt-in `RUN_PUBMED_LIVE=1` smoke test is skipped in CI and the live PubMed call has
+**not** been run from this egress-restricted environment (PENDING). Offline: 605
+passed / 4 skipped (typecheck/lint/format/web-build/diff-check/secret-scan clean).
+See `docs/30` §13, `ADR-020` (M7.7 amendment),
+`docs/reports/M7.7-PUBMED-CONNECTOR.md`.
+
+Later M7 phases (real-provider scheduling) and M8 ingestion remain design-pending and
+unauthorized — build in order. **M7.8 is NOT started and NOT authorized.**
 
 # 10. Phase 8 — Additional Sources
 

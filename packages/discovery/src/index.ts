@@ -110,6 +110,15 @@ export {
   type EuropePMCDiscoveryProviderOptions,
 } from "./europepmc/provider.js";
 
+// PubMed connector (M7.7) — third real DiscoveryProvider (docs/24 C3; JSON-only)
+export {
+  PubMedDiscoveryProvider,
+  PUBMED_SOURCE_DESCRIPTOR,
+  PUBMED_HOST,
+  PUBMED_DISCOVERY_VERSION,
+  type PubMedDiscoveryProviderOptions,
+} from "./pubmed/provider.js";
+
 // Discovery orchestrator (M7.3) — bounded controlled run + persistence ports
 export {
   runDiscovery,
