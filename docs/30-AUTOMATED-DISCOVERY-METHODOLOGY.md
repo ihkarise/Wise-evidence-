@@ -603,3 +603,93 @@ publication/acceptance, no candidate deletion or study merge, no fuzzy/vector
 search, and **no migration** (migrations remain `0001`→`0013`). No new provider
 secret is introduced (none is needed). Live provider and Supabase verification
 remain PENDING a network-permitted, provisioned environment.
+
+# 13. M7.7 — PubMed / NCBI connector (implemented, JSON only, no migration)
+
+M7.7 adds the third real `DiscoveryProvider`, `PubMedDiscoveryProvider`
+(`packages/discovery/src/pubmed/`), the **C3** source in `docs/24` and the last in
+the priority order **Crossref → Europe PMC → PubMed**. It satisfies the M7.1
+contract unchanged and reuses the M7.2/M7.6 security machinery verbatim; only the
+endpoints, the query dialect, and the response parsing are PubMed-specific.
+Authorized scope is **Option A — JSON only**.
+
+## 13.1 Boundary
+
+Isolated in `pubmed/`, it returns only provider-neutral discovery objects; a third
+architecture guard (`boundary.test.ts`) proves no PubMed-specific code leaks into
+the generic contracts, and a further guard asserts the connector imports **no XML
+parser** and never references the `efetch.fcgi` full-text endpoint. It imports no
+AI/database/web/vendor SDK and writes nothing canonical.
+
+## 13.2 JSON-only decision (no XML abstracts)
+
+PubMed abstracts require the XML EFetch endpoint. M7.7 deliberately uses **only**
+the structured **ESearch** and **ESummary** JSON endpoints — no XML parser, no
+abstract retrieval, no full-text. The descriptor therefore declares
+`capabilities.providesAbstracts = false`; Crossref/Europe PMC supply abstracts for
+the same record where appropriate. This keeps the connector simple, safe, and
+provider-focused and avoids introducing an XML dependency.
+
+## 13.3 Two-call flow, HTTP security & identity
+
+A discovery page issues **two** host-pinned HTTPS GETs: ESearch (`term` → a page of
+PMIDs) then ESummary (PMIDs → metadata). `fetch()` is a single ESummary call for one
+PMID. Both are host-PINNED to `eutils.ncbi.nlm.nih.gov` via a module constant and
+re-gated through `assertUrlAllowed`; both are timeout-bounded, size-bounded,
+redirect-rejecting, and JSON-content-type-validated on the shared injected HTTP
+layer. **No API key** — the public E-utilities are used key-free; NCBI's optional
+`api_key`/`tool`/`email` params are intentionally NOT added (a secret is never
+introduced merely to raise a rate limit, and the contact email, when configured,
+appears only in a polite User-Agent, never in the URL). **PMID is PubMed's stable
+source id**, so a DOI-less record is still fully discoverable; DOIs are
+canonicalised via `@wise-evidence/domain` (from `articleids`, or a fallback parse of
+`elocationid`), and PMID/PMCID reuse the existing identifier conventions. Untrusted
+metadata is length-capped/sanitized; free-text queries are stripped of PubMed field
+tags and boolean operators before entering the `term`, and PMID/DOI clauses are
+digit-validated / quote-escaped, so untrusted text can never restructure the query.
+An unbounded request (no query, PMID, or DOI) is refused (`INVALID_IDENTIFIER`).
+
+## 13.4 Error mapping & pagination
+
+Transport/HTTP failures map onto the M7.1 typed errors exactly as the other
+connectors do (timeout → `TIMEOUT`; 429 → `RATE_LIMITED` with safe Retry-After
+detail; 4xx/5xx → `SOURCE_UNAVAILABLE`; non-JSON/oversized/invalid/wrong-structure →
+`MALFORMED_RESPONSE`). A well-formed empty ESearch idlist is terminal, not an error;
+a per-record ESummary `error` string is skipped, not surfaced. Pagination uses
+PubMed's `retstart`/`retmax`, carried through the M7.1 opaque cursor: the connector
+advances only while a full page came back and the next offset stays below the
+reported `count`.
+
+## 13.5 Rate limiting & orchestrator
+
+The descriptor's rate limit is a CONSERVATIVE application cap
+(`requestsPerSecond: 1`); NCBI's public no-key ceiling (~3 req/s) is **not verified
+from this environment** and is marked **LIVE VERIFICATION PENDING**. The connector
+adds no scheduler/worker/retry/concurrency of its own; the M7.3 orchestrator drives
+PUBMED through the registry unchanged (proven by
+`orchestrator/pubmed-integration.test.ts`) — no `if source === "pubmed"` anywhere —
+counting one request per `discover()`/`fetch()` (a page's two HTTP calls stay inside
+the connector). `DUPLICATE ≠ DELETE` and `Study ≠ Publication` hold: a record whose
+DOI already belongs to a known study is flagged `DUPLICATE_CANDIDATE` for human
+review, never merged, deleted, or published.
+
+## 13.6 Testing & live status
+
+All tests run offline via an injected fake fetch (`pubmed/provider.test.ts`,
+`security.test.ts`, plus the integration and registry/boundary tests) covering the
+two-call flow, DOI present/missing/casing, PMID/PMCID, the `elocationid` fallback,
+empty/duplicate/error/malformed shapes, hostile metadata and query-injection, and
+determinism. One opt-in live smoke test is gated on `RUN_PUBMED_LIVE=1` and skipped
+in CI; the live PubMed call has **not** been run from this egress-restricted
+environment (PENDING). See `docs/reports/M7.7-PUBMED-CONNECTOR.md`.
+
+## 13.7 What M7.7 deliberately does NOT do
+
+No XML abstract parsing, no full-text retrieval/hosting, no `efetch.fcgi`, no
+scheduling/Hermes/queue/worker, no scraping, no arbitrary URL fetching, no AI, no
+automatic classification/publication/acceptance, no candidate deletion or study
+merge, no fuzzy/vector search, no new paid API, no new infrastructure, and **no
+migration** (migrations remain `0001`→`0013`; 0013's generic
+`source_key`/`source_stable_id` already carry PMID identity). No new provider secret
+is introduced (none is needed). Live provider and Supabase verification remain
+PENDING a network-permitted, provisioned environment.

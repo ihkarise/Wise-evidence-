@@ -6,10 +6,10 @@
  * that ships in a later milestone will ask the registry for a provider — it will
  * never `new` an adapter and never learn which real source answered.
  *
- * Fail-closed: `MOCK`, `CROSSREF` (M7.2), and `EUROPE_PMC` (M7.6) ship
- * registered; `PUBMED` (and any unregistered type) throws a typed
- * `DiscoveryError("NOT_CONFIGURED")` with a SAFE message. CROSSREF and
- * EUROPE_PMC additionally fail closed with `NOT_CONFIGURED` when resolved WITHOUT
+ * Fail-closed: `MOCK`, `CROSSREF` (M7.2), `EUROPE_PMC` (M7.6), and `PUBMED`
+ * (M7.7) ship registered; any unregistered type throws a typed
+ * `DiscoveryError("NOT_CONFIGURED")` with a SAFE message. All three networked
+ * adapters additionally fail closed with `NOT_CONFIGURED` when resolved WITHOUT
  * an injected `fetch` — the package never reaches for a global fetch, so egress
  * must be supplied by the caller. Constructing a provider performs no I/O (the
  * first network call happens only when the provider is actually used).
@@ -20,6 +20,7 @@ import { DiscoveryError } from "./errors.js";
 import { MockDiscoveryProvider } from "./mock/provider.js";
 import { CrossrefDiscoveryProvider } from "./crossref/provider.js";
 import { EuropePMCDiscoveryProvider } from "./europepmc/provider.js";
+import { PubMedDiscoveryProvider } from "./pubmed/provider.js";
 import type { FetchLike } from "./http.js";
 import type { DiscoveryProvider } from "./provider.js";
 import type { DiscoveryProviderType } from "./types.js";
@@ -96,12 +97,10 @@ export class DiscoveryProviderRegistry {
 }
 
 /**
- * A registry pre-registered with the shipped adapters: MOCK, CROSSREF (M7.2), and
- * EUROPE_PMC (M7.6). Both networked adapters require an injected `fetch` at
- * resolve time (egress is never ambient in this package); resolving either
- * without one fails closed as `NOT_CONFIGURED`. PUBMED is intentionally NOT
- * registered, so the orchestrator fails clearly until its adapter is added,
- * without any change to the seam.
+ * A registry pre-registered with the shipped adapters: MOCK, CROSSREF (M7.2),
+ * EUROPE_PMC (M7.6), and PUBMED (M7.7). All three networked adapters require an
+ * injected `fetch` at resolve time (egress is never ambient in this package);
+ * resolving any of them without one fails closed as `NOT_CONFIGURED`.
  */
 export function createDefaultDiscoveryRegistry(): DiscoveryProviderRegistry {
   return new DiscoveryProviderRegistry()
@@ -130,6 +129,22 @@ export function createDefaultDiscoveryRegistry(): DiscoveryProviderRegistry {
         );
       }
       return new EuropePMCDiscoveryProvider({
+        fetch: context.fetch,
+        key: context.key,
+        contactEmail: context.contactEmail ?? null,
+        clock: context.clock,
+        timeoutMs: context.timeoutMs,
+        maxBytes: context.maxBytes,
+      });
+    })
+    .register("PUBMED", (context) => {
+      if (context.fetch === undefined) {
+        throw new DiscoveryError(
+          "NOT_CONFIGURED",
+          "PUBMED requires an injected fetch (egress is not ambient in @wise-evidence/discovery)",
+        );
+      }
+      return new PubMedDiscoveryProvider({
         fetch: context.fetch,
         key: context.key,
         contactEmail: context.contactEmail ?? null,
