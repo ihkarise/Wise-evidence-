@@ -151,6 +151,15 @@ Reports (`docs/reports/`):
   PUBMED, orchestrator-driven via the registry); no XML/scraping/scheduler/AI/
   DB-write/migration/UI; DUPLICATE ≠ DELETE and Study ≠ Publication preserved; 605
   tests pass; live PENDING
+- `M7.8-MANUAL-RUN-DISCOVERY.md` — Milestone 7.8: the manual "Run discovery now"
+  runtime control — the one composition point `runManualDiscovery` (registry +
+  persistence ports + orchestrator), a staff-only `POST /api/admin/imports/run`
+  endpoint, and a "▶️ Run discovery now" panel on `/admin/imports`. Client never
+  trusted (server actor/role, closed provider allowlist, conservative default
+  budget, host-pinned connectors); persists reviewable candidates only — no
+  publish/classify/score/accept/merge/delete/AI/PDF/scrape; **no scheduler/cron/
+  worker/queue/background job**; no new provider, no migration. 619 tests pass;
+  live provider + Supabase NOT RUN / PENDING
 
 ## Application foundation (Milestone 1)
 

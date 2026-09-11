@@ -90,3 +90,14 @@ export { DatabaseDiscoveryStore, DatabaseStudyIndex } from "./service/discovery.
  * `research_source`, the candidate DOI, and append-only `audit_log`.
  */
 export * from "./service/candidates.js";
+
+/**
+ * Milestone 7.8 manual "Run discovery now" (docs/30 §14, ADR-020 M7.8). The one
+ * composition point that lets an authenticated staff user start the EXISTING
+ * bounded discovery orchestrator against the EXISTING persistence adapters — no
+ * second discovery implementation, no scheduler/worker/queue. It persists
+ * REVIEWABLE candidates only and never publishes, classifies, scores, accepts,
+ * merges, deletes, or calls AI. The client may choose only an allowlisted
+ * provider + a bounded query; identity, role, budget, and host are server-side.
+ */
+export * from "./service/run-discovery.js";
