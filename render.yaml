@@ -76,3 +76,17 @@ services:
       #   sync: false
       # - key: AI_PRICE_OUTPUT_PER_MTOK
       #   sync: false
+
+      # --- SCHEDULED DISCOVERY (Milestone 7.9) — SERVER-ONLY, opt-in. ---
+      # Enables the trusted scheduled-run endpoint (/api/internal/discovery/run)
+      # that an external scheduler (GitHub Actions cron) calls. NO in-app
+      # scheduler/worker is added. Leave DISCOVERY_RUN_TOKEN unset to keep the
+      # feature DISABLED (endpoint 404s). Set the same token in the scheduler.
+      # - key: DISCOVERY_RUN_TOKEN        # shared secret (never committed)
+      #   sync: false
+      # - key: DISCOVERY_RUN_ACTOR_ID     # app_user UUID (a REVIEWER/ADMIN)
+      #   sync: false
+      # - key: DISCOVERY_SCHEDULED_QUERY  # recurring search term (default "homeopathy")
+      #   sync: false
+      # - key: DISCOVERY_SCHEDULED_PROVIDER  # MOCK | CROSSREF | EUROPE_PMC | PUBMED
+      #   sync: false

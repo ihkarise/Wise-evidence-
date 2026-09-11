@@ -359,9 +359,35 @@ recorded FAILED (no candidate, no secret). Offline: 619 passed / 4 skipped
 (typecheck/lint/format/web-build clean). See `docs/30` §14, `ADR-020` (M7.8
 amendment), `docs/reports/M7.8-MANUAL-RUN-DISCOVERY.md`.
 
-Later M7 phases (real-provider **scheduling**) and M8 ingestion remain design-pending
-and unauthorized — build in order. **M7.9 and scheduling are NOT started and NOT
-authorized.**
+**M7.9 — controlled recurring discovery  ✅ complete (offline); live scheduled run
+PENDING.** M7.9 runs the EXISTING discovery engine on a recurring schedule with
+**no in-application scheduler** and **no new provider, no new discovery logic, and
+no migration** (migrations remain `0001`→`0013`; `import_job_trigger` already had
+`SCHEDULED`). Recurrence lives in an EXTERNAL scheduler — a GitHub Actions cron
+workflow (`.github/workflows/discovery.yml`, `schedule:` + `workflow_dispatch` +
+`concurrency:`) that POSTs to one trusted endpoint and runs no discovery logic
+itself (and cleanly skips when unconfigured). The endpoint
+`POST /api/internal/discovery/run` authenticates the caller with a constant-time
+shared secret (`DISCOVERY_RUN_TOKEN`; unset → feature disabled/404) and executes
+under a server-configured REAL staff actor (`DISCOVERY_RUN_ACTOR_ID` → `app_user`;
+role never from the request, non-staff → 403). It reuses `runScheduledDiscovery`
+(the M7.8 composition + `trigger=SCHEDULED` + an overlap guard that refuses an
+in-progress same-source run, `invalid-state` → 409, creating no row; manual runs
+unchanged). The query is server-configured (default `homeopathy`); the budget is
+the conservative `DEFAULT_BUDGET`; the only request input is a provider validated
+against the closed allowlist. It persists REVIEWABLE candidates only — never
+publishes, classifies, scores, accepts, merges, deletes, calls AI, downloads PDFs,
+or scrapes — and writes no canonical research data; the human remains the sole
+decision boundary at `/admin/imports`. GitHub Actions cron was chosen over paid
+Render Cron / a third-party pinger (free-first). Offline: **640 passed / 4
+skipped** (typecheck/lint/format/web-build clean); the live scheduled run against a
+deployed host + Supabase is **PENDING / NOT RUN**. See `docs/30` §15, `ADR-020`
+(M7.9 amendment), `docs/reports/M7.9-SCHEDULED-DISCOVERY.md`.
+
+An **in-app** scheduler/cron/worker/queue/background job, a DB-backed
+schedule-config table + admin schedule UI, saved searches / date windows, and M8
+ingestion remain design-pending and unauthorized — build in order. **M7.10+ and
+any in-application scheduler are NOT started and NOT authorized.**
 
 # 10. Phase 8 — Additional Sources
 

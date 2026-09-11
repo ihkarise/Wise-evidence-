@@ -811,3 +811,128 @@ without DB corruption; a networked provider without egress fails closed
 records the server actor. Offline suite: **619 passed / 4 skipped**
 (typecheck / lint / format / web-build clean). The 4 skips are the opt-in live
 provider smoke tests, which remain **NOT RUN**.
+
+# 15. M7.9 — controlled recurring discovery (implemented, no migration)
+
+M7.9 lets WiseEvidence run the **existing** discovery engine on a recurring
+schedule **without** building any in-application scheduler. Until M7.9 the engine
+could be started only by a human pressing the M7.8 button; M7.9 adds one trusted,
+non-browser entry point so an **external** scheduler (a GitHub Actions cron job)
+can start the same bounded run periodically. Automation may FIND papers; it still
+**never DECIDES** what happens to them — every result lands in the existing
+human-review candidate queue. It adds **no new discovery logic, no new provider,
+no in-app scheduler/cron/worker/queue, and no migration** (migrations remain
+`0001`→`0013`; the `import_job_trigger` enum already carried `SCHEDULED` since
+`0001`).
+
+The trust model is:
+
+```text
+⏰ external schedule (GitHub Actions cron)
+   ↓  (POST /api/internal/discovery/run — Authorization: Bearer <shared secret>)
+🔐 constant-time shared-secret check (unset → feature disabled, 404)
+   ↓
+👤 server-configured REAL staff actor (DISCOVERY_RUN_ACTOR_ID → app_user; role never from the request)
+   ↓
+⚙️ existing runScheduledDiscovery → runDiscovery (registry provider, DEFAULT_BUDGET, trigger=SCHEDULED)
+   ↓
+🔎 selected source (MOCK · CROSSREF · EUROPE_PMC · PUBMED)  ·  🧹 normalize + conservative dedup
+   ↓
+📥 import_candidate queue  →  👤 human review (/admin/imports — unchanged)
+```
+
+## 15.1 Reuse, not a second engine
+
+`runScheduledDiscovery` (in `run-discovery.ts`) shares the **exact** M7.8
+composition through a common internal `runComposedDiscovery`; the only difference
+is the recorded `trigger` (`SCHEDULED`) and the overlap guard below. There is no
+duplicated discovery, dedup, persistence, or budget logic. `DEFAULT_BUDGET`, the
+closed provider allowlist, the host-pinned connectors, and the reviewable-only
+persistence adapters are all inherited unchanged.
+
+## 15.2 Trust boundary — a machine caller, a real staff authority
+
+A scheduled invocation has no browser session, so the endpoint authenticates in
+two independent layers:
+
+- **Caller authentication** — a server-only shared secret `DISCOVERY_RUN_TOKEN`,
+  presented as `Authorization: Bearer <token>`, compared in **constant time**
+  (`node:crypto.timingSafeEqual`, length-guarded) and **never echoed**. When it is
+  unset the whole feature is **disabled** and the route returns 404 (it must not
+  reveal that it exists). The pure decision logic lives in
+  `packages/database/src/service/scheduled-discovery.ts` and is unit-tested.
+- **Run authority** — the run executes under a **real** staff actor configured
+  server-side (`DISCOVERY_RUN_ACTOR_ID`), resolved against `app_user` exactly like
+  a browser session (`resolveActor`). The role is **never** taken from the request;
+  an unknown or non-staff id fails closed (403). This keeps the append-only
+  `audit_log` FK satisfied and attributes every scheduled run to an accountable
+  reviewer/admin.
+
+Nothing else is trusted from the request: the search **query is server-configured**
+(`DISCOVERY_SCHEDULED_QUERY`, default `homeopathy` — the platform's domain), the
+**budget is never client-supplied**, and the only request-derived input is a
+provider **validated against the closed allowlist** (so a trusted scheduler can
+target a specific source; no URL, host, or budget can cross the boundary).
+
+## 15.3 Idempotency, overlap & failure
+
+- **Idempotency** is already DB-enforced (migration `0013` partial unique index +
+  `INSERT … ON CONFLICT DO NOTHING`): a schedule that re-runs the same search adds
+  **no duplicate candidates** — proven by test.
+- **Overlap guard** — `DatabaseDiscoveryStore.createRun`, **gated on
+  `trigger === "SCHEDULED"`**, refuses (typed `invalid-state`, mapped to HTTP 409)
+  when a run for the same source is still `RUNNING`, creating **no** new
+  `import_job` row. This is a best-effort check-then-insert; the realistic overlap
+  (two invocations of the same schedule) is prevented upstream by the scheduler's
+  own `concurrency:` control, and the residual same-source race cannot corrupt data
+  because candidate identity is DB-unique. **Manual runs are intentionally NOT
+  guarded** — M7.8 behaviour is unchanged.
+- **Failure** — a failed run is finalized `FAILED` with a safe, non-secret error
+  summary; it is **never** left `RUNNING`, so a failure can never permanently block
+  future scheduled runs (test-covered). A networked provider without injected
+  egress fails closed (`NOT_CONFIGURED` → `FAILED`), with no candidate and no
+  secret.
+
+## 15.4 The scheduler (external, opt-in, zero-cost)
+
+`.github/workflows/discovery.yml` is the scheduler: a `schedule:` cron (+
+`workflow_dispatch`) with a `concurrency:` guard that simply POSTs to the endpoint
+with the bearer token from a repository secret. It runs no discovery logic. It is
+**inert until the owner opts in** — if `DISCOVERY_RUN_URL` / `DISCOVERY_RUN_TOKEN`
+secrets are unset it cleanly skips (exit 0) and never prints the token. GitHub
+Actions cron was chosen over Render Cron (paid, new service type) and an external
+pinger (third-party dependency): it is free on this repository and reuses existing
+CI infrastructure, matching the free-first cost posture. Render deployments carry
+the same env vars, declared `sync: false` in `render.yaml`.
+
+## 15.5 What M7.9 deliberately does NOT do
+
+No **in-app** scheduler / cron / worker / queue / `setInterval` / background job of
+any kind — recurrence lives only in the external GitHub Actions cron. No new
+provider, no new discovery logic, no migration, no admin schedule-config UI, no
+DB-backed multiple named schedules or saved searches / date windows (deferred,
+FUTURE). A scheduled run persists **reviewable candidates** only; it **never**
+publishes, classifies, scores, auto-accepts, auto-merges, auto-deletes, calls or
+consults AI, downloads PDFs, or scrapes, and writes no canonical
+`research_study` / `publication` / `classification`. The human reviewer remains the
+sole decision boundary at `/admin/imports`.
+
+## 15.6 Testing & offline status
+
+`packages/database/test/scheduled-discovery-auth.test.ts` (12 tests, pure/offline)
+covers constant-time secret verification, bearer parsing, the fail-closed
+authorization ordering (404 disabled → 401 unauthenticated → 503 misconfigured →
+ok), no-token-leak in results, and provider/query resolution.
+`packages/database/test/run-scheduled-discovery.test.ts` (9 tests, PGlite, real
+migrations `0001`→`0013`, fully offline/deterministic) covers: a scheduled run is
+recorded as a `SCHEDULED` `import_job` and enqueues candidates; the overlap guard
+refuses an in-progress run with **no** new row while a **manual** run is
+unaffected; a non-staff actor is refused before any row; idempotency across repeat
+scheduled runs; **no** canonical `research_study`/`publication`/`classification`
+and **no** AI (`ai_job`/`ai_result` empty); a failed run leaves **no** phantom
+`RUNNING` lock; and no secret-like content in the run result. Offline suite:
+**640 passed / 4 skipped** (typecheck / lint / format / web-build clean). The 4
+skips are the opt-in live provider smoke tests, which remain **NOT RUN**. The
+**live scheduled run against a deployed SSR host + Supabase remains PENDING** a
+provisioned environment (this egress-restricted environment cannot reach it, and
+none was faked).

@@ -1,0 +1,89 @@
+name: Scheduled Discovery
+
+# RECURRING DISCOVERY TRIGGER ONLY — this workflow is the *scheduler* for M7.9
+# (docs/30 §15, ADR-020 M7.9 amendment). It runs NO discovery logic itself: it
+# simply POSTs to the deployed application's trusted scheduled-run endpoint
+# (/api/internal/discovery/run), which reuses the EXISTING manual-run engine to
+# start ONE bounded run. The application adds no in-app scheduler/cron/worker/
+# queue; this external cron is the only recurring trigger.
+#
+# What a run does (unchanged, human-review-gated): discover → normalize →
+# conservatively deduplicate → enqueue REVIEWABLE candidates. It NEVER publishes,
+# classifies, scores, accepts, merges, deletes, calls AI, downloads PDFs, or
+# scrapes. A human reviewer remains the sole decision boundary at /admin/imports.
+#
+# Security: the endpoint authenticates this caller with a shared secret
+# (DISCOVERY_RUN_TOKEN) presented as a bearer token and compared server-side in
+# constant time; the run executes under a server-configured staff actor. This
+# workflow never prints the token, and it does NOTHING (a clean skip) unless BOTH
+# repository secrets below are configured — so it is inert until the owner opts in.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   DISCOVERY_RUN_URL    — full URL of the endpoint on the live SSR host, e.g.
+#                          https://wise-evidence-web.onrender.com/api/internal/discovery/run
+#   DISCOVERY_RUN_TOKEN  — the SAME shared secret set on the server (DISCOVERY_RUN_TOKEN).
+# Optional repository variable:
+#   DISCOVERY_PROVIDERS  — space-separated allowlisted providers to run in
+#                          sequence (default: MOCK). e.g. "CROSSREF EUROPE_PMC PUBMED".
+
+on:
+  # Weekly, Monday 06:00 UTC — a conservative default cadence. Each run is bounded
+  # by the server's DEFAULT_BUDGET; edit this cron to change frequency. All three
+  # providers are free/keyless.
+  schedule:
+    - cron: "0 6 * * 1"
+  # Allow a manual "run now from CI" without waiting for the schedule.
+  workflow_dispatch:
+
+# Never let two scheduled invocations overlap (belt-and-braces with the server's
+# own in-progress guard). A run in flight is not cancelled; the new one waits.
+concurrency:
+  group: scheduled-discovery
+  cancel-in-progress: false
+
+# Least privilege: this workflow only makes an outbound HTTPS call.
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger a bounded discovery run
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to the trusted scheduled-run endpoint
+        env:
+          # Mapped to env so we can detect "unset" without ever printing values.
+          RUN_URL: ${{ secrets.DISCOVERY_RUN_URL }}
+          RUN_TOKEN: ${{ secrets.DISCOVERY_RUN_TOKEN }}
+          PROVIDERS: ${{ vars.DISCOVERY_PROVIDERS }}
+        run: |
+          set -euo pipefail
+          # Do not echo commands — the token must never reach the log.
+          set +x
+          if [ -z "${RUN_URL}" ] || [ -z "${RUN_TOKEN}" ]; then
+            echo "Scheduled discovery is not configured (DISCOVERY_RUN_URL / DISCOVERY_RUN_TOKEN secret unset). Skipping."
+            exit 0
+          fi
+          providers="${PROVIDERS:-MOCK}"
+          rc=0
+          for provider in ${providers}; do
+            echo "::group::Discovery run: ${provider}"
+            # -sS: quiet but show errors. --fail-with-body: non-2xx is a failure
+            # but we still capture the safe JSON body. The token goes only in the
+            # header (never the URL/log). The body carries no secrets.
+            http_code=$(curl -sS --fail-with-body \
+              -o response.json -w '%{http_code}' \
+              -X POST "${RUN_URL}" \
+              -H "Authorization: Bearer ${RUN_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "{\"provider\":\"${provider}\"}") || rc=$?
+            echo "HTTP ${http_code}"
+            # Show the safe response body (state/counters), which contains no secret.
+            cat response.json || true
+            echo
+            echo "::endgroup::"
+            if [ "${rc}" -ne 0 ]; then
+              echo "Discovery run for ${provider} failed to trigger (HTTP ${http_code})."
+              exit "${rc}"
+            fi
+          done

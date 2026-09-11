@@ -101,3 +101,12 @@ export * from "./service/candidates.js";
  * provider + a bounded query; identity, role, budget, and host are server-side.
  */
 export * from "./service/run-discovery.js";
+
+/**
+ * M7.9 — trusted scheduled-invocation authorization + configuration. Pure,
+ * framework-independent helpers used by the `/api/internal/discovery/run`
+ * endpoint to authenticate an external scheduler (shared secret, constant-time)
+ * and resolve the server-configured provider/query. The run itself goes through
+ * `runScheduledDiscovery` (above), under a real server-resolved staff actor.
+ */
+export * from "./service/scheduled-discovery.js";

@@ -225,10 +225,41 @@ press. MOCK runs fully offline (default); real CROSSREF/EUROPE_PMC/PUBMED runs f
 closed in this egress-restricted environment and are recorded `FAILED` (no candidate,
 no secret). Offline: 619 passed / 4 skipped (typecheck/lint/format/web-build clean).
 See `docs/30` §14, `ADR-020` (M7.8 amendment),
-`docs/reports/M7.8-MANUAL-RUN-DISCOVERY.md`. **Later M7 work (M7.9, real-provider
-scheduling) and M8 ingestion are NOT started and NOT authorized.** There is still
-**no live automated discovery** and **no scheduling of any kind**. Live provider and
-Supabase (browser/auth/DB) verification is PENDING a provisioned project.
+`docs/reports/M7.8-MANUAL-RUN-DISCOVERY.md`. **Milestone 7.9** then made discovery
+run on a recurring schedule with **no in-application scheduler** and **no
+migration** (migrations remain `0001`–`0013`; `import_job_trigger` already carried
+`SCHEDULED`). Recurrence lives entirely in an **external** GitHub Actions cron
+(`.github/workflows/discovery.yml` — `schedule:` + `workflow_dispatch` +
+`concurrency:`) that runs no discovery logic and merely POSTs to one trusted,
+non-browser endpoint, `POST /api/internal/discovery/run`. That endpoint
+authenticates the caller with a **constant-time** shared secret
+(`DISCOVERY_RUN_TOKEN`; unset → the feature is disabled and the route 404s, never
+echoed) and executes under a server-configured **real** staff actor
+(`DISCOVERY_RUN_ACTOR_ID` resolved against `app_user`; role NEVER from the request,
+non-staff → 403). It reuses `runScheduledDiscovery` (`packages/database/src/service/
+run-discovery.ts`) — the **same** M7.8 composition via a shared
+`runComposedDiscovery`, differing only in `trigger=SCHEDULED` and a **scheduled-only
+overlap guard** in `DatabaseDiscoveryStore.createRun` that refuses an in-progress
+same-source run (`invalid-state` → HTTP 409) with no `import_job` row created
+(manual runs unchanged). The search **query is server-configured** (default
+`homeopathy`), the **budget is the conservative `DEFAULT_BUDGET`** (never
+client-supplied), and the only request-derived input is a provider **validated
+against the closed allowlist** (no URL/host/budget crosses the boundary). It
+persists **reviewable candidates only** — it never publishes, classifies, scores,
+auto-accepts, auto-merges, auto-deletes, calls AI, downloads PDFs, or scrapes, and
+writes no canonical `research_study`/`publication`/`classification`; the human
+remains the sole decision boundary at `/admin/imports`. There is deliberately **no
+in-app scheduler/cron/worker/queue/`setInterval`/background job**, no
+schedule-config DB table or admin schedule UI, and no saved searches/date windows
+(FUTURE). GitHub Actions cron was chosen over paid Render Cron / a third-party
+pinger (free-first). Offline: 640 passed / 4 skipped (typecheck/lint/format/
+web-build clean); the **live scheduled run** against a deployed host + Supabase is
+PENDING/NOT RUN (this egress-restricted environment cannot reach it; none faked).
+See `docs/30` §15, `ADR-020` (M7.9 amendment),
+`docs/reports/M7.9-SCHEDULED-DISCOVERY.md`. **Later work (an in-application
+scheduler, M7.10+, and M8 ingestion) is NOT started and NOT authorized.** There is
+still **no live automated discovery**. Live provider and Supabase
+(browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
 .
@@ -241,9 +272,10 @@ Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 │                                 #   M3 admin workflow UI + public /research/[id];
 │                                 #   M4 /research explorer + ResearchCard;
 │                                 #   M5 /evidence + /statistics + DistributionChart;
-│                                 #   M7.8 /admin/imports "Run discovery now" panel + POST /api/admin/imports/run
+│                                 #   M7.8 /admin/imports "Run discovery now" panel + POST /api/admin/imports/run;
+│                                 #   M7.9 POST /api/internal/discovery/run (trusted scheduled endpoint)
 ├── packages/domain/              # portable domain logic — normalizeDoi(), normalizeTitle()
-├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + M7.8 service/run-discovery (runManualDiscovery composition point) + PGlite tests
+├── packages/database/            # data-access boundary + M3 service + M4 search + M5 stats + M6 service/ai + M7.4A service/discovery (import_job/import_candidate persistence adapter, service_role) + M7.8 service/run-discovery (runManualDiscovery composition point) + M7.9 runScheduledDiscovery + scheduled-discovery.ts (trusted-invocation auth/config) + PGlite tests
 ├── packages/metadata/            # M3 provider-independent Crossref/mock metadata
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
@@ -253,6 +285,7 @@ Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
 ├── .github/workflows/ci.yml      # CI: lint · typecheck · test · build
+├── .github/workflows/discovery.yml # M7.9 external scheduler (cron → POST /api/internal/discovery/run); no discovery logic
 └── docs/
     ├── 00-ARCHITECTURE-BASELINE.md … 23-AI-AGENT-INSTRUCTIONS.md
     ├── 24-MULTI-SOURCE-INGESTION.md  # M8 design checkpoint (design-only)
