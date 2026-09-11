@@ -138,6 +138,12 @@ Reports (`docs/reports/`):
   empty-title guard; Study ≠ Publication preserved; LEVEL 5 fuzzy similarity
   deliberately deferred); no migration, no new provider, no AI; 526 tests pass;
   live PENDING/BLOCKED
+- `M7.6-EUROPE-PMC-CONNECTOR.md` — Milestone 7.6: the C2 Europe PMC
+  `DiscoveryProvider` (host-pinned www.ebi.ac.uk, structured REST search, composite
+  SOURCE/ID identity, DOI/PMID/PMCID, query-injection hardening, no API key;
+  registered EUROPE_PMC, orchestrator-driven via the registry); no scraping/
+  scheduler/AI/DB-write/migration/UI; DUPLICATE ≠ DELETE and Study ≠ Publication
+  preserved; 561 tests pass; live PENDING
 
 ## Application foundation (Milestone 1)
 

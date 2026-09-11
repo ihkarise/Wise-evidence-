@@ -294,10 +294,30 @@ explicit year-conflict), guarded an empty-title false positive, and added
 adversarial/determinism/safety coverage — with **no migration, no new provider,
 no AI**. Fuzzy title similarity (LEVEL 5) is deliberately deferred (false-positive
 risk + would need an unauthorized index). See `docs/30` §10.4,
-`docs/reports/M7.5-DEDUPLICATION.md`. **M7.6 is NOT started and NOT authorized.**
+`docs/reports/M7.5-DEDUPLICATION.md`.
 
-Later M7 phases (PubMed/Europe PMC adapters and scheduling) remain design-pending
-and unauthorized — build in order.
+**M7.6 — Europe PMC connector  ✅ complete (offline; live PENDING).** The second
+real `DiscoveryProvider`, `EuropePMCDiscoveryProvider`
+(`packages/discovery/src/europepmc/`), the **C2** source in `docs/24` (order
+Crossref → Europe PMC → PubMed). It satisfies the M7.1 contract unchanged and
+reuses the M7.2 security machinery verbatim: host-pinned to `www.ebi.ac.uk`,
+HTTPS-only, injected/bounded HTTP, redirects rejected, JSON-validated, no API key.
+It uses only the structured Europe PMC REST `search` endpoint; keys candidates on
+Europe PMC's composite `SOURCE/ID` (so even a DOI-less preprint normalizes),
+emits DOI/PMID/PMCID, hardens untrusted free-text queries against operator
+injection, and maps failures onto the typed errors. Registered as EUROPE_PMC
+(needs an injected fetch, else `NOT_CONFIGURED`; the orchestrator drives it through
+the registry unchanged; PUBMED still `NOT_CONFIGURED`). **No scraping, no
+scheduling, no retries in the connector, no AI, no database writes, no migration,
+no UI, no automatic classification/publication/acceptance/merge/delete.** All tests
+run offline via an injected fake fetch; one opt-in `RUN_EUROPE_PMC_LIVE=1` smoke
+test is skipped in CI and the live Europe PMC call has **not** been run from this
+egress-restricted environment (PENDING). Offline: 561 passed / 3 skipped
+(typecheck/lint/format/web-build/diff-check/secret-scan clean). See `docs/30` §12,
+`ADR-020` (M7.6 amendment), `docs/reports/M7.6-EUROPE-PMC-CONNECTOR.md`.
+
+Later M7 phases (the PubMed/NCBI adapter and scheduling) remain design-pending and
+unauthorized — build in order. **M7.7 is NOT started and NOT authorized.**
 
 # 10. Phase 8 — Additional Sources
 

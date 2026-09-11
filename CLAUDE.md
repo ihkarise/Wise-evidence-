@@ -155,10 +155,29 @@ The matcher stays pure/deterministic and uses only existing indexes
 per-study year aggregation — **no `research_study` table scan**. Migrations remain
 `0001`–`0013`. Offline: 526 passed / 2 skipped (typecheck/lint/format/web-build/
 diff-check/secret-scan clean); live PENDING/BLOCKED (see `docs/30` §10.4, `ADR-020`
-M7.5 amendment, `docs/reports/M7.5-DEDUPLICATION.md`). **Later M7/M8 work (M7.6,
-real-provider scheduling, M8 ingestion) is NOT started and NOT authorized.** There
-is still **no live automated discovery**. Live provider and Supabase (browser/auth/DB)
-verification is PENDING a provisioned project.
+M7.5 amendment, `docs/reports/M7.5-DEDUPLICATION.md`). **Milestone 7.6** then added
+the second real provider, `EuropePMCDiscoveryProvider`
+(`packages/discovery/src/europepmc/`), the **C2** source (order Crossref → Europe
+PMC → PubMed): on the shared injected HTTP layer host-pinned to `www.ebi.ac.uk`,
+HTTPS-only, timeout/size-bounded, redirects rejected, JSON-validated, **no API
+key**; it uses only the structured Europe PMC REST `search` endpoint, keys
+candidates on Europe PMC's composite `SOURCE/ID` (so a DOI-less preprint still
+normalizes), emits DOI/PMID/PMCID, hardens untrusted free-text queries against
+operator injection, and maps failures onto the typed errors. Registered as
+EUROPE_PMC (needs an injected fetch, else `NOT_CONFIGURED`; the orchestrator drives
+it through the registry unchanged; PUBMED still `NOT_CONFIGURED`). It does **no
+scraping, no scheduling, no retries in the connector, no AI, no database writes, no
+migration, no UI, and no automatic classification/publication/acceptance/merge/
+delete** (`DUPLICATE ≠ DELETE` and `Study ≠ Publication` test-covered). All
+connector tests run offline via an injected fake fetch; one opt-in
+`RUN_EUROPE_PMC_LIVE=1` smoke test is skipped in CI and the **live Europe PMC call
+has NOT been run** from this egress-restricted environment (PENDING). Migrations
+remain `0001`–`0013`. Offline: 561 passed / 3 skipped (typecheck/lint/format/
+web-build/diff-check/secret-scan clean). See `docs/30` §12, `ADR-020` (M7.6
+amendment), `docs/reports/M7.6-EUROPE-PMC-CONNECTOR.md`. **Later M7 work (M7.7,
+PubMed/NCBI adapter, real-provider scheduling) and M8 ingestion are NOT started and
+NOT authorized.** There is still **no live automated discovery**. Live provider and
+Supabase (browser/auth/DB) verification is PENDING a provisioned project.
 
 ```text
 .
@@ -177,7 +196,7 @@ verification is PENDING a provisioned project.
 ├── packages/ai/                  # M6 provider abstraction + mock/OpenAI-compatible providers + prompt registry + validation;
 │                                 #   ADR-019 provider registry + provider/model config + presets + capability negotiation
 ├── packages/benchmark/           # M6.1 benchmark harness (drives the existing AI provider/orchestrator; live run env-gated)
-├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports; M7.5 explainable conservative dedup (dedup.ts matcher.test.ts — reason codes, year-conflict, empty-title guard; no fuzzy similarity). No scraping/scheduler/AI/DB-write/migration.
+├── packages/discovery/           # M7.1 provider-neutral discovery (DiscoveryProvider contract + SourceDescriptor + typed objects/errors + registry seam + deterministic mock); M7.2 crossref/ connector + injected http.ts (host-pinned api.crossref.org); M7.3 orchestrator/ bounded runDiscovery + budgets/retries/dedup + persistence ports; M7.5 explainable conservative dedup (dedup.ts matcher.test.ts — reason codes, year-conflict, empty-title guard; no fuzzy similarity); M7.6 europepmc/ connector (host-pinned www.ebi.ac.uk, REST search, composite SOURCE/ID, DOI/PMID/PMCID, query-injection hardening; registered EUROPE_PMC). No scraping/scheduler/AI/DB-write/migration.
 ├── prompts/                      # M6 versioned prompt registry (<task>/v1.md + registry.json)
 ├── supabase/migrations/          # canonical schema, RLS (0001–0011); 0012 anon grant hardening; 0013 discovery candidate identity + partial unique index (M7.4A)
 ├── supabase/seed/                # clearly-labelled DEMO fixtures
